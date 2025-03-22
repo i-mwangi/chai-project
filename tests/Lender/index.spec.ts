@@ -26,7 +26,7 @@ describe("Lending Protocol", async ()=> {
                         tokenId: TokenId.fromSolidityAddress(tokenAddress),
                         ownerAccountId: user.ACCOUNT_ID,
                         spenderAccountId: AccountId.fromString(storedId),
-                        amount: Long.fromNumber(10)
+                        amount: Long.fromNumber(13)
                     })
                 ]
             })

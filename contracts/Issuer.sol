@@ -26,12 +26,11 @@ contract Issuer {
     event AssetSold(string name, uint64 amount, address seller);
     
     address public admin;
-    address public lender;
     PriceOracle constant oracle = PriceOracle(address(0x40c));
-    Reserve constant reserve = Reserve(address(0x40e));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
     address constant USDC_TOKEN_ADDRESS = address(0x40a);
     mapping(string => TokenizedAssetManager) public tokenizedAssets;
+    mapping(address => AssetCollateralReserve) public reserves;
 
     
 
@@ -51,14 +50,12 @@ contract Issuer {
     constructor() {
         admin = msg.sender;
     }
-
-    function setLender(address _l) public onlyAdmin {
-        lender = _l;
-    }
     
     function createTokenizedAsset(string memory _name, string memory _symbol) payable public onlyAdmin {
-        TokenizedAssetManager asset = new TokenizedAssetManager{value: msg.value}(_name, _symbol, lender);
+        TokenizedAssetManager asset = new TokenizedAssetManager{value: msg.value}(_name, _symbol);
+        AssetCollateralReserve reserve = new AssetCollateralReserve(address(asset));
         tokenizedAssets[_name] = asset;
+        reserves[asset.token()] = reserve;
     }
 
     function mint(string memory name, uint64 amount) public onlyAdmin() {
@@ -80,7 +77,7 @@ contract Issuer {
     function purchaseAsset(string memory name, uint64 amount) public {
         TokenizedAssetManager asset = tokenizedAssets[name];
         address token = asset.token();
-        AssetCollateralReserve assetCollateralReserve = reserve.reserves(token);
+        AssetCollateralReserve assetCollateralReserve = reserves[token];
 
         uint64 usdcPricePerAsset = oracle.getPrice(token);
 
@@ -106,7 +103,7 @@ contract Issuer {
         // TODO: add restrictions on howmuch can be withdrawn from reserve
         TokenizedAssetManager a = tokenizedAssets[name];
         address token = a.token();
-        AssetCollateralReserve r = reserve.reserves(token);
+        AssetCollateralReserve r = reserves[token];
 
         uint64 usdcPricePerAsset = oracle.getPrice(token);
 

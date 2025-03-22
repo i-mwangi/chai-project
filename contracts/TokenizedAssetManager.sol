@@ -25,7 +25,6 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
     address public controller;
     address public admin;
     uint64 public totalSupply;
-    address public lender;
 
     event AssetMinted(uint64 amount, uint64 newTotalSupply, address token);
     event AssetBurned(uint64 amount, uint64 newTotalSupply, address token);
@@ -46,13 +45,12 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
     }
 
     modifier onlyAdmin() {
-        require(msg.sender == admin || msg.sender == address(this) || msg.sender == lender, "Only admin can call this function"); 
+        require(msg.sender == admin || msg.sender == address(this), "Only admin can call this function"); 
         _;
     }
 
-    constructor(string memory _name, string memory _symbol, address _lender) payable {
+    constructor(string memory _name, string memory _symbol) payable {
         admin = msg.sender;
-        lender = _lender;
         controller = address(this);
         IHederaTokenService.HederaToken memory tokenDetails;
         tokenDetails.name = _name;
