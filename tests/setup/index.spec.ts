@@ -9,13 +9,11 @@ const admin = getEnv()
 
 describe("Setup Lender and Issuer", async()=>{
     const ISSUER_CONTRACT_ID = testStore.get("Issuer")
-    const RESERVE_CONTRACT_ID = testStore.get("Reserve")
     const LENDER_CONTRACT_ID = testStore.get("Lender")
 
-    if(!ISSUER_CONTRACT_ID || !RESERVE_CONTRACT_ID || !LENDER_CONTRACT_ID) throw new Error("Contracts not deployed");
+    if (!ISSUER_CONTRACT_ID || !LENDER_CONTRACT_ID) throw new Error("Contracts not deployed");
 
     const issuerContract = ContractId.fromString(ISSUER_CONTRACT_ID)
-    const reserveContract = ContractId.fromString(RESERVE_CONTRACT_ID)
     const lenderContract = ContractId.fromString(LENDER_CONTRACT_ID)
 
 
