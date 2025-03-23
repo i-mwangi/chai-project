@@ -89,3 +89,17 @@ export const getTestUser = () => {
         ACCOUNT_ID: AccountId.fromString(ACCOUNT_ID)
     }
 }
+
+export const getSecondUser = () => {
+    const PRIVATE_KEY = process.env.USER2_PRIVATE_KEY!
+    const ADDRESS = process.env.USER2_ADDRESS!
+    const ACCOUNT_ID = process.env.USER2_ACCOUNT_ID!
+
+    console.log(PRIVATE_KEY, ADDRESS, ACCOUNT_ID)
+
+    return {
+        PRIVATE_KEY: PrivateKey.fromStringECDSA(PRIVATE_KEY),
+        ADDRESS: EvmAddress.fromString(ADDRESS),
+        ACCOUNT_ID: AccountId.fromString(ACCOUNT_ID)
+    }
+}

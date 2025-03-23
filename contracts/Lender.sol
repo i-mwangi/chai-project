@@ -7,7 +7,19 @@ import "./system-contracts/hedera-token-service/IHederaTokenService.sol";
 import "./system-contracts/hedera-token-service/KeyHelper.sol";
 import "./system-contracts/hedera-token-service/IHRC719.sol";
 import "./@openzeppelin/contracts/utils/math/Math.sol";
+import "./@openzeppelin/contracts/utils/Strings.sol"; 
 import "./PriceOracle.sol";
+
+using Strings for uint64;
+
+interface IERC20 {
+
+    /**
+     * @dev Returns the value of tokens owned by `account`.
+     */
+    function balanceOf(address account) external view returns (uint256);
+
+}
 
 
 contract LendingTokenReserve is HederaTokenService, KeyHelper {
@@ -48,6 +60,7 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
     constructor(string memory _name, string memory _symbol, address _asset) payable {
         admin = msg.sender;
 
+        asset = _asset;
         IHederaTokenService.HederaToken memory tokenDetails;
         tokenDetails.name = _name;
         tokenDetails.symbol = _symbol;
@@ -57,7 +70,7 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
         expiry.autoRenewPeriod = 7890000;
         tokenDetails.expiry = expiry;
 
-        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](7);
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](6);
 
         keys[0] = getSingleKey(KeyType.ADMIN, KeyValueType.CONTRACT_ID, address(this));
         keys[1] = getSingleKey(KeyType.FREEZE, KeyValueType.CONTRACT_ID, address(this));
@@ -68,7 +81,7 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
 
         tokenDetails.tokenKeys = keys;
         
-        (int response, address tokenAddress) = HederaTokenService.createFungibleToken(tokenDetails, 0, 0);
+        (int response, address tokenAddress) = HederaTokenService.createFungibleToken(tokenDetails, 0, 6);
 
         if (response != HederaResponseCodes.SUCCESS){
             revert("Failed to create token");
@@ -153,32 +166,24 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
     }
 
 
-    function provideLiquidity(uint64 amount) public onlyAdmin() {
-        int responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, msg.sender, address(this), uint256(amount));
-
-        if(responseCode != HederaResponseCodes.SUCCESS){
-            revert("Failed to transfer USDC");
-        } 
+    function provideLiquidity(uint64 amount, address user) public onlyAdmin() {
 
         mint(amount);
 
-        airdropTokens(amount, msg.sender);
+        airdropTokens(amount, user);
 
         
     } 
 
-    function withdrawLiquidity(uint64 amount) public onlyAdmin() {
-        int responseCode = hts.transferFrom(token, msg.sender, address(token), amount);
+    function withdrawLiquidity(uint64 amount, address user) public onlyAdmin() {
 
-        if(responseCode != HederaResponseCodes.SUCCESS){
-            revert("Failed to transfer token");
-        }
-
+        require(IERC20(token).balanceOf(user) >= amount, "Insufficient balance");
+        
         // TODO: handling rewards
 
         burn(amount);
 
-        responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, address(token), msg.sender, amount);
+        int responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, address(this), user, amount);
 
         if(responseCode != HederaResponseCodes.SUCCESS){
             revert("Failed to transfer USDC");
@@ -231,6 +236,21 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
         }
     }
 
+    function refundCollateral(address borrower, uint256 amount) public onlyAdmin() {
+
+        int64 approvalResponseCode = hts.approve(asset, address(this), amount);
+
+        if(approvalResponseCode != HederaResponseCodes.SUCCESS){
+            revert("Failed to approve asset transfer");
+        }
+
+
+        int64 responseCode = hts.transferFrom(asset, address(this), borrower, amount);
+
+        if(responseCode != HederaResponseCodes.SUCCESS){
+            revert("Failed to transfer asset");
+        }
+    }
 }
 
 
@@ -264,15 +284,39 @@ contract Lender {
         lendingReserves[asset] = tokenReserve;
     }
 
+    function getLpTokenAddress(address asset) public view returns(address){
+        return lendingReserves[asset].token();
+    }
+
+    // only for purpouses of granting kyc by issuer
+    function getReserveAddress(address asset) public view returns(address){
+        return address(lendingReserves[asset]);
+    }
+
     function provideLiquidity(address asset, uint64 amount) public {
         LendingTokenReserve reserve = lendingReserves[asset];
-        reserve.provideLiquidity(amount);
+
+        int responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, msg.sender, address(reserve), uint256(amount));
+
+        if(responseCode != HederaResponseCodes.SUCCESS){
+            revert("Failed to transfer USDC");
+        } 
+
+        reserve.provideLiquidity(amount, msg.sender);
     }
 
     function withdrawLiquidity(address asset, uint64 amount) public {
         LendingTokenReserve reserve = lendingReserves[asset];
         // TODO: add functionality for distributing rewards
-        reserve.withdrawLiquidity(amount);
+
+        int responseCode = hts.transferFrom(reserve.token(), msg.sender, address(reserve), amount);
+
+        if(responseCode != HederaResponseCodes.SUCCESS){
+            revert("Failed to transfer token");
+        }
+
+
+        reserve.withdrawLiquidity(amount, msg.sender);
     }
 
 
@@ -286,7 +330,7 @@ contract Lender {
 
         uint64 usdcPricePerAsset = oracle.getPrice(asset);
 
-        uint64 baseLockedAssets = uint64(Math.ceilDiv(uint256(amount * oracle.denominator()) , uint256(usdcPricePerAsset)));
+        uint64 baseLockedAssets = uint64(Math.ceilDiv(uint256(amount) , uint256(usdcPricePerAsset)));
         
         uint64 collateralisedLockedAssets = uint64(Math.ceilDiv((baseLockedAssets * 125) , 100)); // 125% collateralisation ratio
 
@@ -294,8 +338,9 @@ contract Lender {
 
         uint64 repayAmount = uint64(Math.ceilDiv((amount * 110) , 100)); // 110% repayment amount
 
+
         // transfer asset from user to contract
-        int responseCode = hts.transferFrom(asset, msg.sender, address(asset), uint256(collateralisedLockedAssets));
+        int responseCode = hts.transferFrom(asset, msg.sender, address(reserve), uint256(collateralisedLockedAssets));
 
         if(responseCode != HederaResponseCodes.SUCCESS){
             revert("Failed to transfer asset");
@@ -330,7 +375,7 @@ contract Lender {
             revert("Failed to transfer USDC");
         }
 
-        responseCode = hts.transferFrom(asset, address(reserve), msg.sender, uint256(uint64(loan.collateralAmountAsset)));
+        reserve.refundCollateral(msg.sender, uint64(loan.collateralAmountAsset));
 
         if(responseCode != HederaResponseCodes.SUCCESS){
             revert("Failed to transfer asset");

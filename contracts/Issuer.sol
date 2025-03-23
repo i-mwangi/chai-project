@@ -66,7 +66,7 @@ contract Issuer {
         tokenizedAssets[name].burn(amount);
     }
 
-    function grantKYC(string memory name, address account) public {
+    function grantKYC(string memory name, address account) public onlyAdmin() {
         tokenizedAssets[name].grantKYC(account);
     }
 
