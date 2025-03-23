@@ -72,7 +72,7 @@ export const getClient = () => {
         client.setOperator(env.ACCOUNT_ID, env.PRIVATE_KEY)
         return client
     }else{
-        const client = Client.forLocalNode()
+        const client = Client.forTestnet()
         client.setOperator(env.ACCOUNT_ID, env.PRIVATE_KEY)
         return client
     }
@@ -82,6 +82,20 @@ export const getTestUser = () => {
     const PRIVATE_KEY = process.env.USER_PRIVATE_KEY!
     const ADDRESS = process.env.USER_ADDRESS!
     const ACCOUNT_ID = process.env.USER_ACCOUNT_ID!
+
+    const TPRIVATE_KEY = process.env.TUSER_PRIVATE_KEY!
+    const TADDRESS = process.env.TUSER_ADDRESS!
+    const TACCOUNT_ID = process.env.TUSER_ACCOUNT_ID!
+
+    const network = process.env.NETWORK
+
+    if (network == 'testnet') {
+        return {
+            PRIVATE_KEY: PrivateKey.fromStringECDSA(TPRIVATE_KEY),
+            ADDRESS: EvmAddress.fromString(TADDRESS),
+            ACCOUNT_ID: AccountId.fromString(TACCOUNT_ID)
+        }
+    }
 
     return {
         PRIVATE_KEY: PrivateKey.fromStringECDSA(PRIVATE_KEY),
