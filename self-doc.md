@@ -100,3 +100,371 @@ Both modules heavily rely on HTS for:
 - Airdropping tokens.
 
 These interactions ensure that all operations are compliant with Hedera’s standards and that token transfers are secure and reliable.
+
+--------
+
+
+# Frontend Integration Guide
+
+This document outlines the steps for integrating your smart contracts on the frontend. It focuses on user interactions where the user (or secondary user) acts as the operator. Admin actions are handled separately.
+
+---
+
+## Issuer Module
+
+### 1. Request KYC Verification
+
+**Purpose:**  
+Allow the admin to grant KYC so that users can trade tokenized assets.
+
+**User Flow:**  
+- **Admin Action:** Trigger a transaction that calls `grantKYC` with the target user’s address.
+
+**Example Code:**
+
+```javascript
+import { ContractExecuteTransaction, ContractFunctionParameters } from "@hashgraph/sdk";
+
+async function grantKYC(userAddress) {
+  const contractId = "0.0.xxxx"; // Issuer contract ID
+  const tx = new ContractExecuteTransaction()
+    .setContractId(contractId)
+    .setGas(4_000_000)
+    .setFunction("grantKYC", new ContractFunctionParameters()
+      .addString("Safaricom")
+      .addAddress(userAddress)
+    );
+  const signedTx = await tx.freezeWith(client).sign(adminPrivateKey); // Admin signs
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("KYC status:", receipt.status.toString());
+}
+```
+
+---
+
+### 2. Associate Token
+
+**Purpose:**  
+Users must associate their account with a token before holding or trading it.
+
+**User Flow:**  
+- **Action:** The user connects their wallet and initiates token association.
+
+**Example Code:**
+
+```javascript
+import { TokenAssociateTransaction, TokenId } from "@hashgraph/sdk";
+
+async function associateToken(tokenAddress, userAccountId, userPrivateKey) {
+  const tx = new TokenAssociateTransaction()
+    .setTokenIds([TokenId.fromSolidityAddress(tokenAddress)])
+    .setAccountId(userAccountId);
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey);
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("Association status:", receipt.status.toString());
+}
+```
+
+---
+
+### 3. Purchase Token
+
+**Purpose:**  
+Users can purchase a tokenized asset by sending USDC to the reserve and receiving the asset in return.
+
+**User Flow:**  
+- **Action:** The user initiates a purchase transaction via their connected wallet.
+
+**Example Code:**
+
+```javascript
+import { ContractExecuteTransaction, ContractFunctionParameters, Hbar } from "@hashgraph/sdk";
+
+async function purchaseAsset() {
+  const contractId = "0.0.xxxx"; // Issuer contract ID
+  const tx = new ContractExecuteTransaction()
+    .setContractId(contractId)
+    .setGas(4_000_000)
+    .setFunction("purchaseAsset", new ContractFunctionParameters()
+      .addString("Safaricom")
+      .addUint64(100) // Purchase 100 tokens
+    )
+    .setPayableAmount(new Hbar(0)); // If needed
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey); // User signs
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("Purchase status:", receipt.status.toString());
+}
+```
+
+---
+
+### 4. Sell Token
+
+**Purpose:**  
+Enable users to sell their tokens back to the contract in exchange for USDC.
+
+**User Flow:**  
+- **Action:** The user signs a transaction to sell tokens.
+
+**Example Code:**
+
+```javascript
+import { ContractExecuteTransaction, ContractFunctionParameters } from "@hashgraph/sdk";
+
+async function sellAsset() {
+  const contractId = "0.0.xxxx"; // Issuer contract ID
+  const tx = new ContractExecuteTransaction()
+    .setContractId(contractId)
+    .setGas(4_000_000)
+    .setFunction("sellAsset", new ContractFunctionParameters()
+      .addString("Safaricom")
+      .addUint64(50) // Sell 50 tokens
+    );
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey); // User signs
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("Sell status:", receipt.status.toString());
+}
+```
+
+---
+
+## Lender Module
+
+### 1. Associate LP Tokens
+
+**Purpose:**  
+Before interacting with the lending pool, users must associate their account with the LP token.
+
+**User Flow:**  
+- **Action:** The user initiates a token association transaction for the LP token.
+
+**Example Code:**
+
+```javascript
+import { TokenAssociateTransaction, TokenId } from "@hashgraph/sdk";
+
+async function associateLPTokens(lpTokenSolidityAddress, userAccountId, userPrivateKey) {
+  const lpTokenId = TokenId.fromSolidityAddress(lpTokenSolidityAddress);
+  const tx = new TokenAssociateTransaction()
+    .setTokenIds([lpTokenId])
+    .setAccountId(userAccountId);
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey);
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("LP Token Association Status:", receipt.status.toString());
+}
+```
+
+---
+
+### 2. Approve Lending (USDC Spending)
+
+**Purpose:**  
+Users need to approve the contract to spend USDC on their behalf before providing liquidity.
+
+**User Flow:**  
+- **Action:** The user approves a USDC allowance for the lending contract.
+
+**Example Code:**
+
+```javascript
+import { AccountAllowanceApproveTransaction, TokenAllowance, TokenId, AccountId } from "@hashgraph/sdk";
+import Long from "long";
+
+async function approveLendingUSDC(usdcTokenId, userAccountId, spenderContractId, userPrivateKey) {
+  const tx = new AccountAllowanceApproveTransaction({
+    tokenApprovals: [
+      new TokenAllowance({
+        tokenId: usdcTokenId,
+        ownerAccountId: userAccountId,
+        spenderAccountId: AccountId.fromString(spenderContractId),
+        amount: Long.fromNumber(1_000 * 1_000_000) // e.g., 1000 USDC
+      })
+    ]
+  });
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey);
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("USDC Allowance Status:", receipt.status.toString());
+}
+```
+
+---
+
+### 3. Provide Liquidity
+
+**Purpose:**  
+Users deposit USDC into the lending pool and receive LP tokens.
+
+**User Flow:**  
+- **Action:** The user signs a transaction to provide liquidity.
+
+**Example Code:**
+
+```javascript
+import { ContractExecuteTransaction, ContractFunctionParameters, Hbar } from "@hashgraph/sdk";
+
+async function provideLiquidity(safTokenAddress, liquidityAmount, userPrivateKey) {
+  const lenderContractId = "0.0.xxxx"; // Lender contract ID
+  const tx = new ContractExecuteTransaction()
+    .setContractId(lenderContractId)
+    .setFunction("provideLiquidity", new ContractFunctionParameters()
+      .addAddress(safTokenAddress)
+      .addUint64(liquidityAmount) // Amount in micro USDC
+    )
+    .setGas(3_000_000);
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey);
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("Provide Liquidity Status:", receipt.status.toString());
+}
+```
+
+---
+
+### 4. Approve Contract to Spend SAF Tokens
+
+**Purpose:**  
+Users allow the lending contract to spend a specified amount of SAF tokens for loan-related operations.
+
+**User Flow:**  
+- **Action:** The user approves an allowance for SAF tokens.
+
+**Example Code:**
+
+```javascript
+import { AccountAllowanceApproveTransaction, TokenAllowance, TokenId, AccountId } from "@hashgraph/sdk";
+import Long from "long";
+
+async function approveSAFSpending(safTokenId, userAccountId, spenderContractId, userPrivateKey, amount) {
+  const tx = new AccountAllowanceApproveTransaction({
+    tokenApprovals: [
+      new TokenAllowance({
+        tokenId: safTokenId,
+        ownerAccountId: userAccountId,
+        spenderAccountId: AccountId.fromString(spenderContractId),
+        amount: Long.fromNumber(amount)
+      })
+    ]
+  });
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey);
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("SAF Spending Allowance Status:", receipt.status.toString());
+}
+```
+
+---
+
+### 5. Take Out a Loan
+
+**Purpose:**  
+Users lock up collateral (SAF tokens) to obtain a USDC loan from the lending pool.
+
+**User Flow:**  
+- **Action:** The user initiates a loan by signing the transaction.
+
+**Example Code:**
+
+```javascript
+import { ContractExecuteTransaction, ContractFunctionParameters } from "@hashgraph/sdk";
+
+async function takeOutLoan(safTokenAddress, loanAmount, userPrivateKey) {
+  const lenderContractId = "0.0.xxxx"; // Lender contract ID
+  const tx = new ContractExecuteTransaction()
+    .setContractId(lenderContractId)
+    .setFunction("takeOutLoan", new ContractFunctionParameters()
+      .addAddress(safTokenAddress)
+      .addUint64(loanAmount) // Loan amount in micro USDC
+    )
+    .setGas(3_000_000);
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey);
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("Take Out Loan Status:", receipt.status.toString());
+}
+```
+
+---
+
+### 6. Add Allowance for Repayment
+
+**Purpose:**  
+Before repaying a loan, users must approve the contract to spend the required USDC for repayment.
+
+**User Flow:**  
+- **Action:** The user approves a USDC allowance for repayment.
+
+**Example Code:**
+
+```javascript
+import { AccountAllowanceApproveTransaction, TokenAllowance, TokenId, AccountId } from "@hashgraph/sdk";
+import Long from "long";
+
+async function addRepaymentAllowance(usdcTokenId, userAccountId, spenderContractId, userPrivateKey, repaymentAmount) {
+  const tx = new AccountAllowanceApproveTransaction({
+    tokenApprovals: [
+      new TokenAllowance({
+        tokenId: usdcTokenId,
+        ownerAccountId: userAccountId,
+        spenderAccountId: AccountId.fromString(spenderContractId),
+        amount: Long.fromNumber(repaymentAmount)
+      })
+    ]
+  });
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey);
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("Repayment Allowance Status:", receipt.status.toString());
+}
+```
+
+---
+
+### 7. Repay a Loan
+
+**Purpose:**  
+Users repay their outstanding loan to unlock their collateral.
+
+**User Flow:**  
+- **Action:** The user signs a transaction to repay the loan, triggering the collateral refund.
+
+**Example Code:**
+
+```javascript
+import { ContractExecuteTransaction, ContractFunctionParameters } from "@hashgraph/sdk";
+
+async function repayLoan(safTokenAddress, userPrivateKey) {
+  const lenderContractId = "0.0.xxxx"; // Lender contract ID
+  const tx = new ContractExecuteTransaction()
+    .setContractId(lenderContractId)
+    .setFunction("repayOutstandingLoan", new ContractFunctionParameters()
+      .addAddress(safTokenAddress)
+    )
+    .setGas(3_000_000);
+  const signedTx = await tx.freezeWith(client).sign(userPrivateKey);
+  const txResponse = await signedTx.execute(client);
+  const receipt = await txResponse.getReceipt(client);
+  console.log("Repay Loan Status:", receipt.status.toString());
+}
+```
+
+---
+
+## Best Practices
+
+- **Wallet Integration:**  
+  Use secure wallet integrations (like HashPack) to sign transactions instead of exposing private keys directly in the frontend.
+
+- **Separate Contexts:**  
+  Maintain separate flows for user and admin actions. Each should use its own client instance or wallet provider.
+
+- **Error Handling:**  
+  Ensure robust error handling in your UI to inform users of any transaction failures.
+
+- **Gas Estimation:**  
+  Dynamically estimate gas limits to avoid over- or under-provisioning.
