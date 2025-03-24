@@ -22,13 +22,14 @@ interface IERC20 {
 // TODO: add controls to prevent over liquidation from reserve in case of more than 10% of reserve has been loaned out
 contract Issuer {
 
-    event AssetPurchased(string name, uint64 amount, address buyer);
-    event AssetSold(string name, uint64 amount, address seller);
+    event AssetPurchased(string indexed name, uint64 indexed amount, address indexed buyer);
+    event AssetSold(string indexed name, uint64 indexed amount, address indexed seller);
+    event AssetCreated(string indexed name, string indexed symbol, address indexed token);
     
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x40c));
+    PriceOracle constant oracle = PriceOracle(address(0x0000000000000000000000000000000000580051));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant USDC_TOKEN_ADDRESS = address(0x40a);
+    address constant USDC_TOKEN_ADDRESS = address(0x0000000000000000000000000000000000580043);
     mapping(string => TokenizedAssetManager) public tokenizedAssets;
     mapping(address => AssetCollateralReserve) public reserves;
 
@@ -56,6 +57,8 @@ contract Issuer {
         AssetCollateralReserve reserve = new AssetCollateralReserve(address(asset));
         tokenizedAssets[_name] = asset;
         reserves[asset.token()] = reserve;
+
+        emit AssetCreated(_name, _symbol, asset.token());
     }
 
     function mint(string memory name, uint64 amount) public onlyAdmin() {
@@ -107,7 +110,7 @@ contract Issuer {
 
         uint64 usdcPricePerAsset = oracle.getPrice(token);
 
-        uint64 refundAmount = (suppliedAssets * usdcPricePerAsset) / oracle.denominator();
+        uint64 refundAmount = (suppliedAssets * usdcPricePerAsset);
 
         // transfer asset from user to contract
         int responseCode = hts.transferFrom(token, msg.sender, address(a), uint64(suppliedAssets));

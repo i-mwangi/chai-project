@@ -27,7 +27,7 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
     address public token;
     address public admin;
     uint64 public totalSupply;
-    address constant USDC_TOKEN_ADDRESS = address(0x40a);
+    address constant USDC_TOKEN_ADDRESS = address(0x0000000000000000000000000000000000580043);
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
 
     struct Loan {
@@ -256,10 +256,18 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
 
 contract Lender {
 
+    event AssetLendingReserveCreated(string indexed name, string indexed symbol, address indexed token);
+    event LoanRecorded(address indexed borrower, uint64 indexed loanAmountUSDC, uint64 indexed collateralAmountAsset, uint64 liquidationUSDCPrice, uint64 repayAmount);
+    event LoanLiquidated(address indexed borrower);
+    event LoanRepaid(address indexed borrower);
+    event LiquidityProvided(uint64 indexed amount, address indexed user);
+    event LiquidityWithdrawn(uint64 indexed amount, address indexed user);
+
+
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x40c));
+    PriceOracle constant oracle = PriceOracle(address(0x0000000000000000000000000000000000580051));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant USDC_TOKEN_ADDRESS = address(0x40a);
+    address constant USDC_TOKEN_ADDRESS = address(0x000000000000000000000000000000000057f047);
     mapping(address => LendingTokenReserve) public lendingReserves;
 
     receive() external payable {
@@ -282,6 +290,7 @@ contract Lender {
     function addLenderPool(address asset, string memory lender_token_name, string memory lender_token_symbol) payable public onlyAdmin() {
         LendingTokenReserve tokenReserve = new LendingTokenReserve{value: msg.value}(lender_token_name, lender_token_symbol, asset);
         lendingReserves[asset] = tokenReserve;
+        emit AssetLendingReserveCreated(lender_token_name, lender_token_symbol, tokenReserve.token());
     }
 
     function getLpTokenAddress(address asset) public view returns(address){
@@ -303,6 +312,8 @@ contract Lender {
         } 
 
         reserve.provideLiquidity(amount, msg.sender);
+
+        emit LiquidityProvided(amount, msg.sender);
     }
 
     function withdrawLiquidity(address asset, uint64 amount) public {
@@ -317,6 +328,8 @@ contract Lender {
 
 
         reserve.withdrawLiquidity(amount, msg.sender);
+
+        emit LiquidityWithdrawn(amount, msg.sender);
     }
 
 
@@ -350,6 +363,8 @@ contract Lender {
         reserve.loanOut(msg.sender, amount);
 
         reserve.recordLoan(msg.sender, amount, collateralisedLockedAssets, liquidationPriceUSDC, repayAmount);
+
+        emit LoanRecorded(msg.sender, amount, collateralisedLockedAssets, liquidationPriceUSDC, repayAmount);
     }
 
     function repayOutstandingLoan(address asset) public {
@@ -383,6 +398,7 @@ contract Lender {
 
         reserve.repayLoan(msg.sender);
 
+        emit LoanRepaid(msg.sender);
 
     }
 
