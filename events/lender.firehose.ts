@@ -7,6 +7,8 @@ import { eventReader } from "./utils"
 const LIMIT = 10
 const LENDER_CONTRACT_ID = process.env.Lender!
 
+console.log("Lender contract", LENDER_CONTRACT_ID)
+
 eventReader({
     store: lenderFireStore,
     abi: lenderContract.abi,

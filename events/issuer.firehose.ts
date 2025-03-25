@@ -5,6 +5,8 @@ import { eventReader } from "./utils"
 
 const ISSUER_CONTRACT_ID = process.env.Issuer!
 
+console.log("Issuer contract", ISSUER_CONTRACT_ID)
+
 const LIMIT = 10
 
 eventReader({
