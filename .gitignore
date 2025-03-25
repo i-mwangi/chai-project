@@ -5,3 +5,4 @@ sqlite
 **/*.mdb
 **/*.mdb-lock
 **/*.db
+dist
