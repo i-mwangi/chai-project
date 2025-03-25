@@ -10,23 +10,21 @@ contract AssetCollateralReserve {
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
     address asset;
     address issuer;
-    address lender;
     uint256 public totalReserve;
 
     modifier onlyAdmin() {
-        require(msg.sender == issuer || msg.sender == lender || msg.sender == address(this), "Only admin can call this function");
+        require(msg.sender == issuer || msg.sender == address(this), "Only admin can call this function");
         _;
     }
 
-    constructor(address _asset, address _issuer, address _lender) {
+    constructor(address _asset) {
         uint256 responseCode = IHRC719(USDC_TOKEN_ADDRESS).associate(); // TODO: we might need to use a different token association mechanism
         if (int32(uint32(responseCode)) != HederaResponseCodes.SUCCESS) {
             revert("Failed to setup USDC token association");
         }
         asset = _asset;
         totalReserve = 0;
-        issuer = _issuer;
-        lender = _lender;
+        issuer = msg.sender;
     }
 
     function deposit(uint64 amount) public {
@@ -44,10 +42,10 @@ contract AssetCollateralReserve {
         }
     }
 
-    function grantAllowanceToLender(uint256 amount) private onlyAdmin() {
-        int64 responseCode = hts.approve(USDC_TOKEN_ADDRESS, lender, amount);
+    function grantAllowanceToSelf(uint256 amount) private onlyAdmin() {
+        int64 responseCode = hts.approve(USDC_TOKEN_ADDRESS, address(this), amount);
         if (responseCode != HederaResponseCodes.SUCCESS) {
-            revert("Failed to grant allowance to lender");
+            revert("Failed to grant allowance to self");
         }
     }
 
@@ -57,6 +55,7 @@ contract AssetCollateralReserve {
         // } else if(msg.sender == issuer){
         //     grantAllowanceToIssuer(amount);
         // }
+        grantAllowanceToSelf(amount);
         int64 responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, address(this), account, amount);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             revert("Failed to refund");
@@ -65,34 +64,4 @@ contract AssetCollateralReserve {
     }
 
 
-}
-
-interface IReserve {
-    function createReserve(address asset) external;
-}
-
-
-contract Reserve {
-    address public admin;
-    address private issuer;
-    address private lender;
-    mapping(address => AssetCollateralReserve) public reserves;
-
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin can call this function");
-        _;
-    }
-
-    constructor() {
-        admin = msg.sender;
-    }
-
-    function addControllers(address _issuer, address _lender) public onlyAdmin {
-        issuer = _issuer;
-        lender = _lender;
-    }
-
-    function createReserve(address asset) public onlyAdmin {
-        reserves[asset] = new AssetCollateralReserve(asset, issuer, lender);
-    }
 }

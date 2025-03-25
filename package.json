@@ -4,7 +4,21 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "print-db": "tsx lookup-db.ts"
+    "print-db": "tsx lookup-db.ts",
+    "issuer:firehose:events": "tsx ./events/issuer.firehose.ts",
+    "issuer:index:events": "tsx ./events/issuer.indexer.ts",
+    "issuer": "pnpm run issuer:firehose:events & pnpm run issuer:index:events",
+    "lender:firehose:events": "tsx ./events/lender.firehose.ts",
+    "lender:index:events": "tsx ./events/lender.indexer.ts",
+    "price:provider": "tsx ./providers/price-provider.ts",
+    "timeseries:provider": "tsx ./providers/timeseries-provider.ts",
+    "providers": "pnpm run price:provider & pnpm run timeseries:provider",
+    "lender": "pnpm run lender:firehose:events & pnpm run lender:index:events",
+    "index": "pnpm run issuer & sleep 10 && pnpm run lender",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "clean-db": "rm -rf ./local-store/sqlite/sqlite.db && tsx ./events/clean.ts && rm -rf ./db/migrations && pnpm run generate && pnpm run migrate",
+    "studio": "drizzle-kit studio"
   },
   "keywords": [],
   "author": "",
@@ -12,12 +26,18 @@
   "dependencies": {
     "@hashgraph/sdk": "^2.60.1",
     "@openzeppelin/contracts": "^5.2.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "axios": "^1.8.4",
+    "better-sqlite3": "^11.9.1",
     "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.41.0",
+    "ethers": "^6.13.5",
     "node-lmdb": "^0.10.1",
     "solc": "^0.8.29"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "drizzle-kit": "^0.30.5",
     "tsx": "^4.19.3"
   }
 }

@@ -25,16 +25,8 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
     address public controller;
     address public admin;
     uint64 public totalSupply;
-    address public lender;
 
-    event AssetMinted(uint64 amount, uint64 newTotalSupply, address token);
-    event AssetBurned(uint64 amount, uint64 newTotalSupply, address token);
-    event KYCGranted(address account, address token);
-    event LoanRecorded(address borrower, uint64 loanAmountUSDC, uint64 collateralAmountAsset, uint64 liquidationUSDCPrice, uint64 repayAmount);
-    event LoanLiquidated(address borrower);
-    event LoanRepaid(address borrower);
-
-    event AssetCreated(string name, string symbol, address token, uint256 timestamp);
+    
     
 
     receive() external payable {
@@ -46,13 +38,12 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
     }
 
     modifier onlyAdmin() {
-        require(msg.sender == admin || msg.sender == address(this) || msg.sender == lender, "Only admin can call this function"); 
+        require(msg.sender == admin || msg.sender == address(this), "Only admin can call this function"); 
         _;
     }
 
-    constructor(string memory _name, string memory _symbol, address _lender) payable {
+    constructor(string memory _name, string memory _symbol) payable {
         admin = msg.sender;
-        lender = _lender;
         controller = address(this);
         IHederaTokenService.HederaToken memory tokenDetails;
         tokenDetails.name = _name;
@@ -83,8 +74,6 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
 
         token = tokenAddress;
         totalSupply = 0;
-
-        emit AssetCreated(_name, _symbol, token, block.timestamp);
     }
 
     function mint(uint64 amount) public onlyAdmin() {
@@ -95,8 +84,6 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
         }
 
         totalSupply = uint64(_newTotalSupply);
-
-        emit AssetMinted(amount, totalSupply, token);
     }
 
     function burn(uint64 amount) public onlyAdmin() {
@@ -107,8 +94,6 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
        }
 
          totalSupply = uint64(_newTokenSupply);
-
-        emit AssetBurned(amount, totalSupply, token);
     }
 
     function grantKYC(address account) public onlyAdmin() {
@@ -123,7 +108,6 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
 
         }
         
-        emit KYCGranted(account, token);
     }
 
     function airdropPurchasedTokens(address target, uint64 amount) public onlyAdmin() {
@@ -158,37 +142,5 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
             revert("Failed to airdrop tokens");
         }
 
-    }
-
-    function recordLoan(address borrower, uint64 loanAmountUSDC, uint64 collateralAmountAsset, uint64 liquidationUSDCPrice, uint64 repayAmount) public onlyAdmin() {
-        Loan storage existingLoan = loans[borrower];
-        require(!existingLoan.isOutstanding, "Loan already exists for borrower");
-        loans[borrower] = Loan(loanAmountUSDC, collateralAmountAsset, liquidationUSDCPrice, repayAmount, false, false, true);
-
-        emit LoanRecorded(borrower, loanAmountUSDC, collateralAmountAsset, liquidationUSDCPrice, repayAmount);
-    }
-
-    function liquidateLoan(address borrower) public onlyAdmin() {
-        Loan storage loan = loans[borrower];
-        loan.isLiquidated = true;
-
-        emit LoanLiquidated(borrower);
-    }
-
-    function repayLoan(address borrower) public onlyAdmin() {
-        Loan storage loan = loans[borrower];
-        loan.isRepaid = true;
-        loan.isOutstanding = false;
-        loan.isLiquidated = false;
-        loan.loanAmountUSDC = 0;
-        loan.collateralAmountAsset = 0;
-        loan.liquidationUSDCPrice = 0;
-        loan.repayAmountUSDC = 0;
-
-        emit LoanRepaid(borrower);
-    }
-
-    function getLoan(address borrower) public view returns (Loan memory) {
-        return loans[borrower];
     }
 }

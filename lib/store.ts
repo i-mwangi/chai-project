@@ -1,6 +1,7 @@
 import lmdb from 'node-lmdb'
 import fs from 'node:fs'
 import path from 'node:path';
+import { StoreReadStream, StreamOptions } from './stream';
 
 const env = new lmdb.Env()
 let isOpen = false
@@ -126,9 +127,9 @@ export default class Store{
     }
 
 
-    // createStream(options?: StreamOptions,) {
-    //     const stream = new StoreReadStream(env, this.db, options)
-    //     return stream
-    // }
+    createStream(options?: StreamOptions) {
+        const stream = new StoreReadStream(env, this.db, options)
+        return stream
+    }
 
 }
