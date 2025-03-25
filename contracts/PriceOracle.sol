@@ -4,6 +4,7 @@ pragma solidity 0.8.29;
 contract PriceOracle {
     address public admin;
     uint64 public denominator = 1000000;
+    event PriceUpdate(address indexed tokenId, uint64 indexed price);
     mapping(address => uint64) public prices; // 1 share -> price in usdc
 
     modifier onlyAdmin() {
@@ -17,6 +18,7 @@ contract PriceOracle {
 
     function updatePrice(address tokenId, uint64 price) public onlyAdmin {
         prices[tokenId] = price;
+        emit PriceUpdate(tokenId, price);
     }
 
     function getPrice(address tokenId) public view returns (uint64) {

@@ -50,7 +50,7 @@ describe("Issuer", async ()=> {
     
         })
     
-    test.skip("Admin: add reserve asset", async () => {
+    test("Admin: add reserve asset", async () => {
             const reserveContractId = testStore.get("Reserve")
             if(!reserveContractId) throw new Error("Reserve Contract ID not found");
             const tokenAddress = testStore.get("SAF_TOKEN_ADDRESS")

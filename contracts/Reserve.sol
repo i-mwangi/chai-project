@@ -6,7 +6,7 @@ import "./system-contracts/HederaResponseCodes.sol";
 import "./system-contracts/hedera-token-service/IHRC719.sol";
 
 contract AssetCollateralReserve {
-    address constant USDC_TOKEN_ADDRESS = address(0x0000000000000000000000000000000000580043);
+    address constant USDC_TOKEN_ADDRESS = address(0x40a);
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
     address asset;
     address issuer;

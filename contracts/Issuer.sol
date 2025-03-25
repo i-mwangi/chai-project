@@ -16,20 +16,39 @@ interface IERC20 {
      */
     function balanceOf(address account) external view returns (uint256);
 
+    /**
+     * @dev Returns the value of tokens in existence.
+     */
+    function totalSupply() external view returns (uint256);
+
+}
+
+function stringToBytes32(string memory source) pure returns (bytes32 result) {
+    bytes memory temp = bytes(source);
+    if (temp.length == 0) {
+        return 0x0;
+    }
+    assembly {
+        result := mload(add(temp, 32))
+    }
 }
 
 
 // TODO: add controls to prevent over liquidation from reserve in case of more than 10% of reserve has been loaned out
 contract Issuer {
 
-    event AssetPurchased(string indexed name, uint64 indexed amount, address indexed buyer);
-    event AssetSold(string indexed name, uint64 indexed amount, address indexed seller);
-    event AssetCreated(string indexed name, string indexed symbol, address indexed token);
+    event AssetMinted(uint64 indexed amount, uint256 indexed newTotalSupply, address indexed token);
+    event AssetBurned(uint64 indexed amount, uint256 indexed newTotalSupply, address indexed token);
+    event KYCGranted(address indexed account, address indexed token);
+
+    event AssetPurchased(address indexed asset, uint64 indexed amount, address indexed buyer);
+    event AssetSold(address indexed asset, uint64 indexed amount, address indexed seller);
+    event AssetCreated(bytes32 indexed name, bytes32 indexed symbol, address indexed token);
     
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x0000000000000000000000000000000000580051));
+    PriceOracle constant oracle = PriceOracle(address(0x40c));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant USDC_TOKEN_ADDRESS = address(0x0000000000000000000000000000000000580043);
+    address constant USDC_TOKEN_ADDRESS = address(0x40a);
     mapping(string => TokenizedAssetManager) public tokenizedAssets;
     mapping(address => AssetCollateralReserve) public reserves;
 
@@ -58,19 +77,26 @@ contract Issuer {
         tokenizedAssets[_name] = asset;
         reserves[asset.token()] = reserve;
 
-        emit AssetCreated(_name, _symbol, asset.token());
+        emit AssetCreated(stringToBytes32(_name), stringToBytes32(_symbol), asset.token());
     }
 
     function mint(string memory name, uint64 amount) public onlyAdmin() {
         tokenizedAssets[name].mint(amount);
+        address token = tokenizedAssets[name].token();
+        uint256 currentSupply = IERC20(token).totalSupply();
+        emit AssetMinted(amount, currentSupply, token);
     }
 
     function burn(string memory name, uint64 amount) public onlyAdmin() {
         tokenizedAssets[name].burn(amount);
+        address token = tokenizedAssets[name].token();
+        uint256 currentSupply = IERC20(token).totalSupply();
+        emit AssetBurned(amount, currentSupply, token);
     }
 
     function grantKYC(string memory name, address account) public onlyAdmin() {
         tokenizedAssets[name].grantKYC(account);
+        emit KYCGranted(account, tokenizedAssets[name].token());
     }
 
     function getTokenAddress(string memory name) public view returns (address) {
@@ -98,7 +124,7 @@ contract Issuer {
         asset.airdropPurchasedTokens(msg.sender, amount);
         assetCollateralReserve.deposit(totalCost);
 
-        emit AssetPurchased(name, amount, msg.sender);
+        emit AssetPurchased(token, amount, msg.sender);
     }
 
 
@@ -121,6 +147,6 @@ contract Issuer {
 
         r.refund(uint64(refundAmount), msg.sender);
 
-        emit AssetSold(name, suppliedAssets, msg.sender); // TODO: due to size issues may need to remove this
+        emit AssetSold(token, suppliedAssets, msg.sender);
     }
 }

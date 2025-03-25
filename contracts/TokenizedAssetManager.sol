@@ -26,9 +26,7 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
     address public admin;
     uint64 public totalSupply;
 
-    event AssetMinted(uint64 indexed amount, uint64 indexed newTotalSupply, address indexed token);
-    event AssetBurned(uint64 indexed amount, uint64 indexed newTotalSupply, address indexed token);
-    event KYCGranted(address indexed account, address indexed token);
+    
     
 
     receive() external payable {
@@ -86,8 +84,6 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
         }
 
         totalSupply = uint64(_newTotalSupply);
-
-        emit AssetMinted(amount, totalSupply, token);
     }
 
     function burn(uint64 amount) public onlyAdmin() {
@@ -98,8 +94,6 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
        }
 
          totalSupply = uint64(_newTokenSupply);
-
-        emit AssetBurned(amount, totalSupply, token);
     }
 
     function grantKYC(address account) public onlyAdmin() {
@@ -114,7 +108,6 @@ contract TokenizedAssetManager is HederaTokenService, KeyHelper {
 
         }
         
-        emit KYCGranted(account, token);
     }
 
     function airdropPurchasedTokens(address target, uint64 amount) public onlyAdmin() {
