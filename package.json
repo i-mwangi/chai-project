@@ -9,7 +9,7 @@
     "issuer:firehose:events": "node ./dist/events/issuer.firehose.js",
     "issuer:index:events": "node ./dist/events/issuer.indexer.js",
     "issuer": "pnpm run issuer:firehose:events & pnpm run issuer:index:events",
-    "lender:firehose:events": "node ./dist/events/lender.firehose.ts",
+    "lender:firehose:events": "node ./dist/events/lender.firehose.js",
     "lender:index:events": "node ./dist/events/lender.indexer.js",
     "price:provider": "node ./dist/providers/price-provider.js",
     "timeseries:provider": "node ./dist/providers/timeseries-provider.js",
