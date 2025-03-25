@@ -2,6 +2,7 @@
   "name": "hedgehog",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "print-db": "tsx lookup-db.ts",
