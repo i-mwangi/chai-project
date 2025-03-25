@@ -1,4 +1,5 @@
 import "dotenv/config"
+import "../loadIntoEnv"
 import { ContractExecuteTransaction, ContractFunctionParameters, EvmAddress, TokenId } from "@hashgraph/sdk"
 import { getClient, getEnv } from "../utils"
 import { testStore } from "../lib/test-store"

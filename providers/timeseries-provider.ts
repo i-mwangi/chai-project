@@ -1,3 +1,4 @@
+import "../loadIntoEnv"
 import { db } from "../db"
 import { realwordAssetTimeseries } from "../db/schema"
 import { generateId } from "../lib/utils"

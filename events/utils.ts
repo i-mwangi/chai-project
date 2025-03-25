@@ -24,7 +24,7 @@ async function readEventLogs (args: EventOptions) {
 
     const lastRecordedEvent = indexingStore.getObject<{timestamp: number, index: number}>(`${contract_id}_lastRecordedEvent`)
     if(lastRecordedEvent){
-        _next_url = `/api/v1/contracts/${contract_id}/results/logs?order=asc&limit=${limit}&timestamp=gt:${lastRecordedEvent.timestamp}&index=gt:${lastRecordedEvent.index}`
+        _next_url = `/api/v1/contracts/${contract_id}/results/logs?order=asc&limit=${limit}&timestamp=gte:${lastRecordedEvent.timestamp}&index=gt:${lastRecordedEvent.index}`
     }
 
     let next_url = _next_url ?? `/api/v1/contracts/${contract_id}/results/logs`
