@@ -1,4 +1,7 @@
 node_modules
 dist
 sqlite
-sqlite.db
+**/sqlite.db
+**/*.mdb
+**/*.mdb-lock
+**/*.db
