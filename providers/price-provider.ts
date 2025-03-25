@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { ContractExecuteTransaction, ContractFunctionParameters, EvmAddress, TokenId } from "@hashgraph/sdk"
 import { getClient, getEnv } from "../utils"
 import { testStore } from "../lib/test-store"
@@ -7,7 +8,7 @@ import { generateId } from "../lib/utils"
 
 const client = getClient()
 const admin = getEnv()
-const PRICE_CONTRACT_ID = testStore.get("PriceOracle")
+const PRICE_CONTRACT_ID = process.env.PriceOracle!
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 

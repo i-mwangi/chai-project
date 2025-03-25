@@ -45,7 +45,7 @@ async function readEventLogs (args: EventOptions) {
     }
 
     if(last){
-        // indexingStore.setObject(`${contract_id}_lastRecordedEvent`, {timestamp: parseFloat(last.timestamp), index: last.index}) // TODO: turn this back on when production ready
+        indexingStore.setObject(`${contract_id}_lastRecordedEvent`, { timestamp: parseFloat(last.timestamp), index: last.index }) // TODO: turn this back on when production ready
     }
 
     let next = response.data.links.next
