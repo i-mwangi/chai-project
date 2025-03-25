@@ -46,9 +46,9 @@ contract Issuer {
     event AssetCreated(bytes32 indexed name, bytes32 indexed symbol, address indexed token);
     
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x40c));
+    PriceOracle constant oracle = PriceOracle(address(0x581616));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant USDC_TOKEN_ADDRESS = address(0x40a);
+    address constant USDC_TOKEN_ADDRESS = address(0x5815ef);
     mapping(string => TokenizedAssetManager) public tokenizedAssets;
     mapping(address => AssetCollateralReserve) public reserves;
 

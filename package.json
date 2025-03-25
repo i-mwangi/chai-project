@@ -18,13 +18,15 @@
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "clean-db": "rm -rf ./local-store/sqlite/sqlite.db && tsx ./events/clean.ts && rm -rf ./db/migrations && pnpm run generate && pnpm run migrate",
-    "studio": "drizzle-kit studio"
+    "studio": "drizzle-kit studio",
+    "start": "pnpm run index & sleep 10 && pnpm run providers"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@hashgraph/sdk": "^2.60.1",
+    "@libsql/client": "^0.15.1",
     "@openzeppelin/contracts": "^5.2.0",
     "@types/better-sqlite3": "^7.6.12",
     "axios": "^1.8.4",

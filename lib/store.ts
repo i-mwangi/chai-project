@@ -6,6 +6,9 @@ import { StoreReadStream, StreamOptions } from './stream';
 const env = new lmdb.Env()
 let isOpen = false
 
+const network = process.env.NETWORK ?? 'testnet'
+const isTestnet = network === 'testnet'
+
 
 
 export default class Store{
@@ -17,8 +20,8 @@ export default class Store{
     }
 
 
-    static init(name: string) {
-        let dir_name = path.join(process.cwd(), 'store')
+    static init(name: string, customPath?: string) {
+        let dir_name = path.join(process.cwd(), isTestnet ? "local-store/store" : 'store')
         let dirExists = fs.existsSync(dir_name)
 
         if(!dirExists){

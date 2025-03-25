@@ -1,10 +1,11 @@
+import "../loadIntoEnv"
 import { testStore } from "../lib/test-store"
 import lenderContract from "../abi/Lender.json"
 import { lenderFireStore } from "../lib/stores"
 import { eventReader } from "./utils"
 
-const LENDER_CONTRACT_ID = testStore.get("Lender")
 const LIMIT = 10
+const LENDER_CONTRACT_ID = process.env.Lender!
 
 eventReader({
     store: lenderFireStore,

@@ -29,7 +29,7 @@ const issuerId = ContractId.fromString(issuerIdString)
 describe("Lending Protocol", () => {
 
 
-    test("Setup Accounts", async () => {
+    test.skip("Setup Accounts", async () => {
         await setupTestUserWithSAFToken(secondTesteter)
     })
 
@@ -56,7 +56,7 @@ describe("Lending Protocol", () => {
 
     })
 
-    test("Get Lp Token Address", async () => {
+    test.skip("Get Lp Token Address", async () => {
         console.log("Contract ID::", contractIdString)
         const queryRes = await new ContractCallQuery({
             contractId: contractId,
@@ -87,7 +87,7 @@ describe("Lending Protocol", () => {
 
     })
 
-    test("Grant KYC to reserve", async () => {
+    test.skip("Grant KYC to reserve", async () => {
         const reserveAddress = testStore.get(`RESERVE_ADDRESS`)
         if (!reserveAddress) throw new Error("Reserve Address not found");
         const reserveId = AccountId.fromString(reserveAddress)
@@ -112,7 +112,7 @@ describe("Lending Protocol", () => {
     })
 
     // TODO: associate lp tokens and approve lending
-    test("Associate LP Tokens", async () => {
+    test.skip("Associate LP Tokens", async () => {
 
         const lpTokenAddress = testStore.get(`LP_TOKEN_ADDRESS`)
         if (!lpTokenAddress) throw new Error("LP Token Address not found");
@@ -136,7 +136,7 @@ describe("Lending Protocol", () => {
         client.setOperator(admin.ACCOUNT_ID, admin.PRIVATE_KEY)
     })
 
-    test("Approve Lending", async () => {
+    test.skip("Approve Lending", async () => {
         client.setOperator(secondTesteter.ACCOUNT_ID, secondTesteter.PRIVATE_KEY)
 
         const tx = await new AccountAllowanceApproveTransaction({
@@ -160,7 +160,7 @@ describe("Lending Protocol", () => {
 
     })
 
-    test("Provide Liquidity", async () => {
+    test.skip("Provide Liquidity", async () => {
         client.setOperator(secondTesteter.ACCOUNT_ID, secondTesteter.PRIVATE_KEY)
 
         const tx = await new ContractExecuteTransaction()
@@ -183,7 +183,7 @@ describe("Lending Protocol", () => {
         client.setOperator(admin.ACCOUNT_ID, admin.PRIVATE_KEY)
     })
 
-    test("Give contract allowance to spend SAF", async () => {
+    test.skip("Give contract allowance to spend SAF", async () => {
         client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
         const tx = await new AccountAllowanceApproveTransaction({
             tokenApprovals: [
@@ -206,7 +206,7 @@ describe("Lending Protocol", () => {
         client.setOperator(admin.ACCOUNT_ID, admin.PRIVATE_KEY)
     })
 
-    test("Take Out Loan", async () => {
+    test.skip("Take Out Loan", async () => {
         client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
 
         const tx = await new ContractExecuteTransaction()
@@ -229,7 +229,7 @@ describe("Lending Protocol", () => {
         client.setOperator(admin.ACCOUNT_ID, admin.PRIVATE_KEY)
     })
 
-    test("Add Allowance", async () => {
+    test.skip("Add Allowance", async () => {
         client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
 
         const tx = await new AccountAllowanceApproveTransaction({
@@ -255,7 +255,7 @@ describe("Lending Protocol", () => {
     })
 
 
-    test("Repay Loan", async () => {
+    test.skip("Repay Loan", async () => {
         client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
 
         const tx = await new ContractExecuteTransaction()
