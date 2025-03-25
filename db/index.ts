@@ -2,7 +2,7 @@ import "dotenv/config"
 import { drizzle } from 'drizzle-orm/libsql';
 import Database from 'better-sqlite3';
 import * as schema from "./schema"
-import { createClient } from "@libsql/client/.";
+import { createClient } from "@libsql/client";
 
 const DB_URL = process.env.DB_URL
 const NETWORK = process.env.NETWORK
