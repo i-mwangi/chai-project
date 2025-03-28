@@ -1,22 +1,70 @@
 import "../loadIntoEnv"
 import { db } from "../db"
-import { realwordAssetTimeseries } from "../db/schema"
+import { prices, realwordAssetTimeseries } from "../db/schema"
 import { generateId } from "../lib/utils"
+import { desc } from "drizzle-orm"
 
 
 async function getNextTimeSeriesData(asset: string){
     // TODO: intergrate with live data feed from secondary data provider
 
-    return {
-        open: 100, 
-        close: 100,
-        high: 100,
-        low: 100,
-        net: 5000,
-        gross: 21000,
-        timestamp: Date.now(),
-        asset
+    const lastPriceUpdate = await db.query.realwordAssetTimeseries.findMany({
+        where: (prices, { eq }) => eq(prices.asset, asset),
+        orderBy: desc(prices.timestamp),
+        limit: 1
+    })
+
+    const lastCandle = lastPriceUpdate[0]
+    let lastTimestamp = Date.now()
+
+    if (lastCandle) {
+        lastTimestamp = lastCandle.timestamp
+    } else {
+        const lastPrice = await db.query.prices.findFirst({
+            where: (prices, { eq }) => eq(prices.token, asset),
+            orderBy: desc(prices.timestamp)
+        })
+
+        if (lastPrice) {
+            lastTimestamp = lastPrice.timestamp
+        }
+        else {
+            return []
+        }
     }
+    const currentTime = Date.now()
+    const timeDiff = currentTime - lastTimestamp
+
+    const slots = Math.ceil(timeDiff / 60_000) // 1 minute slots
+
+    const seriesData = await Promise.all(Array.from({ length: slots }, async (_, i) => {
+        const pricesInSlotQuery = await db.query.prices.findMany({
+            where: (prices, { eq, and, gt, gte, lte }) => and(
+                eq(prices.token, asset),
+                gte(prices.timestamp, lastCandleTimestamp + i * 60_000),
+                lte(prices.timestamp, lastCandleTimestamp + (i + 1) * 60_000)
+            )
+        })
+
+        const pricesInSlot = pricesInSlotQuery.map(price => price.price)
+        const open = pricesInSlot[0] ?? 0
+        const close = pricesInSlot[pricesInSlot.length - 1] ?? 0
+        const high = Math.max(...pricesInSlot, open)
+        const low = Math.min(...pricesInSlot, open)
+        const net = close - open
+        const gross = pricesInSlot.reduce((acc, price) => acc + price, 0)
+        return {
+            open,
+            close,
+            high,
+            low,
+            net,
+            gross,
+            timestamp: lastCandleTimestamp + i * 60_000
+        }
+    }))
+
+    return seriesData
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -29,17 +77,18 @@ async function updateTimeSeriesData(options: UpdateTimeSeriesOptions) {
     const { asset } = options
 
     try {
-        const data = await getNextTimeSeriesData(asset)
-
-        console.log("Time series data updated for", asset, "with data", data)
+        const seriesData = await getNextTimeSeriesData(asset)
 
         try {
-            await db.insert(realwordAssetTimeseries).values({
-                id: generateId(`price_${asset}`),
-                ...data
-            })
+            for (const data of seriesData) {
+                await db.insert(realwordAssetTimeseries).values({
+                    id: generateId(`price_${asset}`),
+                    ...data,
+                    asset: asset
+                })
+            }
 
-            await sleep(10_000)
+            await sleep(120_000)
         }
         catch (e)
         {

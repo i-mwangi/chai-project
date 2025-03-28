@@ -10,7 +10,7 @@ import "./system-contracts/hedera-token-service/KeyHelper.sol";
 import "./system-contracts/hedera-token-service/ExpiryHelper.sol";
 import "./system-contracts/hedera-token-service/IHRC719.sol";
 
-contract TempUSDC is HederaTokenService, KeyHelper, ExpiryHelper {
+contract KES is HederaTokenService, KeyHelper, ExpiryHelper {
     address public token;
     address admin;
 
@@ -33,8 +33,8 @@ contract TempUSDC is HederaTokenService, KeyHelper, ExpiryHelper {
 
     function initialize() external payable onlyAdmin() {
         IHederaTokenService.HederaToken memory tokenDetails;
-        tokenDetails.name = "TempUSDC";
-        tokenDetails.symbol = "TUSDC";
+        tokenDetails.name = "Kenyan Shilling";
+        tokenDetails.symbol = "KES";
         tokenDetails.treasury = address(this);
         tokenDetails.expiry = createAutoRenewExpiry(address(this), 7890000);
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](6);
@@ -49,7 +49,7 @@ contract TempUSDC is HederaTokenService, KeyHelper, ExpiryHelper {
 
         tokenDetails.tokenKeys = keys;
         
-        (int response, address tokenAddress) = createFungibleToken(tokenDetails, 1000000, 6);
+        (int response, address tokenAddress) = createFungibleToken(tokenDetails, 100_000_000_000_000, 6);
 
         if (response != HederaResponseCodes.SUCCESS){
             revert("Failed to create token");

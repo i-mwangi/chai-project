@@ -46,9 +46,9 @@ contract Issuer {
     event AssetCreated(bytes32 indexed name, bytes32 indexed symbol, address indexed token);
     
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x581616));
+    PriceOracle constant oracle = PriceOracle(address(0x5859fb));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant USDC_TOKEN_ADDRESS = address(0x5815ef);
+    address constant KES = address(0x00000000000000000000000000000000005859f2);
     mapping(string => TokenizedAssetManager) public tokenizedAssets;
     mapping(address => AssetCollateralReserve) public reserves;
 
@@ -108,16 +108,16 @@ contract Issuer {
         address token = asset.token();
         AssetCollateralReserve assetCollateralReserve = reserves[token];
 
-        uint64 usdcPricePerAsset = oracle.getPrice(token);
+        uint64 kesPricePerAsset = oracle.getPrice(token);
 
-        // calculate usdc price
-        uint64 totalCost = (usdcPricePerAsset * amount);
+        // calculate kes price
+        uint64 totalCost = (kesPricePerAsset * amount);
 
-        // Transfer USDC to reserve
-        int responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, msg.sender, address(assetCollateralReserve), uint64(totalCost));
+        // Transfer KES to reserve
+        int responseCode = hts.transferFrom(KES, msg.sender, address(assetCollateralReserve), uint64(totalCost));
 
         if(responseCode != HederaResponseCodes.SUCCESS){
-            revert("Failed to transfer USDC");
+            revert("Failed to transfer KES");
         }
         
         // airdrop asset to buyer
@@ -134,9 +134,9 @@ contract Issuer {
         address token = a.token();
         AssetCollateralReserve r = reserves[token];
 
-        uint64 usdcPricePerAsset = oracle.getPrice(token);
+        uint64 kesPricePerAsset = oracle.getPrice(token);
 
-        uint64 refundAmount = (suppliedAssets * usdcPricePerAsset);
+        uint64 refundAmount = (suppliedAssets * kesPricePerAsset);
 
         // transfer asset from user to contract
         int responseCode = hts.transferFrom(token, msg.sender, address(a), uint64(suppliedAssets));

@@ -15,7 +15,10 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 function getNextPrice(asset: string){
     // TODO: do some custom logic here to get the next price in USDC - default will be 100 for now
-    return 100
+    const price_variations = [100, 150, 110, 90, 120, 130, 140, 83, 85, 90, 104]
+    const randomIndex = Math.floor(Math.random() * price_variations.length)
+    const price = price_variations[randomIndex] ?? 100
+    return price
 }
 
 interface UpdateOptions {

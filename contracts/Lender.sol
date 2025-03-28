@@ -42,14 +42,14 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
     address public token;
     address public admin;
     uint64 public totalSupply;
-    address constant USDC_TOKEN_ADDRESS = address(0x5815ef);
+    address constant KES = address(0x00000000000000000000000000000000005859f2);
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
 
     struct Loan {
-        uint64 loanAmountUSDC;
+        uint64 loanAmountKES;
         uint64 collateralAmountAsset;
-        uint64 liquidationUSDCPrice;
-        uint64 repayAmountUSDC;
+        uint64 liquidationKESPrice;
+        uint64 repayAmountKES;
         bool isLiquidated;
         bool isRepaid;
         bool isOutstanding;
@@ -108,13 +108,13 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
         uint256 associationResponseCode = IHRC719(_asset).associate();
 
         if(int64(uint64(associationResponseCode)) != HederaResponseCodes.SUCCESS){
-            revert("Failed to associate token to USDC");
+            revert("Failed to associate token to KES");
         }
 
-        associationResponseCode = IHRC719(USDC_TOKEN_ADDRESS).associate();
+        associationResponseCode = IHRC719(KES).associate();
 
         if(int64(uint64(associationResponseCode)) != HederaResponseCodes.SUCCESS){
-            revert("Failed to associate USDC token");
+            revert("Failed to associate KES token");
         }
 
 
@@ -198,17 +198,17 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
 
         burn(amount);
 
-        int responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, address(this), user, amount);
+        int responseCode = hts.transferFrom(KES, address(this), user, amount);
 
         if(responseCode != HederaResponseCodes.SUCCESS){
-            revert("Failed to transfer USDC");
+            revert("Failed to transfer KES");
         }
     }
 
-    function recordLoan(address borrower, uint64 loanAmountUSDC, uint64 collateralAmountAsset, uint64 liquidationUSDCPrice, uint64 repayAmount) public onlyAdmin() {
+    function recordLoan(address borrower, uint64 loanAmountKES, uint64 collateralAmountAsset, uint64 liquidationKESPrice, uint64 repayAmount) public onlyAdmin() {
         Loan storage existingLoan = loans[borrower];
         require(!existingLoan.isOutstanding, "Loan already exists for borrower");
-        loans[borrower] = Loan(loanAmountUSDC, collateralAmountAsset, liquidationUSDCPrice, repayAmount, false, false, true);
+        loans[borrower] = Loan(loanAmountKES, collateralAmountAsset, liquidationKESPrice, repayAmount, false, false, true);
 
     }
 
@@ -223,10 +223,10 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
         loan.isRepaid = true;
         loan.isOutstanding = false;
         loan.isLiquidated = false;
-        loan.loanAmountUSDC = 0;
+        loan.loanAmountKES = 0;
         loan.collateralAmountAsset = 0;
-        loan.liquidationUSDCPrice = 0;
-        loan.repayAmountUSDC = 0;
+        loan.liquidationKESPrice = 0;
+        loan.repayAmountKES = 0;
 
     }
 
@@ -234,20 +234,20 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
         return loans[borrower];
     }
 
-    function grantUSDCAllowanceToSelf(uint256 amount) private onlyAdmin() {
-        int64 responseCode = hts.approve(USDC_TOKEN_ADDRESS, address(this), amount);
+    function grantKESAllowanceToSelf(uint256 amount) private onlyAdmin() {
+        int64 responseCode = hts.approve(KES, address(this), amount);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             revert("Failed to grant allowance to self");
         }
     }
 
     function loanOut(address borrower, uint256 amount) public onlyAdmin() {
-        grantUSDCAllowanceToSelf(amount);
+        grantKESAllowanceToSelf(amount);
 
-        int64 responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, address(this), borrower, amount);
+        int64 responseCode = hts.transferFrom(KES, address(this), borrower, amount);
 
         if(responseCode != HederaResponseCodes.SUCCESS){
-            revert("Failed to transfer USDC");
+            revert("Failed to transfer KES");
         }
     }
 
@@ -272,7 +272,7 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
 contract Lender {
 
     event AssetLendingReserveCreated(address indexed asset,address indexed token, bytes32 indexed name);
-    event LoanRecorded(address indexed token, address indexed borrower, uint64 indexed loanAmountUSDC, uint64 collateralAmountAsset, uint64 liquidationUSDCPrice, uint64 repayAmount);
+    event LoanRecorded(address indexed token, address indexed borrower, uint64 indexed loanAmountKES, uint64 collateralAmountAsset, uint64 liquidationKESPrice, uint64 repayAmount);
     event LoanLiquidated(address indexed token, address indexed borrower);
     event LoanRepaid(address indexed token, address indexed borrower, uint64 indexed repayAmount);
     event LiquidityProvided(address indexed asset, uint64 indexed amount, address indexed user);
@@ -280,9 +280,9 @@ contract Lender {
 
 
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x581616));
+    PriceOracle constant oracle = PriceOracle(address(0x5859fb));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant USDC_TOKEN_ADDRESS = address(0x5815ef);
+    address constant KES = address(0x00000000000000000000000000000000005859f2);
     mapping(address => LendingTokenReserve) public lendingReserves;
 
     receive() external payable {
@@ -320,10 +320,10 @@ contract Lender {
     function provideLiquidity(address asset, uint64 amount) public {
         LendingTokenReserve reserve = lendingReserves[asset];
 
-        int responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, msg.sender, address(reserve), uint256(amount));
+        int responseCode = hts.transferFrom(KES, msg.sender, address(reserve), uint256(amount));
 
         if(responseCode != HederaResponseCodes.SUCCESS){
-            revert("Failed to transfer USDC");
+            revert("Failed to transfer KES");
         } 
 
         reserve.provideLiquidity(amount, msg.sender);
@@ -356,13 +356,13 @@ contract Lender {
         require(existingLoan.isOutstanding == false, "Loan already exists");
         require(existingLoan.isLiquidated == false, "Loan already exists");
 
-        uint64 usdcPricePerAsset = oracle.getPrice(asset);
+        uint64 kesPricePerAsset = oracle.getPrice(asset);
 
-        uint64 baseLockedAssets = uint64(Math.ceilDiv(uint256(amount) , uint256(usdcPricePerAsset)));
+        uint64 baseLockedAssets = uint64(Math.ceilDiv(uint256(amount) , uint256(kesPricePerAsset)));
         
         uint64 collateralisedLockedAssets = uint64(Math.ceilDiv((baseLockedAssets * 125) , 100)); // 125% collateralisation ratio
 
-        uint64 liquidationPriceUSDC = uint64(Math.ceilDiv((usdcPricePerAsset * 90) ,100));
+        uint64 liquidationPriceKES = uint64(Math.ceilDiv((kesPricePerAsset * 90) ,100));
 
         uint64 repayAmount = uint64(Math.ceilDiv((amount * 110) , 100)); // 110% repayment amount
 
@@ -377,13 +377,13 @@ contract Lender {
         // assetCollateralReserve.refund(uint256(amount), msg.sender);
         reserve.loanOut(msg.sender, amount);
 
-        reserve.recordLoan(msg.sender, amount, collateralisedLockedAssets, liquidationPriceUSDC, repayAmount);
+        reserve.recordLoan(msg.sender, amount, collateralisedLockedAssets, liquidationPriceKES, repayAmount);
 
-        emit LoanRecorded(asset, msg.sender, amount, collateralisedLockedAssets, liquidationPriceUSDC, repayAmount);
+        emit LoanRecorded(asset, msg.sender, amount, collateralisedLockedAssets, liquidationPriceKES, repayAmount);
     }
 
     function repayOutstandingLoan(address asset) public {
-        // Before contract call, approve USDC transfer from user to contract
+        // Before contract call, approve KES transfer from user to contract
         LendingTokenReserve reserve = lendingReserves[asset];
         LendingTokenReserve.Loan memory loan = reserve.getLoan(msg.sender);
 
@@ -399,10 +399,10 @@ contract Lender {
             revert("Loan is already repaid");
         }
 
-        int responseCode = hts.transferFrom(USDC_TOKEN_ADDRESS, msg.sender, address(reserve), uint256(uint64(loan.repayAmountUSDC)));
+        int responseCode = hts.transferFrom(KES, msg.sender, address(reserve), uint256(uint64(loan.repayAmountKES)));
 
         if(responseCode != HederaResponseCodes.SUCCESS){
-            revert("Failed to transfer USDC");
+            revert("Failed to transfer KES");
         }
 
         reserve.refundCollateral(msg.sender, uint64(loan.collateralAmountAsset));
@@ -411,7 +411,7 @@ contract Lender {
             revert("Failed to transfer asset");
         }
 
-        emit LoanRepaid(asset, msg.sender, loan.repayAmountUSDC);
+        emit LoanRepaid(asset, msg.sender, loan.repayAmountKES);
 
 
         reserve.repayLoan(msg.sender);

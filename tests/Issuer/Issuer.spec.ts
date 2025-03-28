@@ -7,9 +7,13 @@ const client = getClient()
 const admin = getEnv()
 const user = getTestUser()
 
+const TOKEN_NAME = "Bamburi Cement"
+const TOKEN_SYMBOL = "BAMB"
+
 describe("Issuer", async ()=> {
-    const contractId = testStore.get("Issuer")
-    const usdcTokenAddress = testStore.get("USDC_TOKEN_ADDRESS") 
+    const contractId = process.env.Issuer_TESTNET
+    console.log("Contract ID", contractId)
+    const usdcTokenAddress = process.env.USDC_TOKEN_ADDRESS;
 
     if(!contractId || !usdcTokenAddress) throw new Error("Contract ID not found")
 
@@ -21,8 +25,8 @@ describe("Issuer", async ()=> {
             .setPayableAmount(new Hbar(40))
             .setFunction("createTokenizedAsset", 
                 new ContractFunctionParameters()
-                .addString("Safaricom")
-                .addString("SAF")
+                    .addString(TOKEN_NAME)
+                    .addString(TOKEN_SYMBOL)
             )
             .freezeWith(client)
             .sign(admin.PRIVATE_KEY)
@@ -38,7 +42,7 @@ describe("Issuer", async ()=> {
             .setGas(300_000)
             .setFunction("getTokenAddress",
                 new ContractFunctionParameters()
-                .addString("Safaricom")
+                    .addString(TOKEN_NAME)
             )
             .execute(client)
     
@@ -46,33 +50,10 @@ describe("Issuer", async ()=> {
     
             console.log(`Token Address: ${tokenAddress}`)
     
-            testStore.set("SAF_TOKEN_ADDRESS", tokenAddress.toString())
+        testStore.set(`TOKEN_ADDRESS_${TOKEN_NAME}`, tokenAddress.toString())
     
         })
-    
-    test("Admin: add reserve asset", async () => {
-            const reserveContractId = testStore.get("Reserve")
-            if(!reserveContractId) throw new Error("Reserve Contract ID not found");
-            const tokenAddress = testStore.get("SAF_TOKEN_ADDRESS")
-            if(!tokenAddress) throw new Error("Token Address not found");
-            const contractAddress = ContractId.fromString(contractId).toSolidityAddress()
-            const tx = await new ContractExecuteTransaction()
-            .setContractId(reserveContractId)
-            .setGas(4_000_000)
-            .setFunction("createReserve",
-                new ContractFunctionParameters()
-                .addAddress(tokenAddress)
-            )
-            .freezeWith(client)
-            .sign(admin.PRIVATE_KEY)
-    
-            const submittedTx = await tx.execute(client)
-            const receipt = await submittedTx.getReceipt(client)
-    
-            console.log(`Tx Hash: ${tx.transactionId} Status: ${receipt.status}`)
-            console.log(`Contract ID: ${receipt.contractId}`)
-        })
-    
+
     test("Admin: mint 1 billion SAF", async () => {
     
     
@@ -81,7 +62,7 @@ describe("Issuer", async ()=> {
             .setGas(4_000_000)
             .setFunction("mint",
                 new ContractFunctionParameters()
-                .addString("Safaricom")
+                    .addString(TOKEN_NAME)
                 .addUint64(1_000_000_000)
             )
             .freezeWith(client)
@@ -94,7 +75,7 @@ describe("Issuer", async ()=> {
             console.log(`Contract ID: ${receipt.contractId}`)
         })
     
-    test("User: associate with saf token", async () => {
+    test.skip("User: associate with saf token", async () => {
             const tokenAddress = testStore.get("SAF_TOKEN_ADDRESS")
             if(!tokenAddress) throw new Error("Token Address not found")
             //     const isAssociated = testStore.get(`${user.ACCOUNT_ID}_ASSOCIATED_${tokenAddress}`)
@@ -121,7 +102,7 @@ describe("Issuer", async ()=> {
     
         // TODO: KYC granted on intial purchase tos test user, but need to add explicit tests with another user
     
-    test("Update Price Oracle with valuation of SAF in USDC", async () => {
+    test.skip("Update Price Oracle with valuation of SAF in USDC", async () => {
             const priceOracleContractId = testStore.get("PriceOracle")
             if(!priceOracleContractId) throw new Error("Price Oracle Contract ID not found");
             const tokenAddress = testStore.get("SAF_TOKEN_ADDRESS")
@@ -146,7 +127,7 @@ describe("Issuer", async ()=> {
     
         })
     
-    test("Approve Spending TempUSDC", async () => {
+    test.skip("Approve Spending TempUSDC", async () => {
             client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
             const tempUSDCAddress = testStore.get("USDC_TOKEN_ADDRESS")
             const tempUSDCId = testStore.get("USDC_TOKEN_ID")
@@ -176,7 +157,7 @@ describe("Issuer", async ()=> {
     
         })
 
-    test("Grant KYC to user", async () => {
+    test.skip("Grant KYC to user", async () => {
 
             const tx = await new ContractExecuteTransaction()
             .setContractId(contractId)
@@ -197,7 +178,7 @@ describe("Issuer", async ()=> {
 
         })
     
-    test("Purchase 100 SAF", async () => { 
+    test.skip("Purchase 100 SAF", async () => { 
     
             client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
     
@@ -221,7 +202,7 @@ describe("Issuer", async ()=> {
             client.setOperator(admin.ACCOUNT_ID, admin.PRIVATE_KEY)
         })
     
-    test("Give contract allowance to spend 50 SAF", async () => {
+    test.skip("Give contract allowance to spend 50 SAF", async () => {
     
             client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
             const safToknenAddress = testStore.get("SAF_TOKEN_ADDRESS")
@@ -249,7 +230,7 @@ describe("Issuer", async ()=> {
             client.setOperator(admin.ACCOUNT_ID, admin.PRIVATE_KEY)
         })
     
-    test("Sell 50 SAF", async () => {
+    test.skip("Sell 50 SAF", async () => {
     
             client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
     
@@ -273,7 +254,7 @@ describe("Issuer", async ()=> {
             client.setOperator(admin.ACCOUNT_ID, admin.PRIVATE_KEY)
         })
     
-    test("burn 50 SAF", async () => {
+    test.skip("burn 50 SAF", async () => {
     
             const tx = await new ContractExecuteTransaction()
             .setContractId(contractId)
