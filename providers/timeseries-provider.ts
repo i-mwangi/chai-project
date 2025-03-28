@@ -65,4 +65,4 @@ async function timeSeriesProvider(){
 }
 
 
-timeSeriesProvider() 
+await timeSeriesProvider() 

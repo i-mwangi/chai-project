@@ -84,4 +84,4 @@ async function priceProvider(){
     }
 }
 
-priceProvider()
+await priceProvider()
