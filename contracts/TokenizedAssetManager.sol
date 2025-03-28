@@ -9,25 +9,11 @@ import "./system-contracts/hedera-token-service/IHRC719.sol";
 import "./@openzeppelin/contracts/utils/Strings.sol";
 
 contract TokenizedAssetManager is HederaTokenService, KeyHelper {
-
-    struct Loan {
-        uint64 loanAmountUSDC;
-        uint64 collateralAmountAsset;
-        uint64 liquidationUSDCPrice;
-        uint64 repayAmountUSDC;
-        bool isLiquidated;
-        bool isRepaid;
-        bool isOutstanding;
-    }
-
-    mapping (address => Loan) private loans;
     address public token;
     address public controller;
     address public admin;
     uint64 public totalSupply;
 
-    
-    
 
     receive() external payable {
         // do nothing

@@ -8,11 +8,11 @@ const user = getTestUser()
 const admin = getEnv()
 
 
-describe("TempUSDC", async ()=>{
+describe("KES", async ()=>{
 
-    test("Initialize Temp USDC tokens", async (t)=> {
+    test("Initialize KES tokens", async (t)=> {
     
-            const contractId = testStore.get("TempUSDC")
+        const contractId = testStore.get("KES")
             if(!contractId) throw new Error("Contract ID not found")
             
             const tx = await new ContractExecuteTransaction()
@@ -46,8 +46,8 @@ describe("TempUSDC", async ()=>{
     
             console.log(`Token ID: ${tokenID}`);
     
-            testStore.set("USDC_TOKEN_ID", tokenID.toString())
-            testStore.set("USDC_TOKEN_ADDRESS", tokenAddress)
+            testStore.set("KES_TOKEN_ID", tokenID.toString())
+            testStore.set("KES_TOKEN_ADDRESS", tokenAddress)
     
     
     
@@ -55,7 +55,7 @@ describe("TempUSDC", async ()=>{
     
     
     test("Mint Temp USDC tokens", async ()=> {
-        const contractId = testStore.get("TempUSDC")
+        const contractId = testStore.get("KES")
         if(!contractId) throw new Error("Contract ID not found")
     
         const tx = await new ContractExecuteTransaction()
@@ -81,9 +81,9 @@ describe("TempUSDC", async ()=>{
     
     test("Associate and Grant KYC", async () => {
         
-        const contractId = testStore.get("TempUSDC")
-        const tokenId = testStore.get("USDC_TOKEN_ID")
-        const tokenAddress = testStore.get("USDC_TOKEN_ADDRESS")
+        const contractId = testStore.get("KES")
+        const tokenId = testStore.get("KES_TOKEN_ID")
+        const tokenAddress = testStore.get("KES_TOKEN_ADDRESS")
         console.log("Token Address", tokenId)
     
         if(!contractId || !tokenAddress || !tokenId) throw new Error("Contract ID not found")
@@ -107,7 +107,7 @@ describe("TempUSDC", async ()=>{
     
     test("Airdrop a billion temp USDC to user", async ()=> {
         
-        const contractId = testStore.get("TempUSDC")
+        const contractId = testStore.get("KES")
         if(!contractId) throw new Error("Contract ID not found")
         
         client.setOperator(user.ACCOUNT_ID, user.PRIVATE_KEY)
