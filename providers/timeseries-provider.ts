@@ -41,8 +41,8 @@ async function getNextTimeSeriesData(asset: string){
         const pricesInSlotQuery = await db.query.prices.findMany({
             where: (prices, { eq, and, gt, gte, lte }) => and(
                 eq(prices.token, asset),
-                gte(prices.timestamp, lastCandleTimestamp + i * 60_000),
-                lte(prices.timestamp, lastCandleTimestamp + (i + 1) * 60_000)
+                gte(prices.timestamp, lastTimestamp + i * 60_000),
+                lte(prices.timestamp, lastTimestamp + (i + 1) * 60_000)
             )
         })
 
@@ -60,7 +60,7 @@ async function getNextTimeSeriesData(asset: string){
             low,
             net,
             gross,
-            timestamp: lastCandleTimestamp + i * 60_000
+            timestamp: lastTimestamp + i * 60_000
         }
     }))
 
