@@ -83,7 +83,7 @@ async function priceProvider(){
 
         }
 
-        await sleep(3600_000)
+        await sleep(60_000)
     }
 }
 
