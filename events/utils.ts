@@ -146,7 +146,11 @@ export async function indexFirestore(options: IndexerOptions){
 
     for await (const chunk of stream.iterator()){
         const data = chunk.value
-        await processor(chunk.key, data)
+        try {
+            await processor(chunk.key, data)
+        } catch (e) {
+            console.log("Error processing chunk", e)
+        }
         indexingStore.set(`lastCommitedKey_${contract}`, chunk.key)
     }
 }
