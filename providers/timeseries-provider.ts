@@ -47,6 +47,7 @@ async function getNextTimeSeriesData(asset: string){
         })
 
         const pricesInSlot = pricesInSlotQuery.map(price => price.price)
+        if (!pricesInSlot) return null
         const open = pricesInSlot[0] ?? 0
         const close = pricesInSlot[pricesInSlot.length - 1] ?? 0
         const high = Math.max(...pricesInSlot, open)
@@ -64,7 +65,15 @@ async function getNextTimeSeriesData(asset: string){
         }
     }))
 
-    return seriesData
+    return seriesData?.filter(data => data !== null) as Array<{
+        open: number
+        close: number
+        high: number
+        low: number
+        net: number
+        gross: number
+        timestamp: number
+    }>
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
