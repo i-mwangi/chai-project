@@ -7,7 +7,6 @@ import { indexFirestore } from "./utils";
 
 indexFirestore({
     contract: 'lender',
-    ignoreLastCommit: true,
     processor: async (key, data) => {
         console.log("Processing key", key)
         console.log("Processing data", data)
