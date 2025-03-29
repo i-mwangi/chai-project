@@ -42,7 +42,7 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
     address public token;
     address public admin;
     uint64 public totalSupply;
-    address constant KES = address(0x00000000000000000000000000000000005859f2);
+    address constant KES = address(0x0000000000000000000000000000000000585f50);
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
 
     struct Loan {
@@ -280,9 +280,9 @@ contract Lender {
 
 
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x5859fb));
+    PriceOracle constant oracle = PriceOracle(address(0x585f5e));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant KES = address(0x00000000000000000000000000000000005859f2);
+    address constant KES = address(0x0000000000000000000000000000000000585f50);
     mapping(address => LendingTokenReserve) public lendingReserves;
 
     receive() external payable {

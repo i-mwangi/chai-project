@@ -40,7 +40,7 @@ export async function updatePrice(options: UpdateOptions){
         .setFunction("updatePrice", 
             new ContractFunctionParameters()
             .addAddress( EvmAddress.fromString(asset))
-            .addUint64(price)
+                .addUint64(price * 1_000_000)
         )
         .freezeWith(client)
         .sign(admin.PRIVATE_KEY)

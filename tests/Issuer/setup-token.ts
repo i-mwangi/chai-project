@@ -151,7 +151,7 @@ export async function setupLenderPools(args: {
     .freezeWith(client)
     .sign(admin.PRIVATE_KEY)
     
-    const gsubmittedTx = await tx.execute(client)
+    const gsubmittedTx = await gtx.execute(client)
     
     const greceipt = await gsubmittedTx.getReceipt(client)
     
@@ -225,18 +225,18 @@ export const assets = [
       symbol: "EABL",
       tokenizedSymbol: "hhEABL"
     },
-    {
-      id: "coop",
-      name: "Co-operative Bank",
-      symbol: "COOP",
-      tokenizedSymbol: "hhCOOP"
-    },
-    {
-      id: "bamb",
-      name: "Bamburi Cement",
-      symbol: "BAMB",
-      tokenizedSymbol: "hhBAMB"
-    },
+    // {
+    //   id: "coop",
+    //   name: "Co-operative Bank",
+    //   symbol: "COOP",
+    //   tokenizedSymbol: "hhCOOP"
+    // },
+    // {
+    //   id: "bamb",
+    //   name: "Bamburi Cement",
+    //   symbol: "BAMB",
+    //   tokenizedSymbol: "hhBAMB"
+    // },
   ];
 
 async function main () {
@@ -266,4 +266,4 @@ async function kycs(){
 }
 
 // await main()
-// await kycs()
+await kycs()
