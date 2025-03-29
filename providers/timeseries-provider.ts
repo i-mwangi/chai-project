@@ -97,7 +97,7 @@ async function updateTimeSeriesData(options: UpdateTimeSeriesOptions) {
                 })
             }
 
-            await sleep(120_000)
+
         }
         catch (e)
         {
@@ -119,6 +119,8 @@ async function timeSeriesProvider(){
         for (const asset of assets){
             await updateTimeSeriesData({asset: asset.token})
         }
+
+        await sleep(120_000)
     }
 }
 
