@@ -113,16 +113,16 @@ async function updateTimeSeriesData(options: UpdateTimeSeriesOptions) {
 
 
 async function timeSeriesProvider(){
-    return 0;
-    const assets = await db.query.assets.findMany()
+    // return 0;
+    // const assets = await db.query.assets.findMany()
 
-    while(true) {
-        for (const asset of assets){
-            await updateTimeSeriesData({asset: asset.token})
-        }
+    // while(true) {
+    //     for (const asset of assets){
+    //         await updateTimeSeriesData({asset: asset.token})
+    //     }
 
-        await sleep(120_000)
-    }
+    //     await sleep(120_000)
+    // }
 }
 
 

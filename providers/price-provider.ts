@@ -74,17 +74,17 @@ export async function updatePrice(options: UpdateOptions){
 
 
 async function priceProvider(){
-    return 0; 
+    // return 0; 
     const assets = await db.query.assets.findMany()
 
-    while(true) {
-        for (const asset of assets){
-            await updatePrice({asset: asset.token})
+    // while(true) {
+    //     for (const asset of assets){
+    //         await updatePrice({asset: asset.token})
 
-        }
+    //     }
 
-        await sleep(60_000)
-    }
+    //     await sleep(60_000)
+    // }
 }
 
 await priceProvider()
