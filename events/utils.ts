@@ -148,6 +148,7 @@ export async function indexFirestore(options: IndexerOptions){
         store.dump()
     }
     const lastCommitedKey = indexingStore.get(`lastCommitedKey_${contract}`) ?? null
+    console.log("Last Commited key ::", lastCommitedKey)
     const stream = store.createStream({
         batchSize: 10,
         start_slot: ignoreLastCommit  ? undefined : lastCommitedKey
