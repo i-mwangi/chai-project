@@ -9,7 +9,7 @@ console.log("Issuer contract", ISSUER_CONTRACT_ID)
 
 const LIMIT = 10
 
-eventReader({
+await eventReader({
     store: issuerFireStore,
     abi: issuerContract.abi,
     contract_id: ISSUER_CONTRACT_ID,

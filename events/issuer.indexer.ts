@@ -4,7 +4,7 @@ import { issuerFireStore } from "../lib/stores";
 import { indexFirestore } from "./utils";
 
 
-indexFirestore({
+await indexFirestore({
     contract: 'issuer',
     processor: async (key, data) => {
         console.log("Processing key", key)

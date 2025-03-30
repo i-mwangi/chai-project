@@ -9,7 +9,7 @@ const LENDER_CONTRACT_ID = process.env.Lender!
 
 console.log("Lender contract", LENDER_CONTRACT_ID)
 
-eventReader({
+await eventReader({
     store: lenderFireStore,
     abi: lenderContract.abi,
     contract_id: LENDER_CONTRACT_ID,

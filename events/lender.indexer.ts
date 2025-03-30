@@ -5,7 +5,7 @@ import { generateId } from "../lib/utils";
 import { indexFirestore } from "./utils";
 
 
-indexFirestore({
+await indexFirestore({
     contract: 'lender',
     processor: async (key, data) => {
         console.log("Processing key", key)
