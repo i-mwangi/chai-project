@@ -74,7 +74,7 @@ export async function updatePrice(options: UpdateOptions){
 
 
 async function priceProvider(){
-    
+    return 0; 
     const assets = await db.query.assets.findMany()
 
     while(true) {

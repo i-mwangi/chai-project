@@ -113,6 +113,7 @@ async function updateTimeSeriesData(options: UpdateTimeSeriesOptions) {
 
 
 async function timeSeriesProvider(){
+    return 0;
     const assets = await db.query.assets.findMany()
 
     while(true) {

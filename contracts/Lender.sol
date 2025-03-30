@@ -196,9 +196,15 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
         
         // TODO: handling rewards
 
+        (int responseCode,) = hts.allowance(token, address(this), address(this));
+
+        if(responseCode != HederaResponseCodes.SUCCESS){
+            revert("Failed to grant self allowance");
+        }
+
         burn(amount);
 
-        int responseCode = hts.transferFrom(KES, address(this), user, amount);
+        responseCode = hts.transferFrom(KES, address(this), user, amount);
 
         if(responseCode != HederaResponseCodes.SUCCESS){
             revert("Failed to transfer KES");
