@@ -28,8 +28,8 @@ indexFirestore({
                     collateralAmount: data.collateralAmountAsset,
                     collateralAsset: data.token,
                     id: generateId("loan"),
-                    liquidationPrice: data.liquidationUSDCPrice,
-                    loanAmountUSDC: data.loanAmountUSDC,
+                    liquidationPrice: data.liquidationKESPrice,
+                    loanAmountUSDC: data.loanAmountKES,
                     repaymentAmount: data.repayAmount,
                     timestamp: data.timestamp
                 })
