@@ -23,8 +23,10 @@ async function readEventLogs (args: EventOptions) {
     const intfc = new Interface(abi)
 
     const lastRecordedEvent = indexingStore.getObject<{timestamp: number, index: number}>(`${contract_id}_lastRecordedEvent`)
+    console.log("Last Recorded Event", lastRecordedEvent)
     if(lastRecordedEvent){
         _next_url = `/api/v1/contracts/${contract_id}/results/logs?order=asc&limit=${limit}&timestamp=gte:${lastRecordedEvent.timestamp}&index=gt:${lastRecordedEvent.index}`
+        console.log("Updated last recorded event ::", _next_url)
     }
 
     let next_url = _next_url ?? `/api/v1/contracts/${contract_id}/results/logs`
@@ -102,6 +104,8 @@ export async function eventReader(args: EventOptions & { store: Store, nukeFirst
 
     let next_url: string | undefined = _next_url ?? `/api/v1/contracts/${contract_id}/results/logs`
 
+    console.log("Next URL::", next_url)
+
     do {
         const result = await readEventLogs({
             abi,
@@ -109,6 +113,7 @@ export async function eventReader(args: EventOptions & { store: Store, nukeFirst
             contract_id,
             limit
         })
+        console.log("Results ::", result)
         next_url = result.next
 
         for (const event of result.events){
