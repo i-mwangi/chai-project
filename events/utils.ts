@@ -31,6 +31,8 @@ async function readEventLogs (args: EventOptions) {
 
     const url = `${MIRROR_NODE_BASE_API}${next_url}`
 
+    console.log("DATA URL::", url)
+
     const response = await axios.get(url, {
         params: {
             order: "asc",
@@ -45,6 +47,7 @@ async function readEventLogs (args: EventOptions) {
     }
 
     if(last){
+        console.log("Setting last recorded to::", last)
         indexingStore.setObject(`${contract_id}_lastRecordedEvent`, { timestamp: parseFloat(last.timestamp), index: last.index }) // TODO: turn this back on when production ready
     }
 
@@ -114,6 +117,7 @@ export async function eventReader(args: EventOptions & { store: Store, nukeFirst
             if(!existing){
                 store.setObject(id, event)
             }
+            console.log(`Completed recording ${id}`)
         }
 
         if(result.emptyNext){
