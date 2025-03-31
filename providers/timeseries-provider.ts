@@ -114,20 +114,25 @@ async function updateTimeSeriesData(options: UpdateTimeSeriesOptions) {
 
 async function timeSeriesProvider(){
     // return 0;
-    // const assets = await db.query.assets.findMany()
-
-    // while(true) {
-    //     for (const asset of assets){
-    //         await updateTimeSeriesData({asset: asset.token})
-    //     }
-
-    //     await sleep(120_000)
-    // }
+    const assets = await db.query.assets.findMany()
 
     while (true) {
-        await sleep(60_000)
-        console.log("RUNNING TIME SERIES PROVIDER")
+        if (process.env.NO_PRICE_UPDATE == "true") {
+            await sleep(120_000)
+            continue
+        }
+
+        for (const asset of assets) {
+            await updateTimeSeriesData({ asset: asset.token })
+        }
+
+        await sleep(120_000)
     }
+
+    // while (true) {
+    //     await sleep(60_000)
+    //     console.log("RUNNING TIME SERIES PROVIDER")
+    // }
 }
 
 
