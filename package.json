@@ -21,7 +21,7 @@
     "clean-db": "rm -rf ./local-store/sqlite/sqlite.db && tsx ./events/clean.ts && rm -rf ./db/migrations && pnpm run generate && pnpm run migrate",
     "studio": "drizzle-kit studio",
     "build": "rm -rf ./dist && tsup",
-    "start": "pnpm run index & pnpm run providers",
+    "start": "pnpm run index",
     "token-prep": "tsx ./tests/Issuer/setup-token.ts"
   },
   "keywords": [],
