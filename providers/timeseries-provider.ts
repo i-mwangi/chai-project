@@ -123,6 +123,11 @@ async function timeSeriesProvider(){
 
     //     await sleep(120_000)
     // }
+
+    while (true) {
+        await sleep(60_000)
+        console.log("RUNNING TIME SERIES PROVIDER")
+    }
 }
 
 
