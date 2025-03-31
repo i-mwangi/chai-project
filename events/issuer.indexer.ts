@@ -3,7 +3,7 @@ import { assets, kyc, transactions } from "../db/schema";
 import { issuerFireStore } from "../lib/stores";
 import { indexFirestore } from "./utils";
 
-
+console.log("STARTED ISSUER INDEXER")
 await indexFirestore({
     contract: 'issuer',
     processor: async (key, data) => {
@@ -75,3 +75,4 @@ await indexFirestore({
     },
     store: issuerFireStore
 })
+console.log("ENDED ISSUER INDEXER")

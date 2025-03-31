@@ -5,6 +5,7 @@ import { eventReader } from "./utils"
 
 const ISSUER_CONTRACT_ID = process.env.Issuer!
 
+console.log("STARTED ISSUER FIREHOSE")
 console.log("Issuer contract", ISSUER_CONTRACT_ID)
 
 const LIMIT = 10
@@ -16,3 +17,4 @@ await eventReader({
     limit: LIMIT
 })
 
+console.log("ENDED ISSUER FIREHOSE")

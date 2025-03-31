@@ -4,7 +4,7 @@ import {lenderFireStore } from "../lib/stores";
 import { generateId } from "../lib/utils";
 import { indexFirestore } from "./utils";
 
-
+console.log("Started  LENDER INDEXER")
 await indexFirestore({
     contract: 'lender',
     processor: async (key, data) => {
@@ -106,3 +106,5 @@ await indexFirestore({
     },
     store: lenderFireStore
 })
+
+console.log("ENDED LENDER INDEXER")
