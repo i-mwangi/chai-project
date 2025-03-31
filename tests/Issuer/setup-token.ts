@@ -225,18 +225,18 @@ export const assets = [
       symbol: "EABL",
       tokenizedSymbol: "hhEABL"
     },
-    // {
-    //   id: "coop",
-    //   name: "Co-operative Bank",
-    //   symbol: "COOP",
-    //   tokenizedSymbol: "hhCOOP"
-    // },
-    // {
-    //   id: "bamb",
-    //   name: "Bamburi Cement",
-    //   symbol: "BAMB",
-    //   tokenizedSymbol: "hhBAMB"
-    // },
+    {
+        id: "coop",
+        name: "Co-operative Bank",
+        symbol: "COOP",
+        tokenizedSymbol: "hhCOOP"
+    },
+    {
+        id: "bamb",
+        name: "Bamburi Cement",
+        symbol: "BAMB",
+        tokenizedSymbol: "hhBAMB"
+    },
   ];
 
 async function main () {
@@ -265,5 +265,5 @@ async function kycs(){
     }
 }
 
-// await main()
-await kycs()
+await main()
+// await kycs()

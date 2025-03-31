@@ -46,9 +46,9 @@ contract Issuer {
     event AssetCreated(bytes32 indexed name, bytes32 indexed symbol, address indexed token);
     
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x585f5e));
+    PriceOracle constant oracle = PriceOracle(address(0x0000000000000000000000000000000000588104));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant KES = address(0x0000000000000000000000000000000000585f50);
+    address constant KES = address(0x5880fb);
     mapping(string => TokenizedAssetManager) public tokenizedAssets;
     mapping(address => AssetCollateralReserve) public reserves;
 

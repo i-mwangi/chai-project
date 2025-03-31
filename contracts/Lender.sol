@@ -42,7 +42,7 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
     address public token;
     address public admin;
     uint64 public totalSupply;
-    address constant KES = address(0x0000000000000000000000000000000000585f50);
+    address constant KES = address(0x5880fb);
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
 
     struct Loan {
@@ -196,11 +196,12 @@ contract LendingTokenReserve is HederaTokenService, KeyHelper {
         
         // TODO: handling rewards
 
-        (int responseCode,) = hts.allowance(token, address(this), address(this));
+        int responseCode = hts.approve(KES, address(this), amount);
 
         if(responseCode != HederaResponseCodes.SUCCESS){
             revert("Failed to grant self allowance");
         }
+
 
         burn(amount);
 
@@ -286,9 +287,9 @@ contract Lender {
 
 
     address public admin;
-    PriceOracle constant oracle = PriceOracle(address(0x585f5e));
+    PriceOracle constant oracle = PriceOracle(address(0x0000000000000000000000000000000000588104));
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
-    address constant KES = address(0x0000000000000000000000000000000000585f50);
+    address constant KES = address(0x5880fb);
     mapping(address => LendingTokenReserve) public lendingReserves;
 
     receive() external payable {
