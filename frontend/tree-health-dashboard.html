@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Health Dashboard - Coffee Tree Platform</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/tree-health-dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Tree Health Dashboard</h1>
+                <div class="header-controls">
+                    <select id="grove-selector" class="form-select">
+                        <option value="">Loading groves...</option>
+                    </select>
+                    <select id="time-range" class="form-select">
+                        <option value="1h">Last Hour</option>
+                        <option value="24h" selected>Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
+                    <button id="refresh-dashboard" class="btn btn-primary">
+                        <i class="icon-refresh"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-main" id="tree-health-dashboard">
+            <div class="dashboard-grid">
+                <!-- Health Overview Section -->
+                <section class="dashboard-section health-overview-section">
+                    <div id="health-overview" class="health-overview">
+                        <div class="loading-placeholder">
+                            <p>Select a grove to view health data</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Alerts Panel -->
+                <section class="dashboard-section alerts-section">
+                    <div id="alerts-panel" class="alerts-panel">
+                        <h4>Alerts</h4>
+                        <div class="loading-placeholder">
+                            <p>Loading alerts...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Sensor Charts Section -->
+                <section class="dashboard-section charts-section">
+                    <h3>Environmental Monitoring</h3>
+                    <div id="sensor-charts" class="sensor-charts">
+                        <div class="loading-placeholder">
+                            <p>Loading sensor data...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Recommendations Section -->
+                <section class="dashboard-section recommendations-section">
+                    <div id="recommendations" class="recommendations">
+                        <h4>Recommendations</h4>
+                        <div class="loading-placeholder">
+                            <p>Loading recommendations...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Yield Projections Section -->
+                <section class="dashboard-section yield-section">
+                    <div id="yield-projections" class="yield-projections">
+                        <h4>Yield Projections</h4>
+                        <div class="loading-placeholder">
+                            <p>Loading yield data...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Maintenance Log Section -->
+                <section class="dashboard-section maintenance-section">
+                    <div id="maintenance-log" class="maintenance-log">
+                        <h4>Maintenance Log</h4>
+                        <div class="loading-placeholder">
+                            <p>Loading maintenance activities...</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Maintenance Activity Modal -->
+        <div id="maintenance-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Log Maintenance Activity</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="maintenance-form" class="modal-body">
+                    <div class="form-group">
+                        <label for="activity-type">Activity Type</label>
+                        <select id="activity-type" name="activityType" required>
+                            <option value="">Select activity type...</option>
+                            <option value="WATERING">Watering</option>
+                            <option value="FERTILIZING">Fertilizing</option>
+                            <option value="PRUNING">Pruning</option>
+                            <option value="PEST_TREATMENT">Pest Treatment</option>
+                            <option value="DISEASE_TREATMENT">Disease Treatment</option>
+                            <option value="SOIL_AMENDMENT">Soil Amendment</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="activity-description">Description</label>
+                        <textarea id="activity-description" name="description" required 
+                                  placeholder="Describe the maintenance activity..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="activity-cost">Cost (USD)</label>
+                            <input type="number" id="activity-cost" name="cost" 
+                                   step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="area-treated">Area Treated (hectares)</label>
+                            <input type="number" id="area-treated" name="areaTreated" 
+                                   step="0.1" min="0" placeholder="0.0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="materials-used">Materials Used</label>
+                        <input type="text" id="materials-used" name="materialsUsed" 
+                               placeholder="e.g., Organic fertilizer, Water, Pesticide">
+                        <small>Separate multiple materials with commas</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="weather-conditions">Weather Conditions</label>
+                        <input type="text" id="weather-conditions" name="weatherConditions" 
+                               placeholder="e.g., Sunny, 25°C, Light breeze">
+                    </div>
+                    <div class="form-group">
+                        <label for="activity-notes">Notes</label>
+                        <textarea id="activity-notes" name="notes" 
+                                  placeholder="Additional notes or observations..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="activity-date">Activity Date</label>
+                        <input type="datetime-local" id="activity-date" name="activityDate" required>
+                    </div>
+                </form>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                    <button type="submit" form="maintenance-form" class="btn btn-primary">Log Activity</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Action Button for Maintenance -->
+        <button id="add-maintenance" class="fab" title="Log Maintenance Activity">
+            <i class="icon-plus"></i>
+        </button>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notifications" class="notifications-container"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/tree-health-dashboard.js"></script>
+    <script>
+        // Initialize maintenance modal functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('maintenance-modal')
+            const addBtn = document.getElementById('add-maintenance')
+            const closeButtons = document.querySelectorAll('.modal-close')
+            const form = document.getElementById('maintenance-form')
+
+            // Open modal
+            addBtn?.addEventListener('click', () => {
+                modal.style.display = 'flex'
+                // Set default date to now
+                const now = new Date()
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+                document.getElementById('activity-date').value = now.toISOString().slice(0, 16)
+            })
+
+            // Close modal
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.style.display = 'none'
+                    form.reset()
+                })
+            })
+
+            // Close modal on backdrop click
+            modal?.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none'
+                    form.reset()
+                }
+            })
+
+            // Handle form submission
+            form?.addEventListener('submit', async (e) => {
+                e.preventDefault()
+                
+                const formData = new FormData(form)
+                const data = {
+                    groveId: window.treeHealthDashboard?.currentGroveId,
+                    farmerAddress: '0x1234567890123456789012345678901234567890', // Would come from wallet
+                    activityType: formData.get('activityType'),
+                    description: formData.get('description'),
+                    cost: formData.get('cost') ? Math.round(parseFloat(formData.get('cost')) * 100) : null,
+                    materialsUsed: formData.get('materialsUsed') ? 
+                        formData.get('materialsUsed').split(',').map(m => m.trim()).filter(m => m) : [],
+                    areaTreated: formData.get('areaTreated') ? parseFloat(formData.get('areaTreated')) : null,
+                    weatherConditions: formData.get('weatherConditions') || null,
+                    notes: formData.get('notes') || null,
+                    activityDate: formData.get('activityDate')
+                }
+
+                try {
+                    const response = await fetch('/api/tree-monitoring/maintenance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    })
+                    
+                    const result = await response.json()
+                    
+                    if (result.success) {
+                        modal.style.display = 'none'
+                        form.reset()
+                        window.treeHealthDashboard?.loadMaintenanceActivities()
+                        window.treeHealthDashboard?.showSuccess('Maintenance activity logged successfully')
+                    } else {
+                        throw new Error(result.error)
+                    }
+                } catch (error) {
+                    console.error('Error logging maintenance activity:', error)
+                    window.treeHealthDashboard?.showError('Failed to log maintenance activity')
+                }
+            })
+        })
+    </script>
+</body>
+</html>

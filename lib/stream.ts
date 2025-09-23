@@ -1,5 +1,6 @@
-import lmdb from 'node-lmdb'
 import { Readable } from 'stream'
+import { getLmdb } from './lmdb-shim'
+const lmdb: any = getLmdb()
 
 export interface StreamOptions {
     start_slot?: string
@@ -10,15 +11,15 @@ export interface StreamOptions {
 
 export class StoreReadStream extends Readable {
     private options: StreamOptions
-    private env: lmdb.Env
-    private dbi: lmdb.Dbi
+    private env: any
+    private dbi: any
     private last_key: string | null = null
     private isReading = false
     private _closed = false
 
     constructor(
-        env: lmdb.Env,
-        dbi: lmdb.Dbi,
+        env: any,
+        dbi: any,
         options: StreamOptions = {}
     ) {
         super({ objectMode: true })
@@ -89,7 +90,7 @@ export class StoreReadStream extends Readable {
         }
     }
 
-    private finishBatch(cursor: lmdb.Cursor, txn: lmdb.Txn) {
+    private finishBatch(cursor: any, txn: any) {
         cursor.close()
         txn.abort()
         this.isReading = false

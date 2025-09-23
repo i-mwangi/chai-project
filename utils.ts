@@ -2,6 +2,12 @@ import "dotenv/config"
 import path from "path"
 import fs from "fs"
 import { AccountId, Client, EvmAddress, PrivateKey } from "@hashgraph/sdk"
+
+type SHARED_KEYS = {
+    FILE_ID: string | null
+    CONTRACT_ID: string | null
+    USDC_TOKEN_ID: string | null
+}
 export function updateShared(fileId: string, contractId: string, usdcTokenId?: string) {
     const shared: SHARED_KEYS = {
         FILE_ID: fileId,

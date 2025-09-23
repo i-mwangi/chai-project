@@ -8,6 +8,34 @@
       "when": 1743198929855,
       "tag": "0000_cooing_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1758294921664,
+      "tag": "0001_numerous_payback",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1758336692319,
+      "tag": "0002_crazy_nemesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1758340315158,
+      "tag": "0003_round_tana_nile",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1758340817457,
+      "tag": "0004_nebulous_moira_mactaggert",
+      "breakpoints": true
     }
   ]
 }

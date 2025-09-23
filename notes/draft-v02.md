@@ -1,4 +1,4 @@
-# Hedgehog Lending Protocol
+# chai project Lending Protocol
 
 _Version: Draft v0.0.2_
 
@@ -8,7 +8,7 @@ This document outlines a lending protocol that uses real-world assets (RWAs)—s
 
 ## 1. Introduction
 
-The Hedgehog Lending Protocol is designed to enable secure lending by leveraging fungible assets that are backed 1:1 by shares held in reserve. Users can deposit these tokenized shares and use them as collateral to borrow USDC. Key elements of the system include an automated pricing oracle, periodic liquidity management, and comprehensive risk controls.
+The chai project Lending Protocol is designed to enable secure lending by leveraging fungible assets that are backed 1:1 by shares held in reserve. Users can deposit these tokenized shares and use them as collateral to borrow USDC. Key elements of the system include an automated pricing oracle, periodic liquidity management, and comprehensive risk controls.
 
 ## 2. Base Module
 

@@ -1,0 +1,374 @@
+/* Marketplace Styles */
+
+.marketplace-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.marketplace-header {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.marketplace-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.marketplace-filters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.marketplace-filters select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+}
+
+.marketplace-search {
+    flex: 1;
+    max-width: 300px;
+}
+
+.marketplace-search input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.marketplace-listings {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.marketplace-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.marketplace-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.listing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.grove-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.grove-meta {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.variety-tag, .location-tag {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.location-tag {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.health-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.health-score {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.health-score.success {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.health-score.warning {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.health-score.danger {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+.listing-price {
+    text-align: right;
+}
+
+.listing-price .price {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #8B4513;
+}
+
+.listing-price small {
+    display: block;
+    color: #666;
+    font-size: 0.75rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detail-item .label {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.detail-item .value {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.text-success {
+    color: #28a745 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.listing-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.listing-actions .btn {
+    flex: 1;
+    max-width: 120px;
+}
+
+/* Modal Enhancements */
+.modal-content.large {
+    max-width: 800px;
+    width: 90vw;
+}
+
+.listing-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.detail-section h5 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #8B4513;
+    padding-bottom: 0.5rem;
+}
+
+.detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row .label {
+    font-weight: 500;
+    color: #666;
+}
+
+.detail-row .value {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Purchase/Listing Forms */
+.investment-summary, .purchase-calculation, .listing-calculation {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.summary-row, .calc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.summary-row:last-child, .calc-row:last-child {
+    border-bottom: none;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Trade History */
+.trade-item {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.trade-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.trade-header h5 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.trade-date {
+    color: #666;
+    font-size: 0.875rem;
+}
+
+.trade-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .marketplace-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .marketplace-filters {
+        justify-content: space-between;
+    }
+    
+    .marketplace-search {
+        max-width: none;
+    }
+    
+    .marketplace-listings {
+        grid-template-columns: 1fr;
+    }
+    
+    .listing-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .listing-price {
+        text-align: left;
+    }
+    
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .listing-details-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .listing-actions {
+        flex-direction: column;
+    }
+    
+    .listing-actions .btn {
+        max-width: none;
+    }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.empty-state h4 {
+    margin: 0 0 0.5rem 0;
+    color: #999;
+}
+
+.empty-state p {
+    margin: 0 0 1rem 0;
+}
+
+/* Loading States */
+.marketplace-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem;
+}
+
+.marketplace-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #8B4513;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

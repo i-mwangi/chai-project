@@ -1,5 +1,5 @@
 {
-  "name": "hedgehog",
+  "name": "project chai",
   "version": "1.0.0",
   "description": "",
   "type": "module",
@@ -22,7 +22,18 @@
     "studio": "drizzle-kit studio",
     "build": "rm -rf ./dist && tsup",
     "start": "pnpm run index & pnpm run providers",
-    "token-prep": "tsx ./tests/Issuer/setup-token.ts"
+    "token-prep": "tsx ./tests/Issuer/setup-token.ts",
+    "test": "vitest",
+    "test:e2e": "tsx tests/run-e2e-tests.ts",
+    "test:e2e:integration": "vitest run tests/Integration/end-to-end-platform.spec.ts",
+    "test:e2e:load": "vitest run tests/Performance/load-testing.spec.ts",
+    "test:e2e:recovery": "vitest run tests/ErrorHandling/recovery-testing.spec.ts",
+    "test:e2e:comprehensive": "vitest run tests/Integration/comprehensive-e2e-runner.spec.ts",
+    "api": "tsx api/server.ts",
+    "api:mock": "node frontend/api-server.js",
+    "frontend": "node frontend/server.js",
+    "dev": "pnpm run api:mock & pnpm run frontend",
+    "dev:full": "pnpm run build && pnpm run api & pnpm run frontend & pnpm run providers"
   },
   "keywords": [],
   "author": "",
@@ -45,6 +56,7 @@
     "@types/node": "^22.13.10",
     "drizzle-kit": "^0.30.5",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.4"
   }
 }

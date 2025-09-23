@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Button Test</title>
+</head>
+<body>
+    <h1>Button Test</h1>
+    
+    <button onclick="testViewDetails()">Test View Details</button>
+    <button onclick="testReportHarvest()">Test Report Harvest</button>
+    
+    <script>
+        function testViewDetails() {
+            console.log('Testing View Details button...');
+            if (window.farmerDashboard) {
+                window.farmerDashboard.viewGroveDetails('1');
+            } else {
+                console.error('farmerDashboard not found');
+            }
+        }
+        
+        function testReportHarvest() {
+            console.log('Testing Report Harvest button...');
+            if (window.farmerDashboard) {
+                window.farmerDashboard.reportHarvestForGrove('1');
+            } else {
+                console.error('farmerDashboard not found');
+            }
+        }
+    </script>
+</body>
+</html>

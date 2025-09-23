@@ -1,4 +1,5 @@
-import lmdb from 'node-lmdb'
+import { getLmdb } from './lmdb-shim'
+const lmdb: any = getLmdb()
 import fs from 'node:fs'
 import path from 'node:path';
 import { StoreReadStream, StreamOptions } from './stream';
@@ -12,10 +13,10 @@ const isTestnet = network === 'testnet'
 
 
 export default class Store{
-    db: lmdb.Dbi
+    db: any
 
 
-    constructor(db: lmdb.Dbi) {
+    constructor(db: any) {
         this.db = db;
     }
 
