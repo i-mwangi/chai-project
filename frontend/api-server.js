@@ -67,13 +67,16 @@ const mockData = {
 // Revenue distributions store for mock server
 mockData.revenueDistributions = [];
 
+// Mock user settings storage (in-memory for demo)
+const mockUserSettings = {};
+
 // Utility functions
 function sendResponse(res, statusCode, data) {
     res.writeHead(statusCode, {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-demo-bypass'
     });
     res.end(JSON.stringify(data));
 }
@@ -105,7 +108,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-demo-bypass'
         });
         res.end();
         return;
@@ -625,6 +628,41 @@ const server = http.createServer(async (req, res) => {
             });
         }
         
+        // User settings endpoints
+        else if (pathname.startsWith('/api/user/settings/') && method === 'GET') {
+            const accountId = pathname.split('/').pop();
+            
+            // Return stored settings or defaults
+            const settings = mockUserSettings[accountId] || {
+                skipFarmerVerification: false,
+                skipInvestorVerification: false,
+                demoBypass: false
+            };
+            
+            sendResponse(res, 200, {
+                success: true,
+                settings: settings
+            });
+        }
+
+        else if (pathname.startsWith('/api/user/settings/') && method === 'PUT') {
+            const accountId = pathname.split('/').pop();
+            const settings = body || {};
+            
+            // Store the settings in memory
+            mockUserSettings[accountId] = {
+                skipFarmerVerification: settings.skipFarmerVerification || false,
+                skipInvestorVerification: settings.skipInvestorVerification || false,
+                demoBypass: settings.demoBypass || false,
+                updatedAt: new Date().toISOString()
+            };
+            
+            sendResponse(res, 200, {
+                success: true,
+                settings: mockUserSettings[accountId]
+            });
+        }
+        
         // Default 404
         else {
             sendError(res, 404, 'Endpoint not found');
@@ -656,6 +694,8 @@ server.listen(PORT, () => {
     console.log('  GET  /api/investment/available-groves');
     console.log('  GET  /api/investment/portfolio?investorAddress=...');
     console.log('  POST /api/investment/purchase-tokens');
+    console.log('  GET  /api/user/settings/:accountId');
+    console.log('  PUT  /api/user/settings/:accountId');
 });
 
 // Graceful shutdown

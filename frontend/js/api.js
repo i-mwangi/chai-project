@@ -39,7 +39,7 @@ class CoffeeTreeAPI {
         // If user has chosen demo bypass on the frontend, forward a demo header
         try {
             if (localStorage.getItem('skipFarmerVerification') === 'true') {
-                config.headers['X-Demo-Bypass'] = 'true'
+                config.headers['x-demo-bypass'] = 'true'
                 // Also include in body for servers that don't inspect headers
                 if (config.body && typeof config.body === 'string') {
                     try {

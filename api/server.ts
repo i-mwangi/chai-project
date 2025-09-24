@@ -62,7 +62,7 @@ function sendResponse(res: ServerResponse, statusCode: number, data: any) {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Demo-Bypass'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-demo-bypass'
     })
     res.end(JSON.stringify(data))
 }
@@ -115,7 +115,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             res.writeHead(200, {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Demo-Bypass'
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-demo-bypass'
             })
             res.end()
             return
