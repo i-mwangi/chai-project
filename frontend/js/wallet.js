@@ -68,12 +68,8 @@ class WalletManager {
             
             this.showToast(`Connected as ${userType}`, 'success');
 
-            // Check verification status based on user type
-            if (userType === 'farmer') {
-                await this.checkFarmerVerification();
-            } else if (userType === 'investor') {
-                await this.checkInvestorVerification();
-            }
+            // Verification is disabled in this build (frontend no-op)
+            // we intentionally skip calling the verification flows so no modal appears
 
         } catch (error) {
             console.error('Wallet connection failed:', error);
@@ -109,34 +105,8 @@ class WalletManager {
     }
 
     async checkFarmerVerification() {
-        // Respect user's choice to skip verification for now
-        if (localStorage.getItem('skipFarmerVerification') === 'true') return;
-
-        try {
-            const response = await window.coffeeAPI.getVerificationStatus(this.accountId);
-
-            if (response && response.success) {
-                const status = response.verification?.status || 'pending';
-
-                if (status === 'pending') {
-                    this.showToast('Please complete farmer verification to access all features', 'warning');
-                    setTimeout(() => this.showFarmerOnboardingModal(response.verification), 2000);
-                } else if (status === 'rejected') {
-                    this.showToast('Farmer verification was rejected. Please resubmit documents.', 'error');
-                    setTimeout(() => this.showFarmerOnboardingModal(response.verification), 2000);
-                } else if (status === 'verified') {
-                    this.showToast('Farmer verification complete!', 'success');
-                }
-            }
-        } catch (error) {
-            console.error('Failed to check verification status:', error);
-            // For new farmers, show onboarding (unless skipped)
-            setTimeout(() => {
-                if (localStorage.getItem('skipFarmerVerification') !== 'true') {
-                    this.showFarmerOnboardingModal(null);
-                }
-            }, 2000);
-        }
+        // Verification intentionally disabled on frontend — no-op
+        return;
     }
 
     updateUI() {
@@ -280,125 +250,13 @@ class WalletManager {
     }
 
     async checkInvestorVerification() {
-        // Respect user's choice to skip verification for now
-        if (localStorage.getItem('skipInvestorVerification') === 'true') return;
-
-        try {
-            const response = await window.coffeeAPI.getInvestorVerificationStatus(this.accountId);
-
-            if (response && response.success) {
-                const status = response.verification?.status || 'pending';
-
-                if (status === 'pending') {
-                    this.showToast('Please complete investor verification to access all features', 'warning');
-                    setTimeout(() => this.showInvestorOnboardingModal(response.verification), 2000);
-                } else if (status === 'rejected') {
-                    this.showToast('Investor verification was rejected. Please resubmit documents.', 'error');
-                    setTimeout(() => this.showInvestorOnboardingModal(response.verification), 2000);
-                } else if (status === 'verified') {
-                    this.showToast('Investor verification complete!', 'success');
-                }
-            }
-        } catch (error) {
-            console.error('Failed to check investor verification status:', error);
-            
-            // If API endpoint is not found, show a different message
-            if (error.message.includes('Endpoint not found') || error.message.includes('404')) {
-                console.warn('Investor verification API not available yet');
-                this.showToast('Investor verification system is being set up. Full features available soon!', 'info');
-                return;
-            }
-            
-            // For other errors or new investors, show onboarding (unless skipped)
-            setTimeout(() => {
-                if (localStorage.getItem('skipInvestorVerification') !== 'true') {
-                    this.showInvestorOnboardingModal(null);
-                }
-            }, 2000);
-        }
+        // Verification intentionally disabled on frontend — no-op
+        return;
     }
 
     showFarmerOnboardingModal(verification) {
-        // Don't show if already verified
-        if (verification && verification.status === 'verified') return;
-
-        const modal = document.createElement('div');
-        modal.className = 'modal active';
-        modal.id = 'farmerOnboardingModal';
-        
-        const status = verification?.status || 'new';
-        const isRejected = status === 'rejected';
-        const isPending = status === 'pending';
-        
-        modal.innerHTML = `
-            <div class="modal-content onboarding-modal">
-                <div class="modal-header">
-                    <h4>🌱 Welcome to Chai Platform</h4>
-                    <button class="modal-close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="onboarding-content">
-                        ${isRejected ? `
-                            <div class="status-alert alert-danger">
-                                <h5>⚠️ Verification Rejected</h5>
-                                <p><strong>Reason:</strong> ${verification.rejectionReason}</p>
-                                <p>Please resubmit your documents with the required corrections.</p>
-                            </div>
-                        ` : isPending ? `
-                            <div class="status-alert alert-warning">
-                                <h5>⏳ Verification Pending</h5>
-                                <p>Your documents are being reviewed. This usually takes 1-3 business days.</p>
-                                <p>Submitted on: ${new Date(verification.submissionDate).toLocaleDateString()}</p>
-                            </div>
-                        ` : `
-                            <div class="welcome-message">
-                                <h5>👋 Welcome, Coffee Farmer!</h5>
-                                <p>To start using the platform, you need to complete farmer verification.</p>
-                            </div>
-                        `}
-                        
-                        <div class="onboarding-steps">
-                            <h6>Required Documents:</h6>
-                            <ul class="document-checklist">
-                                <li>📄 <strong>Land Ownership Documents</strong><br>
-                                    <small>Land title, deed, lease agreement, or property certificate</small>
-                                </li>
-                                <li>🆔 <strong>Government-Issued ID</strong><br>
-                                    <small>National ID, passport, driver's license, or voter card</small>
-                                </li>
-                                <li>🌾 <strong>Farming License or Permit</strong><br>
-                                    <small>Agricultural license, farming permit, or cooperative membership</small>
-                                </li>
-                            </ul>
-                            <div class="document-requirements">
-                                <small><strong>Requirements:</strong> PDF, JPG, or PNG format • Clear and legible • Current documents</small>
-                            </div>
-                        </div>
-                        
-                        <div class="onboarding-benefits">
-                            <h6>After verification, you can:</h6>
-                            <ul class="benefits-list">
-                                <li>✅ Register your coffee groves</li>
-                                <li>✅ Report harvests and track revenue</li>
-                                <li>✅ Access tree health monitoring</li>
-                                <li>✅ Receive payments from investors</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button class="btn btn-secondary modal-close">Maybe Later</button>
-                        <button class="btn btn-primary" onclick="window.walletManager.startVerificationProcess()">
-                            ${isRejected || isPending ? 'Update Documents' : 'Start Verification'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Close modal handlers — allow skipping verification
+        // Frontend verification UI disabled — don't render the modal
+        return;
         modal.querySelectorAll('.modal-close').forEach(btn => {
             btn.addEventListener('click', async () => {
                 // mark that the user chose to skip farmer verification for now
@@ -453,87 +311,8 @@ class WalletManager {
     }
 
     showInvestorOnboardingModal(verification) {
-        // Don't show if already verified
-        if (verification && verification.status === 'verified') return;
-
-        const modal = document.createElement('div');
-        modal.className = 'modal active';
-        modal.id = 'investorOnboardingModal';
-        
-        const status = verification?.status || 'new';
-        const isRejected = status === 'rejected';
-        const isPending = status === 'pending';
-        
-        modal.innerHTML = `
-            <div class="modal-content onboarding-modal">
-                <div class="modal-header">
-                    <h4>💰 Welcome to Chai Platform</h4>
-                    <button class="modal-close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="onboarding-content">
-                        ${isRejected ? `
-                            <div class="status-alert alert-danger">
-                                <h5>⚠️ Verification Rejected</h5>
-                                <p><strong>Reason:</strong> ${verification.rejectionReason}</p>
-                                <p>Please resubmit your documents with the required corrections.</p>
-                            </div>
-                        ` : isPending ? `
-                            <div class="status-alert alert-warning">
-                                <h5>⏳ Verification Pending</h5>
-                                <p>Your documents are being reviewed. This usually takes 1-3 business days.</p>
-                                <p>Submitted on: ${new Date(verification.submissionDate).toLocaleDateString()}</p>
-                            </div>
-                        ` : `
-                            <div class="welcome-message">
-                                <h5>👋 Welcome, Coffee Investor!</h5>
-                                <p>To start investing in coffee groves, you need to complete investor verification.</p>
-                            </div>
-                        `}
-                        
-                        <div class="onboarding-steps">
-                            <h6>Required Documents:</h6>
-                            <ul class="document-checklist">
-                                <li>🆔 <strong>Government-Issued ID</strong><br>
-                                    <small>National ID, passport, driver's license, or state ID</small>
-                                </li>
-                                <li>🏦 <strong>Proof of Address</strong><br>
-                                    <small>Utility bill, bank statement, or lease agreement (last 3 months)</small>
-                                </li>
-                                <li>💼 <strong>Financial Information</strong><br>
-                                    <small>Bank statement, income verification, or investment account statement</small>
-                                </li>
-                            </ul>
-                            <div class="document-requirements">
-                                <small><strong>Requirements:</strong> PDF, JPG, or PNG format • Clear and legible • Current documents</small>
-                            </div>
-                        </div>
-                        
-                        <div class="onboarding-benefits">
-                            <h6>After verification, you can:</h6>
-                            <ul class="benefits-list">
-                                <li>✅ Invest in coffee grove tokens</li>
-                                <li>✅ Receive revenue distributions</li>
-                                <li>✅ Trade tokens on secondary market</li>
-                                <li>✅ Access detailed grove analytics</li>
-                                <li>✅ Track investment performance</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button class="btn btn-secondary modal-close">Maybe Later</button>
-                        <button class="btn btn-primary" onclick="window.walletManager.startInvestorVerificationProcess()">
-                            ${isRejected || isPending ? 'Update Documents' : 'Start Verification'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Close modal handlers — allow skipping verification
+        // Frontend verification UI disabled — don't render the modal
+        return;
         modal.querySelectorAll('.modal-close').forEach(btn => {
             btn.addEventListener('click', async () => {
                 // mark that the user chose to skip investor verification for now

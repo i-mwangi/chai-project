@@ -26,18 +26,25 @@ describe("Farmer Verification API Unit Tests", () => {
     test("Should validate address format correctly", () => {
         // Test address validation logic
         function validateAddress(address: string): boolean {
-            return /^0x[a-fA-F0-9]{40}$/.test(address)
+            // Accept either Ethereum-style 0x... addresses or Hedera account IDs like 0.0.123456
+            const eth = /^0x[a-fA-F0-9]{40}$/.test(address)
+            const hedera = /^\d+\.\d+\.\d+$/.test(address)
+            return eth || hedera
         }
         
         // Valid addresses
         assert.equal(validateAddress("0x1234567890123456789012345678901234567890"), true)
         assert.equal(validateAddress("0xabcdefABCDEF1234567890123456789012345678"), true)
+        assert.equal(validateAddress("0.0.123456"), true)
+        assert.equal(validateAddress("123.456.789"), true)
         
         // Invalid addresses
         assert.equal(validateAddress("invalid-address"), false)
         assert.equal(validateAddress("0x123"), false) // Too short
         assert.equal(validateAddress("1234567890123456789012345678901234567890"), false) // Missing 0x
         assert.equal(validateAddress("0xGHIJKL1234567890123456789012345678901234"), false) // Invalid hex
+        assert.equal(validateAddress("0.0"), false) // Incomplete Hedera ID
+        assert.equal(validateAddress("0.0."), false) // Incomplete Hedera ID
     })
     
     test("Should validate coordinates correctly", () => {

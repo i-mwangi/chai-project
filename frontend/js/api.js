@@ -11,7 +11,7 @@ class CoffeeTreeAPI {
     // Utility method for making HTTP requests
     async request(endpoint, options = {}) {
         // Helper to add a timeout to fetch requests
-        const fetchWithTimeout = (url, cfg, timeout = 15000) => {
+        const fetchWithTimeout = (url, cfg, timeout = 30000) => { // Increased from 15000 to 30000 ms
             return new Promise((resolve, reject) => {
                 const timer = setTimeout(() => {
                     reject(new Error('Request timed out'))
@@ -62,7 +62,7 @@ class CoffeeTreeAPI {
         }
 
         try {
-            const response = await fetchWithTimeout(url, config, 20000);
+            const response = await fetchWithTimeout(url, config, 30000); // Increased from 20000 to 30000 ms
             const data = await response.json();
 
             if (!response.ok) {

@@ -73,17 +73,11 @@ class InvestorPortal {
         const investorAddress = window.walletManager.getAccountId();
 
         try {
-            // Always allow verification section
+            // Verification disabled: always allow access
             if (section === 'verification') {
-                await this.loadInvestorVerificationStatus(investorAddress);
+                this.renderInvestorVerificationStatus({ status: 'verified', demoBypass: true });
                 return;
             }
-            // If user skipped investor verification, allow access
-            if (localStorage.getItem('skipInvestorVerification') === 'true') return;
-
-            // Check verification status for other sections
-            const isVerified = await this.checkVerificationForSection(investorAddress, section);
-            if (!isVerified) return;
 
             switch (section) {
                 case 'browse':
@@ -741,83 +735,20 @@ class InvestorPortal {
     }
 
     async checkVerificationForSection(investorAddress, section) {
-        try {
-            const response = await window.coffeeAPI.getInvestorVerificationStatus(investorAddress);
-
-            if (response && response.success && response.verification && response.verification.status === 'verified') {
-                return true;
-            }
-
-            // Show verification required message
-            this.showVerificationRequired(section);
-            return false;
-        } catch (error) {
-            console.error('Failed to check investor verification:', error);
-            
-            // If API endpoint is not found, assume unverified and show verification required
-            if (error.message.includes('Endpoint not found') || error.message.includes('404')) {
-                console.warn('Investor verification API not available, showing verification required');
-                this.showVerificationRequired(section);
-                return false;
-            }
-            
-            // For other errors, allow access but log the issue
-            console.warn('Investor verification check failed, allowing access');
-            return true;
-        }
+        // Frontend verification disabled — always allow
+        return true;
     }
 
     showVerificationRequired(section) {
+        // No-op: verification UI removed in this build. Show simple available message instead
         const sectionContainer = document.getElementById(`${section}Section`);
         if (!sectionContainer) return;
-
-        sectionContainer.innerHTML = `
-            <div class="verification-required">
-                <div class="verification-card">
-                    <div class="verification-icon">🔒</div>
-                    <h4>Investor Verification Required</h4>
-                    <p>You need to complete investor verification to access ${section} features and start investing.</p>
-                    <div class="verification-actions">
-                        <button class="btn btn-primary" onclick="investorPortal.switchSection('verification')">
-                            Complete Verification
-                        </button>
-                        <button class="btn btn-secondary" onclick="window.walletManager.showInvestorOnboardingModal()">
-                            Learn More
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
+        sectionContainer.innerHTML = `<div class="info-card"><p>Feature available (verification disabled).</p></div>`;
     }
 
     async loadInvestorVerificationStatus(investorAddress) {
-        window.walletManager.showLoading('Loading verification status...');
-
-        try {
-            if (localStorage.getItem('skipInvestorVerification') === 'true') {
-                this.renderInvestorVerificationStatus({ status: 'verified', demoBypass: true });
-                return;
-            }
-
-            const response = await window.coffeeAPI.getInvestorVerificationStatus(investorAddress);
-
-            if (response && response.success) {
-                this.renderInvestorVerificationStatus(response.verification);
-            }
-        } catch (error) {
-            console.error('Failed to load investor verification status:', error);
-            
-            // If API endpoint is not found, show form for new verification
-            if (error.message.includes('Endpoint not found') || error.message.includes('404')) {
-                console.warn('Investor verification API not available, showing verification form');
-                window.walletManager.showToast('Investor verification system is being set up. Please try again shortly.', 'warning');
-            }
-            
-            // Show form for unverified investors
-            this.renderInvestorVerificationStatus(null);
-        } finally {
-            window.walletManager.hideLoading();
-        }
+        // Verification disabled: show verified
+        this.renderInvestorVerificationStatus({ status: 'verified', demoBypass: true });
     }
 
     renderInvestorVerificationStatus(verification) {

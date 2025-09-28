@@ -4,6 +4,11 @@ import { db } from '../db'
 import { farmerVerifications, coffeeGroves, userSettings } from '../db/schema'
 import { eq } from 'drizzle-orm'
 
+// Farmer verification is intentionally disabled in this build (Option A).
+// The API will treat farmers as verified and allow grove registration without
+// requiring manual verification. This is a non-destructive, reversible change.
+const DISABLE_FARMER_VERIFICATION = true
+
 // Types for API requests and responses
 interface SubmitDocumentsRequest {
     farmerAddress: string
@@ -127,47 +132,47 @@ class FarmerVerificationAPI {
                 return sendError(res, 400, 'Invalid documents hash format (expected IPFS hash)')
             }
             
-            // Check if farmer already has a pending or verified submission
+            // Since farmer verification is disabled, auto-insert (or update)
+            // the farmer record and mark it as 'verified'. This allows the
+            // rest of the platform (grove registration, analytics) to operate
+            // without manual verifier intervention.
             const existingFarmer = await db.query.farmerVerifications.findFirst({
                 where: eq(farmerVerifications.farmerAddress, body.farmerAddress)
             })
-            
-            if (existingFarmer && existingFarmer.verificationStatus === 'verified') {
-                return sendError(res, 409, 'Farmer is already verified')
-            }
-            
-            // Insert or update farmer verification record
+
+            const now = Date.now()
             const farmerData = {
                 farmerAddress: body.farmerAddress,
                 documentsHash: body.documentsHash,
-                verificationStatus: 'pending' as const,
-                createdAt: Date.now()
+                verificationStatus: 'verified' as const,
+                verifierAddress: 'system',
+                verificationDate: now,
+                rejectionReason: null,
+                createdAt: now
             }
-            
+
             if (existingFarmer) {
-                // Update existing record
                 await db.update(farmerVerifications)
                     .set({
                         documentsHash: body.documentsHash,
-                        verificationStatus: 'pending',
+                        verificationStatus: 'verified',
+                        verifierAddress: 'system',
+                        verificationDate: now,
                         rejectionReason: null,
-                        verifierAddress: null,
-                        verificationDate: null,
-                        createdAt: Date.now()
+                        createdAt: now
                     })
                     .where(eq(farmerVerifications.farmerAddress, body.farmerAddress))
             } else {
-                // Insert new record
                 await db.insert(farmerVerifications).values(farmerData)
             }
-            
+
             sendResponse(res, 200, {
                 success: true,
-                message: 'Documents submitted successfully',
+                message: 'Documents accepted and farmer auto-verified (verification disabled in this build)',
                 data: {
                     farmerAddress: body.farmerAddress,
-                    status: 'pending',
-                    submissionDate: new Date().toISOString()
+                    status: 'verified',
+                    submissionDate: new Date(now).toISOString()
                 }
             })
             
@@ -260,6 +265,23 @@ class FarmerVerificationAPI {
             
             // Allow demo bypass via user settings (server-side persisted)
             const userSetting = await db.query.userSettings.findFirst({ where: eq(userSettings.account, farmerAddress) }).catch(() => null)
+
+            // If global bypass is enabled, return a verified-like response regardless
+            if (DISABLE_FARMER_VERIFICATION) {
+                return sendResponse(res, 200, {
+                    success: true,
+                    data: {
+                        farmerAddress,
+                        status: 'verified',
+                        documentsHash: farmer ? farmer.documentsHash : null,
+                        verifierAddress: farmer ? farmer.verifierAddress : null,
+                        verificationDate: farmer && farmer.verificationDate ? new Date(farmer.verificationDate).toISOString() : null,
+                        rejectionReason: farmer ? farmer.rejectionReason : null,
+                        submissionDate: farmer && farmer.createdAt ? new Date(farmer.createdAt).toISOString() : null,
+                        demoBypass: true
+                    }
+                })
+            }
 
             if (!farmer) {
                 // If no farmer record, still allow demo bypass if settings say so
@@ -355,7 +377,9 @@ class FarmerVerificationAPI {
                 })
 
                 if (!farmer || farmer.verificationStatus !== 'verified') {
-                    return sendError(res, 403, 'Farmer must be verified before registering grove ownership')
+                    if (!DISABLE_FARMER_VERIFICATION) {
+                        return sendError(res, 403, 'Farmer must be verified before registering grove ownership')
+                    }
                 }
 
                 // Check if grove name is already registered
@@ -407,7 +431,8 @@ class FarmerVerificationAPI {
                 const userSetting = await db.query.userSettings.findFirst({ where: eq(userSettings.account, bodyAny.farmerAddress) }).catch(() => null)
 
                 if (!farmer && !(userSetting && userSetting.demoBypass)) {
-                    if (!demoBypass) {
+                    // If global flag to disable farmer verification is set, allow registration
+                    if (!demoBypass && !DISABLE_FARMER_VERIFICATION) {
                         return sendError(res, 403, 'Farmer must be verified before registering grove ownership')
                     }
                 }
@@ -454,29 +479,6 @@ class FarmerVerificationAPI {
      * Get all pending verifications (for verifiers)
      * GET /api/farmer-verification/pending
      */
-    async getPendingVerifications(req: IncomingMessage, res: ServerResponse) {
-        try {
-            const pendingFarmers = await db.query.farmerVerifications.findMany({
-                where: eq(farmerVerifications.verificationStatus, 'pending')
-            })
-            
-            const formattedData = pendingFarmers.map(farmer => ({
-                farmerAddress: farmer.farmerAddress,
-                documentsHash: farmer.documentsHash,
-                submissionDate: new Date(farmer.createdAt!).toISOString()
-            }))
-            
-            sendResponse(res, 200, {
-                success: true,
-                data: formattedData
-            })
-            
-        } catch (error) {
-            console.error('Error getting pending verifications:', error)
-            sendError(res, 500, 'Internal server error')
-        }
-    }
-    
     /**
      * Upload file handler (placeholder for document uploads)
      * POST /api/farmer-verification/upload
@@ -489,18 +491,44 @@ class FarmerVerificationAPI {
             // 2. Validate file types and sizes
             // 3. Upload to IPFS or cloud storage
             // 4. Return the file hash/URL
-            
+
             sendResponse(res, 501, {
                 success: false,
                 error: 'File upload not implemented. Please use IPFS directly and provide the hash.'
             })
-            
         } catch (error) {
             console.error('Error uploading file:', error)
             sendError(res, 500, 'Internal server error')
         }
     }
-}
+
+    async getPendingVerifications(req: IncomingMessage, res: ServerResponse) {
+        try {
+            const pendingFarmers = await db.query.farmerVerifications.findMany({
+                where: eq(farmerVerifications.verificationStatus, 'pending')
+            })
+            // If global bypass is enabled, return an empty pending list (nothing to verify)
+            if (DISABLE_FARMER_VERIFICATION) {
+                return sendResponse(res, 200, { success: true, data: [] })
+            }
+
+            const formattedData = pendingFarmers.map(farmer => ({
+                farmerAddress: farmer.farmerAddress,
+                documentsHash: farmer.documentsHash,
+                submissionDate: new Date(farmer.createdAt!).toISOString()
+            }))
+
+            sendResponse(res, 200, {
+                success: true,
+                data: formattedData
+            })
+        } catch (error) {
+            console.error('Error getting pending verifications:', error)
+            sendError(res, 500, 'Internal server error')
+        }
+    }
+
+} // end class FarmerVerificationAPI
 
 // Route handler
 export function createFarmerVerificationServer(port: number = 3001) {

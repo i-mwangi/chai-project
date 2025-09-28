@@ -69,7 +69,10 @@ function sendError(res: ServerResponse, statusCode: number, message: string) {
 
 // Validation functions
 function validateAddress(address: string): boolean {
-    return /^0x[a-fA-F0-9]{40}$/.test(address)
+    // Accept either Ethereum-style 0x... addresses or Hedera account IDs like 0.0.123456
+    const eth = /^0x[a-fA-F0-9]{40}$/.test(address)
+    const hedera = /^\d+\.\d+\.\d+$/.test(address)
+    return eth || hedera
 }
 
 function validateHarvestData(data: ReportHarvestRequest): string | null {
@@ -99,60 +102,85 @@ class HarvestReportingAPI {
      * POST /api/harvest/report
      */
     async reportHarvest(req: IncomingMessage, res: ServerResponse) {
+        const startTime = Date.now();
+        console.log('Harvest report request received at:', new Date(startTime).toISOString());
+        
         try {
             const body: ReportHarvestRequest = await parseBody(req)
+            console.log('Parsed request body:', body);
             
             // Validate harvest data
             const validationError = validateHarvestData(body)
             if (validationError) {
+                console.log('Validation error:', validationError);
                 return sendError(res, 400, validationError)
             }
             
             // Check if grove exists and farmer owns it
+            console.log('Checking if grove exists for farmer:', body.farmerAddress, 'and grove:', body.groveName);
+            const groveQueryStart = Date.now();
             const grove = await db.query.coffeeGroves.findFirst({
                 where: and(
                     eq(coffeeGroves.groveName, body.groveName),
                     eq(coffeeGroves.farmerAddress, body.farmerAddress)
                 )
             })
+            console.log('Grove query took:', Date.now() - groveQueryStart, 'ms');
             
             if (!grove) {
+                console.log('Grove not found or farmer does not own this grove');
                 return sendError(res, 404, 'Grove not found or farmer does not own this grove')
             }
             
+            console.log('Found grove with ID:', grove.id);
+            
             if (grove.verificationStatus !== 'verified') {
+                console.log('Grove is not verified');
                 return sendError(res, 403, 'Grove must be verified before reporting harvests')
             }
             
             // Validate yield against grove capacity
+            console.log('Validating yield against grove capacity');
+            const yieldValidationStart = Date.now();
             if (grove.expectedYieldPerTree && grove.treeCount) {
                 const maxExpectedYield = grove.treeCount * grove.expectedYieldPerTree
                 const maxReasonableYield = maxExpectedYield * 1.5 // Allow 50% over expected
                 if (body.yieldKg > maxReasonableYield) {
+                    console.log('Yield exceeds reasonable maximum');
                     return sendError(res, 400, `Yield (${body.yieldKg}kg) exceeds reasonable maximum for grove size (${maxReasonableYield}kg)`)
                 }
             }
+            console.log('Yield validation took:', Date.now() - yieldValidationStart, 'ms');
             
-            // Check for recent harvests (prevent spam)
-            const sevenDaysAgoSeconds = Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60)
-            const recentHarvest = await db.query.harvestRecords.findFirst({
-                where: and(
+            // Check for recent harvests (prevent spam) - OPTIMIZED VERSION
+            console.log('Checking for recent harvests');
+            const recentHarvestQueryStart = Date.now();
+            const sevenDaysAgoSeconds = Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60);
+            const recentHarvestCount = await db.select({ count: sql<number>`count(*)` })
+                .from(harvestRecords)
+                .where(and(
                     eq(harvestRecords.groveId, grove.id),
-                    sql`${harvestRecords.harvestDate} > ${sevenDaysAgoSeconds}` // 7 days ago (seconds)
-                ),
-                orderBy: desc(harvestRecords.harvestDate)
-            })
-            
-            if (recentHarvest) {
+                    sql`${harvestRecords.harvestDate} > ${sevenDaysAgoSeconds}`
+                ))
+                .limit(1)
+            console.log('Recent harvest query took:', Date.now() - recentHarvestQueryStart, 'ms');
+
+            if (recentHarvestCount[0].count > 0) {
+                console.log('Harvest reported within 7 days');
                 return sendError(res, 409, 'Cannot report harvest within 7 days of previous harvest')
             }
             
             // Calculate revenue shares
+            console.log('Calculating revenue shares');
+            const revenueCalcStart = Date.now();
             const totalRevenue = body.yieldKg * body.salePricePerKg
             const farmerShare = Math.floor(totalRevenue * 0.3) // 30% to farmer
             const investorShare = totalRevenue - farmerShare // 70% to investors
+            console.log('Revenue calculation took:', Date.now() - revenueCalcStart, 'ms');
             
             // Insert harvest record
+            console.log('Inserting harvest record');
+            const insertStart = Date.now();
             const nowSeconds = Math.floor(Date.now() / 1000)
             const harvestData = {
                 groveId: grove.id,
@@ -168,6 +196,10 @@ class HarvestReportingAPI {
             }
             
             const [insertedHarvest] = await db.insert(harvestRecords).values(harvestData).returning()
+            console.log('Insert took:', Date.now() - insertStart, 'ms');
+            
+            const totalTime = Date.now() - startTime;
+            console.log('Harvest report completed successfully in', totalTime, 'ms');
             
             sendResponse(res, 201, {
                 success: true,
@@ -185,7 +217,8 @@ class HarvestReportingAPI {
             })
             
         } catch (error) {
-            console.error('Error reporting harvest:', error)
+            const totalTime = Date.now() - startTime;
+            console.error('Error reporting harvest (took', totalTime, 'ms):', error)
             sendError(res, 500, 'Internal server error')
         }
     }

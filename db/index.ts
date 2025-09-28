@@ -25,6 +25,14 @@ function createInMemoryMockDb() {
   }
 
   const mockDb: any = {
+    // Diagnostic helpers to allow serialization of the in-memory store
+    __dumpStorage: () => Object.fromEntries(Array.from(storage.entries())),
+    __loadStorage: (obj: Record<string, any[]>) => {
+      storage.clear()
+      for (const [k, v] of Object.entries(obj || {})) {
+        storage.set(k, Array.isArray(v) ? v.slice() : [])
+      }
+    },
     select(projection?: any) {
       const qb: any = {
         _projection: projection,
@@ -241,6 +249,35 @@ function createInMemoryMockDb() {
 
 if (FORCE_IN_MEMORY) {
   dbVar = createInMemoryMockDb()
+  // Attempt to hydrate the in-memory DB from disk to survive restarts during demo mode
+  try {
+    const fs = require('fs')
+    const path = './local-store/inmemory-db.json'
+    if (fs.existsSync(path)) {
+      const raw = fs.readFileSync(path, 'utf8')
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object' && dbVar.__loadStorage) {
+        dbVar.__loadStorage(parsed)
+        console.log('Hydrated in-memory DB from', path)
+      }
+    }
+    // Save on shutdown so data persists across restarts in demo mode
+    const saveSnapshot = () => {
+      try {
+        const dump = dbVar.__dumpStorage ? dbVar.__dumpStorage() : {}
+        fs.mkdirSync('./local-store', { recursive: true })
+        fs.writeFileSync(path, JSON.stringify(dump, null, 2), 'utf8')
+        console.log('Saved in-memory DB snapshot to', path)
+      } catch (e) {
+        console.warn('Failed to save in-memory DB snapshot:', e && e.message)
+      }
+    }
+    process.on('SIGINT', saveSnapshot)
+    process.on('SIGTERM', saveSnapshot)
+    process.on('exit', saveSnapshot)
+  } catch (e) {
+    // ignore persistence errors for demo mode
+  }
 
 } else {
   // Use dynamic require to avoid top-level import errors when native

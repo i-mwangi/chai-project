@@ -51,7 +51,10 @@ function parseRequestBody(req) {
 
 // Validation functions
 function validateAddress(address) {
-    return /^0x[a-fA-F0-9]{40}$/.test(address);
+    // Accept either Ethereum-style 0x... addresses or Hedera account IDs like 0.0.123456
+    const eth = /^0x[a-fA-F0-9]{40}$/.test(address);
+    const hedera = /^\d+\.\d+\.\d+$/.test(address);
+    return eth || hedera;
 }
 
 function validateDocumentHash(hash) {

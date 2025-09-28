@@ -48,13 +48,13 @@ import {
     getUserListings
 } from './marketplace'
 import { db } from '../db'
-import { userSettings } from '../db/schema'
+import { userSettings, coffeeGroves } from '../db/schema'
 import { eq } from 'drizzle-orm'
 
 const PORT = parseInt(process.env.API_PORT || '3001')
 
-// Developer toggle (same variable used in investor-verification API)
-const DISABLE_INVESTOR_KYC = (process.env.DISABLE_INVESTOR_KYC || 'false').toLowerCase() === 'true'
+// Developer toggle: for Option A we want verification flows disabled by default.
+const DISABLE_INVESTOR_KYC = true
 
 // Utility functions
 function sendResponse(res: ServerResponse, statusCode: number, data: any) {
@@ -285,6 +285,69 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             } else if (pathname === '/api/market/overview' && method === 'GET') {
                 await getMarketOverview(req as any, expressRes as any)
             
+            // Grove management endpoints (UI expects /api/groves)
+            } else if (pathname.startsWith('/api/groves') && method === 'GET') {
+                try {
+                    const farmerAddress = (req.query && (req.query as any).farmerAddress) ? String((req.query as any).farmerAddress) : undefined
+                    let groves
+                    if ((db as any).__dumpStorage) {
+                        // In-memory DB fallback: locate any table that looks like coffee_groves
+                        const dump = (db as any).__dumpStorage()
+                        const allTables = Object.values(dump || {}) as any[]
+                        const candidates = allTables.flat().filter(r => r && typeof r === 'object' && ('groveName' in r || 'grove_name' in r))
+                        // Normalize and filter by farmerAddress (accept different key names and formats)
+                        if (farmerAddress) {
+                            const q = String(farmerAddress).trim()
+                            groves = candidates.filter((g: any) => {
+                                const stored = String(g.farmerAddress ?? g.farmer_address ?? '').trim()
+                                return stored === q
+                            })
+                        } else {
+                            groves = candidates
+                        }
+                    } else {
+                        if (farmerAddress) {
+                            groves = await db.select().from(coffeeGroves).where(eq(coffeeGroves.farmerAddress, farmerAddress))
+                        } else {
+                            groves = await db.select().from(coffeeGroves)
+                        }
+                    }
+                    sendResponse(res, 200, { success: true, groves })
+                } catch (error) {
+                    console.error('Error fetching groves:', error)
+                    sendError(res, 500, 'Failed to fetch groves')
+                }
+            } else if (pathname === '/api/groves/register' && method === 'POST') {
+                // Delegate to the existing farmer verification handler for registration logic
+                await farmerVerificationAPI.registerGroveOwnership(req, expressRes as any)
+
+            // Investment endpoints (basic compatibility with frontend/demo)
+            } else if (pathname === '/api/investment/available-groves' && method === 'GET') {
+                try {
+                    // Pull groves from the DB and shape them like the demo/mock server expects
+                    let groves: any[] = []
+                    if ((db as any).__dumpStorage) {
+                        const dump = (db as any).__dumpStorage()
+                        const allTables = Object.values(dump || {}) as any[]
+                        groves = allTables.flat().filter(r => r && typeof r === 'object' && 'groveName' in r)
+                    } else {
+                        groves = await db.select().from(coffeeGroves)
+                    }
+                    const availableGroves = groves.map(grove => {
+                        const treeCount = Number((grove as any).treeCount || 0)
+                        return {
+                            ...grove,
+                            tokensAvailable: Math.floor(treeCount * 0.5),
+                            pricePerToken: 25 + Math.floor(Math.random() * 100) / 10,
+                            projectedAnnualReturn: 10 + Math.floor(Math.random() * 80) / 10
+                        }
+                    })
+                    sendResponse(res, 200, { success: true, groves: availableGroves })
+                } catch (error) {
+                    console.error('Error fetching available groves:', error)
+                    sendError(res, 500, 'Failed to fetch available groves')
+                }
+
             // Tree Monitoring Routes
             } else if (pathname === '/api/tree-monitoring/sensor-data' && method === 'POST') {
                 await treeMonitoringAPI.ingestSensorData(req, expressRes as any)
@@ -578,6 +641,21 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             } else if (pathname === '/api/marketplace/user-listings' && method === 'GET') {
                 await getUserListings(req, res)
             
+            // Debug endpoint: dump in-memory DB storage or query groves
+            } else if (pathname === '/__debug/db' && method === 'GET') {
+                try {
+                    // If running with in-memory DB, expose the raw storage map
+                    if ((db as any).__dumpStorage) {
+                        return sendResponse(res, 200, { success: true, inmemory: (db as any).__dumpStorage() })
+                    }
+
+                    // Otherwise, return the coffee_groves rows
+                    const groves = await db.select().from(coffeeGroves)
+                    return sendResponse(res, 200, { success: true, groves })
+                } catch (e) {
+                    console.error('Debug DB dump failed:', e)
+                    return sendError(res, 500, 'Failed to dump DB')
+                }
             } else {
                 sendError(res, 404, 'Endpoint not found')
             }
@@ -597,20 +675,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
         console.log(`Health check: http://localhost:${port}/health`)
         console.log(`API info: http://localhost:${port}/api`)
         console.log('')
-        console.log('Farmer Verification Endpoints:')
-        console.log('  POST /api/farmer-verification/submit-documents')
-        console.log('  POST /api/farmer-verification/verify')
-        console.log('  GET  /api/farmer-verification/status/:farmerAddress')
-        console.log('  POST /api/farmer-verification/register-grove')
-        console.log('  GET  /api/farmer-verification/pending')
-        console.log('  POST /api/farmer-verification/upload')
-        console.log('')
-        console.log('Investor Verification Endpoints:')
-        console.log('  POST /api/investor-verification/submit-documents')
-        console.log('  GET  /api/investor-verification/status/:investorAddress')
-        console.log('  GET  /api/investor-verification/pending')
-        console.log('  POST /api/investor-verification/process')
-        console.log('  GET  /api/investor-verification/metrics')
+    console.log('Verification: farmer and investor verification flows are DISABLED in this build (auto-approve mode).')
         console.log('')
         console.log('Harvest Reporting Endpoints:')
         console.log('  POST /api/harvest/report')

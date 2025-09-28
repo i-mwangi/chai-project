@@ -1,4 +1,4 @@
-import { real, sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { real, sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 
 
 
@@ -111,7 +111,12 @@ export const coffeeGroves = sqliteTable("coffee_groves", {
     currentHealthScore: integer("current_health_score"),
     createdAt: integer("created_at").default(Date.now()),
     updatedAt: integer("updated_at").default(Date.now())
-})
+}, (table) => {
+    return {
+        farmerAddressIdx: index("coffee_groves_farmer_address_idx").on(table.farmerAddress),
+        groveNameIdx: index("coffee_groves_name_idx").on(table.groveName),
+    }
+});
 
 export const harvestRecords = sqliteTable("harvest_records", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -126,7 +131,13 @@ export const harvestRecords = sqliteTable("harvest_records", {
     revenueDistributed: integer("revenue_distributed", { mode: 'boolean' }).default(false),
     transactionHash: text("transaction_hash"),
     createdAt: integer("created_at").default(Date.now())
-})
+}, (table) => {
+    return {
+        groveIdIdx: index("harvest_records_grove_id_idx").on(table.groveId),
+        harvestDateIdx: index("harvest_records_date_idx").on(table.harvestDate),
+        revenueDistributedIdx: index("harvest_records_distributed_idx").on(table.revenueDistributed),
+    }
+});
 
 export const tokenHoldings = sqliteTable("token_holdings", {
     id: integer("id").primaryKey({ autoIncrement: true }),
@@ -157,7 +168,12 @@ export const farmerVerifications = sqliteTable("farmer_verifications", {
     verificationDate: integer("verification_date"),
     rejectionReason: text("rejection_reason"),
     createdAt: integer("created_at").default(Date.now())
-})
+}, (table) => {
+    return {
+        farmerAddressIdx: index("farmer_verifications_address_idx").on(table.farmerAddress),
+        verificationStatusIdx: index("farmer_verifications_status_idx").on(table.verificationStatus),
+    }
+});
 
 export const farmers = sqliteTable("farmers", {
     id: integer("id").primaryKey({ autoIncrement: true }),

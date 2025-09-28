@@ -11,6 +11,7 @@ class FarmerDashboard {
         this.harvests = [];
         this.map = null;
         this.mapMarker = null;
+        this.isSubmittingHarvest = false; // Add loading state to prevent multiple submissions
         this.init();
     }
 
@@ -175,6 +176,13 @@ class FarmerDashboard {
         });
     }
 
+    // Helper to find a grove by id with normalization to string
+    getGroveById(groveId) {
+        if (groveId === null || groveId === undefined) return null;
+        const idStr = String(groveId);
+        return this.groves.find(g => String(g.id) === idStr) || null;
+    }
+
     switchSection(section) {
         // Update active menu item
         document.querySelectorAll('.farmer-dashboard .menu-item').forEach(item => {
@@ -238,15 +246,12 @@ class FarmerDashboard {
         }
 
         try {
-            // Always allow verification section
+            // Verification is disabled in this build: always allow access
             if (section === 'verification') {
-                await this.loadVerificationStatus(farmerAddress);
+                // Render a verified status to avoid showing forms
+                this.renderVerificationStatus({ status: 'verified', demoBypass: true });
                 return;
             }
-
-            // Check verification status for other sections
-            const isVerified = await this.checkVerificationForSection(farmerAddress, section);
-            if (!isVerified) return;
 
             switch (section) {
                 case 'groves':
@@ -269,44 +274,15 @@ class FarmerDashboard {
     }
 
     async checkVerificationForSection(farmerAddress, section) {
-        try {
-            const response = await window.coffeeAPI.getVerificationStatus(farmerAddress);
-
-            if (response && response.success && response.verification && response.verification.status === 'verified') {
-                return true;
-            }
-
-            // Show verification required message
-            this.showVerificationRequired(section);
-            return false;
-        } catch (error) {
-            console.error('Failed to check verification:', error);
-            this.showVerificationRequired(section);
-            return false;
-        }
+        // Frontend verification disabled — always allow
+        return true;
     }
 
     showVerificationRequired(section) {
+        // No-op: verification UI removed in this build. Instead, show a simple message.
         const sectionContainer = document.getElementById(`${section}Section`);
         if (!sectionContainer) return;
-
-        sectionContainer.innerHTML = `
-            <div class="verification-required">
-                <div class="verification-card">
-                    <div class="verification-icon">🔒</div>
-                    <h4>Verification Required</h4>
-                    <p>You need to complete farmer verification to access ${section} features.</p>
-                    <div class="verification-actions">
-                        <button class="btn btn-primary" onclick="farmerDashboard.switchSection('verification')">
-                            Complete Verification
-                        </button>
-                        <button class="btn btn-secondary" onclick="window.walletManager.showFarmerOnboardingModal()">
-                            Learn More
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
+        sectionContainer.innerHTML = `<div class="info-card"><p>Feature available (verification disabled).</p></div>`;
     }
 
     async loadGroves(farmerAddress) {
@@ -316,7 +292,8 @@ class FarmerDashboard {
             const response = await window.coffeeAPI.getGroves(farmerAddress);
 
             if (response.success) {
-                this.groves = response.groves;
+                // Normalize IDs to strings so lookups are consistent
+                this.groves = (response.groves || []).map(g => Object.assign({}, g, { id: String(g.id) }));
             } else {
                 // Fallback to mock data for testing
                 this.groves = [
@@ -612,7 +589,7 @@ class FarmerDashboard {
                         select.dispatchEvent(new Event('change'));
                         
                         // Find the grove name for confirmation
-                        const grove = this.groves.find(g => g.id === this.selectedGroveForHarvest);
+                                    const grove = this.getGroveById(this.selectedGroveForHarvest);
                         if (grove) {
                             window.walletManager.showToast(`Grove "${grove.groveName}" pre-selected`, 'info');
                         }
@@ -649,7 +626,7 @@ class FarmerDashboard {
 
         // Allow reporting harvest when demo bypass is active
         if (localStorage.getItem('skipFarmerVerification') === 'true') {
-            const grove = this.groves.find(g => g.id === groveId);
+            const grove = this.getGroveById(groveId);
             if (!grove) {
                 window.walletManager.showToast('Grove not found', 'error');
                 return;
@@ -668,7 +645,7 @@ class FarmerDashboard {
             return;
         }
 
-        const grove = this.groves.find(g => g.id === groveId);
+    const grove = this.getGroveById(groveId);
         if (!grove) {
             console.error('Grove not found for ID:', groveId);
             window.walletManager.showToast('Grove not found', 'error');
@@ -700,10 +677,25 @@ class FarmerDashboard {
     async handleHarvestSubmit(e) {
         e.preventDefault();
 
+        // Prevent multiple submissions
+        if (this.isSubmittingHarvest) {
+            window.walletManager.showToast('Harvest report is already being submitted. Please wait.', 'warning');
+            return;
+        }
+
         const formData = new FormData(e.target);
+        const groveId = formData.get('groveId');
+        
+        // Get the grove name from the grove ID
+        const grove = this.getGroveById(groveId);
+        if (!grove) {
+            window.walletManager.showToast('Selected grove not found', 'error');
+            return;
+        }
+
         const harvestData = {
             farmerAddress: window.walletManager.getAccountId(),
-            groveId: formData.get('groveId'),
+            groveName: grove.groveName, // Send groveName instead of groveId
             harvestDate: formData.get('harvestDate'),
             yieldKg: parseFloat(formData.get('yieldKg')),
             qualityGrade: parseInt(formData.get('qualityGrade')),
@@ -712,6 +704,7 @@ class FarmerDashboard {
         };
 
         try {
+            this.isSubmittingHarvest = true; // Set loading state
             window.walletManager.showLoading('Submitting harvest report...');
 
             const response = await window.coffeeAPI.reportHarvest(harvestData);
@@ -723,8 +716,9 @@ class FarmerDashboard {
             }
         } catch (error) {
             console.error('Harvest reporting failed:', error);
-            window.walletManager.showToast('Failed to report harvest', 'error');
+            window.walletManager.showToast('Failed to report harvest: ' + error.message, 'error');
         } finally {
+            this.isSubmittingHarvest = false; // Reset loading state
             window.walletManager.hideLoading();
         }
     }
@@ -882,27 +876,8 @@ class FarmerDashboard {
     }
 
     async loadVerificationStatus(farmerAddress) {
-        window.walletManager.showLoading('Loading verification status...');
-
-        try {
-            // Respect skip flag: if skipped, render as demo bypass verified
-            if (localStorage.getItem('skipFarmerVerification') === 'true') {
-                this.renderVerificationStatus({ status: 'verified', demoBypass: true })
-                return;
-            }
-
-            const response = await window.coffeeAPI.getVerificationStatus(farmerAddress);
-
-            if (response && response.success) {
-                this.renderVerificationStatus(response.verification);
-            }
-        } catch (error) {
-            console.error('Failed to load verification status:', error);
-            // Show form for unverified farmers
-            this.renderVerificationStatus(null);
-        } finally {
-            window.walletManager.hideLoading();
-        }
+        // Verification disabled: show verified status
+        this.renderVerificationStatus({ status: 'verified', demoBypass: true });
     }
 
     renderVerificationStatus(verification) {
@@ -1008,13 +983,38 @@ class FarmerDashboard {
         });
     }
 
-    viewGroveDetails(groveId) {
-        console.log('viewGroveDetails called with groveId:', groveId);
-        console.log('Available groves:', this.groves);
-        
-        const grove = this.groves.find(g => g.id === groveId);
+    async viewGroveDetails(groveId) {
+        console.log('viewGroveDetails called with groveId:', groveId, 'typeof:', typeof groveId);
+        console.log('Available groves (count):', this.groves.length);
+
+        // Try normalized string lookup first
+        let grove = this.getGroveById(groveId);
+
+        // Fallbacks: loose equality or numeric comparison
         if (!grove) {
-            console.error('Grove not found for ID:', groveId);
+            grove = this.groves.find(g => g.id == groveId) || this.groves.find(g => Number(g.id) === Number(groveId));
+        }
+
+        // If still not found, attempt to reload groves once (may fix timing issues)
+        if (!grove) {
+            try {
+                console.warn('Grove not found locally. Attempting to reload groves and retry lookup for ID:', groveId);
+                const farmerAddress = window.walletManager?.getAccountId();
+                if (farmerAddress) {
+                    await this.loadGroves(farmerAddress);
+                }
+            } catch (err) {
+                console.error('Failed to reload groves during lookup:', err);
+            }
+
+            // Retry lookups after reload
+            grove = this.getGroveById(groveId) || this.groves.find(g => g.id == groveId) || this.groves.find(g => Number(g.id) === Number(groveId));
+        }
+
+        if (!grove) {
+            // Diagnostic: log available IDs and types to help debugging
+            const availableIds = this.groves.map(g => ({ id: g.id, type: typeof g.id }));
+            console.error('Grove not found for ID:', groveId, 'available grove ids:', availableIds);
             window.walletManager.showToast('Grove not found', 'error');
             return;
         }
