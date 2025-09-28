@@ -115,6 +115,7 @@ export const coffeeGroves = sqliteTable("coffee_groves", {
     return {
         farmerAddressIdx: index("coffee_groves_farmer_address_idx").on(table.farmerAddress),
         groveNameIdx: index("coffee_groves_name_idx").on(table.groveName),
+        
     }
 });
 
@@ -136,6 +137,7 @@ export const harvestRecords = sqliteTable("harvest_records", {
         groveIdIdx: index("harvest_records_grove_id_idx").on(table.groveId),
         harvestDateIdx: index("harvest_records_date_idx").on(table.harvestDate),
         revenueDistributedIdx: index("harvest_records_distributed_idx").on(table.revenueDistributed),
+       
     }
 });
 
@@ -148,6 +150,7 @@ export const tokenHoldings = sqliteTable("token_holdings", {
     purchaseDate: integer("purchase_date").notNull(),
     isActive: integer("is_active", { mode: 'boolean' }).default(true)
 })
+
 
 export const revenueDistributions = sqliteTable("revenue_distributions", {
     id: integer("id").primaryKey({ autoIncrement: true }),

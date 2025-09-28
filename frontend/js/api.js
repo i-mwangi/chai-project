@@ -4,7 +4,7 @@
  */
 
 class CoffeeTreeAPI {
-    constructor(baseURL = 'http://localhost:3001') {
+    constructor(baseURL = 'http://localhost:3002') {
         this.baseURL = baseURL;
     }
 

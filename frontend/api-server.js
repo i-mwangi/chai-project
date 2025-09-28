@@ -8,7 +8,7 @@
 import http from 'http';
 import { parse } from 'url';
 
-const PORT = parseInt(process.env.API_PORT || '3001');
+const PORT = parseInt(process.env.API_PORT || '3002');
 
 // Mock data
 const mockData = {
@@ -231,21 +231,31 @@ const server = http.createServer(async (req, res) => {
         }
         
         else if (pathname === '/api/harvest/report' && method === 'POST') {
-            const newHarvest = {
-                id: (mockData.harvests.length + 1).toString(),
-                ...body,
-                totalRevenue: body.yieldKg * body.salePricePerKg,
-                revenueDistributed: false,
-                createdAt: new Date().toISOString()
-            };
+            console.log('[LOG] Received request for /api/harvest/report');
+            try {
+                const newHarvest= {
+                    id: (mockData.harvests.length + 1).toString(),
+                    ...body,
+                    totalRevenue: body.yieldKg * body.salePricePerKg,
+                    revenueDistributed: false,
+                    createdAt: new Date().toISOString()
+                };
+                console.log('[LOG] Created new harvest object:', newHarvest);
             
             mockData.harvests.push(newHarvest);
-            
+            console.log('[LOG] Pushed new harvest to mockData.harvests');
             sendResponse(res, 200, {
                 success: true,
                 message: 'Harvest reported successfully',
                 harvestId: newHarvest.id
-            });
+                });
+            console.log('[LOG] Response sent.');
+        } catch (error) {
+            console.error('[ERROR] An error occurred in /api/harvest/report handler:', error);
+            sendError(res, 500, 'Internal server error in harvest report');
+        }
+
+            
         }
 
         // Calculate distribution preview for a harvest
