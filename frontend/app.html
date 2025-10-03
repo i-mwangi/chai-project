@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chai Platform</title>
+    <link rel="icon" href="public/chai.png">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/marketplace.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <h1><img src="public/chai.png" alt="Chai Platform Logo" width="30" height="30" style="vertical-align: middle; margin-right: 10px;"> Chai Platform</h1>
+                </div>
+                <div class="nav-menu">
+                    <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-view="farmer">Farmer Portal</button>
+                    <button class="nav-btn" data-view="investor">Investor Portal</button>
+                </div>
+                <div class="nav-user">
+                    <div class="wallet-connection">
+                        <button id="connectWallet" class="btn btn-primary">Connect Wallet</button>
+                        <div id="walletInfo" class="wallet-info hidden">
+                            <span id="walletAddress"></span>
+                            <button id="disconnectWallet" class="btn btn-secondary">Disconnect</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="view active">
+                <div class="dashboard-header">
+                    <h2>Platform Overview</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Total Groves</h3>
+                            <div class="stat-value" id="totalGroves">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Active Farmers</h3>
+                            <div class="stat-value" id="activeFarmers">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Revenue</h3>
+                            <div class="stat-value" id="totalRevenue">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Coffee Price</h3>
+                            <div class="stat-value" id="coffeePrice">-</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Wallet Connection Prompt -->
+                    <div id="walletPrompt" class="wallet-prompt">
+                        <div class="prompt-card">
+                            <h3>🔗 Connect Your Wallet to Get Started</h3>
+                            <p>Connect your Hedera wallet to access farmer and investor features:</p>
+                            <ul>
+                                <li><strong>Farmers:</strong> Register groves, report harvests, track revenue</li>
+                                <li><strong>Investors:</strong> Browse groves, purchase tokens, manage portfolio</li>
+                            </ul>
+                            <button class="btn btn-primary btn-large" onclick="window.walletManager.connectWallet()">
+                                Connect Wallet Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Farmer Portal View -->
+            <div id="farmerView" class="view">
+                <div class="farmer-dashboard">
+                    <div class="dashboard-sidebar">
+                        <div class="sidebar-menu">
+                            <button class="menu-item active" data-section="groves">My Groves</button>
+                            <button class="menu-item" data-section="harvest">Harvest Reports</button>
+                            <button class="menu-item" data-section="revenue">Revenue Tracking</button>
+                            <button class="menu-item" data-section="health">Tree Health</button>
+                            <button class="menu-item" data-section="verification">Verification</button>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-content">
+                        <!-- Grove Management Section -->
+                        <div id="grovesSection" class="section active">
+                            <div class="section-header">
+                                <h3>Grove Management</h3>
+                                <button id="addGroveBtn" class="btn btn-primary">Register New Grove</button>
+                            </div>
+                            
+                            <div class="groves-grid" id="grovesGrid">
+                                <!-- Grove cards will be populated here -->
+                            </div>
+                            
+                            <!-- Grove Registration Modal -->
+                            <div id="groveModal" class="modal">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4>Register Coffee Grove</h4>
+                                        <button class="modal-close">&times;</button>
+                                    </div>
+                                    <form id="groveForm" class="modal-body">
+                                        <div class="form-group">
+                                            <label for="groveName">Grove Name</label>
+                                            <input type="text" id="groveName" name="groveName" required>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="location">Location</label>
+                                            <input type="text" id="location" name="location" placeholder="e.g., Costa Rica, Central Valley" required>
+                                        </div>
+                                        
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="latitude">Latitude</label>
+                                                <input type="number" id="latitude" name="latitude" step="any" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="longitude">Longitude</label>
+                                                <input type="number" id="longitude" name="longitude" step="any" required>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="treeCount">Number of Trees</label>
+                                                <input type="number" id="treeCount" name="treeCount" min="1" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="coffeeVariety">Coffee Variety</label>
+                                                <select id="coffeeVariety" name="coffeeVariety" required>
+                                                    <option value="">Select variety</option>
+                                                    <option value="Arabica">Arabica</option>
+                                                    <option value="Robusta">Robusta</option>
+                                                    <option value="Bourbon">Bourbon</option>
+                                                    <option value="Typica">Typica</option>
+                                                    <option value="Caturra">Caturra</option>
+                                                    <option value="Geisha">Geisha</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="expectedYield">Expected Yield per Tree (kg/year)</label>
+                                            <input type="number" id="expectedYield" name="expectedYield" step="0.1" min="0" required>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label>Location on Map</label>
+                                            <div id="groveMap" class="map-container"></div>
+                                            <small>Click on the map to set grove location</small>
+                                        </div>
+                                        
+                                        <div class="modal-actions">
+                                            <button type="button" class="btn btn-secondary" id="cancelGrove">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Register Grove</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Harvest Reports Section -->
+                        <div id="harvestSection" class="section">
+                            <div class="section-header">
+                                <h3>Harvest Reports</h3>
+                                <button id="addHarvestBtn" class="btn btn-primary">Report New Harvest</button>
+                            </div>
+                            
+                            <div class="harvest-list" id="harvestList">
+                                <!-- Harvest reports will be populated here -->
+                            </div>
+                            
+                            <!-- Harvest Report Modal -->
+                            <div id="harvestModal" class="modal">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4>Report Harvest</h4>
+                                        <button class="modal-close">&times;</button>
+                                    </div>
+                                    <form id="harvestForm" class="modal-body">
+                                        <div class="form-group">
+                                            <label for="harvestGrove">Select Grove</label>
+                                            <select id="harvestGrove" name="groveId" required>
+                                                <option value="">Select a grove</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="harvestDate">Harvest Date</label>
+                                            <input type="date" id="harvestDate" name="harvestDate" required>
+                                        </div>
+                                        
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="yieldKg">Total Yield (kg)</label>
+                                                <input type="number" id="yieldKg" name="yieldKg" step="0.1" min="0" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="qualityGrade">Quality Grade (1-10)</label>
+                                                <input type="number" id="qualityGrade" name="qualityGrade" min="1" max="10" required>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="salePrice">Sale Price per kg (USDC)</label>
+                                            <input type="number" id="salePrice" name="salePrice" step="0.01" min="0" required>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="notes">Additional Notes</label>
+                                            <textarea id="notes" name="notes" rows="3" placeholder="Weather conditions, processing method, etc."></textarea>
+                                        </div>
+                                        
+                                        <div class="modal-actions">
+                                            <button type="button" class="btn btn-secondary" id="cancelHarvest">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Submit Report</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Revenue Tracking Section -->
+                        <div id="revenueSection" class="section">
+                            <div class="section-header">
+                                <h3>Revenue Tracking</h3>
+                            </div>
+                            
+                            <div class="revenue-overview">
+                                <div class="revenue-stats">
+                                    <div class="stat-card">
+                                        <h4>Total Earnings</h4>
+                                        <div class="stat-value" id="totalEarnings">$0.00</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h4>This Month</h4>
+                                        <div class="stat-value" id="monthlyEarnings">$0.00</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h4>Pending Distributions</h4>
+                                        <div class="stat-value" id="pendingDistributions">$0.00</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="revenue-chart">
+                                    <canvas id="revenueChart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="distributions-list" id="distributionsList">
+                                <!-- Distribution history will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Tree Health Section -->
+                        <div id="healthSection" class="section">
+                            <div class="section-header">
+                                <h3>Tree Health Monitoring</h3>
+                            </div>
+                            
+                            <div class="health-overview" id="healthOverview">
+                                <!-- Health monitoring cards will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Verification Section -->
+                        <div id="verificationSection" class="section">
+                            <div class="section-header">
+                                <h3>Farmer Verification</h3>
+                            </div>
+                            
+                            <div class="verification-status" id="verificationStatus">
+                                <!-- Verification status will be populated here -->
+                            </div>
+                            
+                            <div class="verification-form" id="verificationForm">
+                                <h4>Submit Verification Documents</h4>
+                                <div class="form-instructions">
+                                    <p>Please upload clear, legible copies of the following documents. All documents must be current and valid.</p>
+                                </div>
+                                <form id="documentsForm">
+                                    <div class="form-group">
+                                        <label for="landOwnership">📄 Land Ownership Documents</label>
+                                        <small class="form-help">Land title, deed, lease agreement, or property certificate proving your right to farm the land</small>
+                                        <input type="file" id="landOwnership" name="landOwnership" accept=".pdf,.jpg,.png" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="farmingLicense">🌾 Farming License or Permit</label>
+                                        <small class="form-help">Agricultural license, farming permit, cooperative membership, or coffee grower registration</small>
+                                        <input type="file" id="farmingLicense" name="farmingLicense" accept=".pdf,.jpg,.png" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="identityDocument">🆔 Government-Issued Identity Document</label>
+                                        <small class="form-help">National ID, passport, driver's license, or voter registration card</small>
+                                        <input type="file" id="identityDocument" name="identityDocument" accept=".pdf,.jpg,.png" required>
+                                    </div>
+                                    
+                                    <div class="form-requirements">
+                                        <h6>Document Requirements:</h6>
+                                        <ul>
+                                            <li>✅ Accepted formats: PDF, JPG, PNG</li>
+                                            <li>✅ Maximum file size: 10MB per document</li>
+                                            <li>✅ Documents must be clear and legible</li>
+                                            <li>✅ All text must be readable</li>
+                                            <li>✅ Documents must be current and valid</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">Submit Documents for Review</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Investor Portal View -->
+            <div id="investorView" class="view">
+                <div class="investor-dashboard">
+                    <div class="dashboard-sidebar">
+                        <div class="sidebar-menu">
+                            <button class="menu-item active" data-section="browse">Browse Groves</button>
+                            <button class="menu-item" data-section="portfolio">My Portfolio</button>
+                            <button class="menu-item" data-section="marketplace">Marketplace</button>
+                            <button class="menu-item" data-section="earnings">Earnings</button>
+                            <button class="menu-item" data-section="verification">Verification</button>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-content">
+                        <!-- Browse Groves Section -->
+                        <div id="browseSection" class="section active">
+                            <div class="section-header">
+                                <h3>Available Coffee Groves</h3>
+                                <div class="filters">
+                                    <select id="varietyFilter">
+                                        <option value="">All Varieties</option>
+                                        <option value="Arabica">Arabica</option>
+                                        <option value="Robusta">Robusta</option>
+                                        <option value="Bourbon">Bourbon</option>
+                                        <option value="Typica">Typica</option>
+                                        <option value="Caturra">Caturra</option>
+                                        <option value="Geisha">Geisha</option>
+                                    </select>
+                                    <select id="locationFilter">
+                                        <option value="">All Locations</option>
+                                    </select>
+                                    <input type="range" id="yieldFilter" min="0" max="10" step="0.1" placeholder="Min Yield">
+                                </div>
+                            </div>
+                            
+                            <div class="groves-marketplace" id="grovesMarketplace">
+                                <!-- Available groves will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Portfolio Section -->
+                        <div id="portfolioSection" class="section">
+                            <div class="section-header">
+                                <h3>My Investment Portfolio</h3>
+                            </div>
+                            
+                            <div class="portfolio-overview">
+                                <div class="portfolio-stats">
+                                    <div class="stat-card">
+                                        <h4>Total Investment</h4>
+                                        <div class="stat-value" id="totalInvestment">$0.00</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h4>Current Value</h4>
+                                        <div class="stat-value" id="currentValue">$0.00</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h4>Total Returns</h4>
+                                        <div class="stat-value" id="totalReturns">$0.00</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h4>ROI</h4>
+                                        <div class="stat-value" id="roi">0%</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="portfolio-chart">
+                                    <canvas id="portfolioChart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="holdings-list" id="holdingsList">
+                                <!-- Token holdings will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Marketplace Section -->
+                        <div id="marketplaceSection" class="section">
+                            <div class="section-header">
+                                <h3>Secondary Market</h3>
+                                <div class="section-actions">
+                                    <button class="btn btn-secondary" onclick="marketplace.loadTradeHistory()">
+                                        View Trade History
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="marketplace-content">
+                                <div class="market-listings" id="marketListings">
+                                    <!-- Market listings will be populated here -->
+                                </div>
+                                
+                                <div class="trade-history" id="tradeHistory" style="display: none;">
+                                    <!-- Trade history will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Earnings Section -->
+                        <div id="earningsSection" class="section">
+                            <div class="section-header">
+                                <h3>Earnings History</h3>
+                            </div>
+                            
+                            <div class="earnings-overview">
+                                <div class="earnings-chart">
+                                    <canvas id="earningsChart"></canvas>
+                                </div>
+                                
+                                <div class="earnings-list" id="earningsList">
+                                    <!-- Earnings history will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Investor Verification Section -->
+                        <div id="verificationSection" class="section">
+                            <div class="section-header">
+                                <h3>Investor Verification</h3>
+                            </div>
+                            
+                            <div class="verification-status" id="investorVerificationStatus">
+                                <!-- Verification status will be populated here -->
+                            </div>
+                            
+                            <div class="verification-form" id="investorVerificationForm">
+                                <h4>Submit Verification Documents</h4>
+                                <div class="form-instructions">
+                                    <p>Please upload clear, legible copies of the following documents. All documents must be current and valid.</p>
+                                </div>
+                                <form id="investorDocumentsForm">
+                                    <div class="form-group">
+                                        <label for="investorIdentityDocument">🆔 Government-Issued Identity Document</label>
+                                        <small class="form-help">National ID, passport, driver's license, or state-issued ID card</small>
+                                        <input type="file" id="investorIdentityDocument" name="identityDocument" accept=".pdf,.jpg,.png" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="proofOfAddress">🏠 Proof of Address</label>
+                                        <small class="form-help">Utility bill, bank statement, lease agreement, or government correspondence (last 3 months)</small>
+                                        <input type="file" id="proofOfAddress" name="proofOfAddress" accept=".pdf,.jpg,.png" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="financialInformation">💼 Financial Information</label>
+                                        <small class="form-help">Bank statement, income verification, investment account statement, or tax return</small>
+                                        <input type="file" id="financialInformation" name="financialInformation" accept=".pdf,.jpg,.png" required>
+                                    </div>
+                                    
+                                    <div class="form-requirements">
+                                        <h6>Document Requirements:</h6>
+                                        <ul>
+                                            <li>✅ Accepted formats: PDF, JPG, PNG</li>
+                                            <li>✅ Maximum file size: 10MB per document</li>
+                                            <li>✅ Documents must be clear and legible</li>
+                                            <li>✅ All text must be readable</li>
+                                            <li>✅ Documents must be current and valid</li>
+                                            <li>✅ Address documents must be from last 3 months</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">Submit Documents for Review</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading...</div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/wallet.js"></script>
+    <script src="js/marketplace.js"></script>
+    <script src="js/farmer-dashboard.js"></script>
+    <script src="js/investor-portal.js"></script>
+    <script src="js/main.js"></script>
+    <script src="demo-helper.js"></script>
+</body>
+</html>

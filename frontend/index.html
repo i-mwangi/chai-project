@@ -3,517 +3,1072 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chai Platform</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/marketplace.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Chai Platform - Beta</title>
+    <link rel="icon" href="public/chai.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Playfair+Display:wght@700;900&display=swap');
+    :root {
+        --bg-dark: #1F1612;
+        --bg-glass: rgba(60, 45, 38, 0.5);
+        --border-glass: rgba(199, 172, 149, 0.2);
+        --text-light: #F5EFE6;
+        --text-dark: #B0A090;
+        --gradient-primary: linear-gradient(90deg, #8A5A44 0%, #D4A373 100%);
+        --glow-primary: rgba(212, 163, 115, 0.4);
+        --nav-height: 80px;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Inter', 'Segoe UI', sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-light);
+        padding-top: var(--nav-height);
+        position: relative;
+        overflow-x: hidden;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image:
+            url("data:image/svg+xml,<svg version='1.0' xmlns='http://www.w3.org/2000/svg' width='150' height='80' viewBox='0 0 300 159' preserveAspectRatio='xMidYMid meet'><g transform='translate(0.000000,159.000000) scale(0.100000,-0.100000)' fill='%23F5EFE6' stroke='none' opacity='0.1'><path d='M1617 1583 c18 -2 50 -2 70 0 21 2 7 4 -32 4 -38 0 -55 -2 -38 -4z'/></g></svg>"),
+            url('data:image/svg+xml,<svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="225" height="225" viewBox="0 0 225 225" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,225) scale(0.1,-0.1)" fill="%23F5EFE6" opacity="0.15" stroke="none"><path d="M985 2133 c-166 -19 -302 -80 -404 -181z"/></g></svg>'),
+            url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="180"><g opacity="0.06"><path d="M75 170 V 40" stroke="%236B4F43" stroke-width="6" fill="none"/><circle cx="70" cy="90" r="6" fill="%23B94E48"/></g></svg>');
+        background-repeat: no-repeat;
+        background-position: 10% 15%, 85% 25%, 20% 80%, 75% 60%, 90% 90%, 5% 55%;
+        pointer-events: none;
+        z-index: 0;
+        animation: spiral-float 60s infinite ease-in-out;
+    }
+
+    .background-glow {
+        position: fixed;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 0;
+        filter: blur(50px);
+    }
+    .glow-1 {
+        width: 450px;
+        height: 450px;
+        background: rgba(212, 163, 115, 0.04);
+        top: 15%;
+        right: 5%;
+        animation: pulse 18s infinite ease-in-out;
+    }
+    .glow-2 {
+        width: 500px;
+        height: 500px;
+        background: rgba(138, 90, 68, 0.05);
+        bottom: 10%;
+        left: 10%;
+        animation: pulse 22s infinite ease-in-out 3s;
+    }
+    .glow-3 {
+        width: 350px;
+        height: 350px;
+        background: rgba(176, 137, 104, 0.045);
+        top: 50%;
+        left: 45%;
+        animation: pulse 20s infinite ease-in-out 6s;
+    }
+
+    @keyframes spiral-float {
+        0% { transform: translate(0, 0) rotate(0deg); }
+        25% { transform: translate(20px, -25px) rotate(10deg); }
+        50% { transform: translate(-25px, 20px) rotate(-8deg); }
+        75% { transform: translate(15px, 15px) rotate(12deg); }
+        100% { transform: translate(0, 0) rotate(0deg); }
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.15); }
+    }
+
+    nav, #app, .landing-page, main, section, footer {
+        position: relative;
+        z-index: 1;
+    }
+
+    .hidden { display: none !important; }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .btn-primary {
+        background: var(--gradient-primary);
+        color: white;
+        box-shadow: 0 4px 15px var(--glow-primary);
+    }
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 7px 20px var(--glow-primary);
+    }
+    .btn-large { padding: 14px 32px; font-size: 1.1rem; }
+
+    nav {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        height: var(--nav-height);
+        background: rgba(31, 22, 18, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border-glass);
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    .brand-section { 
+        display: flex; 
+        align-items: center; 
+        gap: 15px; 
+    }
+    
+    .brand-logo {
+        width: 50px; 
+        height: 50px; 
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .brand-text { 
+        display: flex; 
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .brand-name-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .brand-name { 
+        color: var(--text-light); 
+        font-weight: 700; 
+        font-size: 1.3rem; 
+        margin: 0; 
+    }
+    
+    .beta-badge {
+        background: #D4A373; 
+        color: #1F1612;
+        box-shadow: 0 2px 4px rgba(212, 163, 115, 0.3);
+        font-size: 0.65rem; 
+        padding: 3px 8px; 
+        border-radius: 10px;
+        font-weight: 600; 
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+    
+    .brand-tagline { 
+        color: var(--text-dark); 
+        font-size: 0.75rem; 
+        margin: 0; 
+    }
+    
+    .nav-section { display: flex; align-items: center; gap: 20px; }
+    .notification-container { position: relative; cursor: pointer; padding: 5px; }
+    .notification-bell { font-size: 1.3rem; transition: transform 0.3s ease; color: var(--text-light); }
+    .notification-container:hover .notification-bell { transform: scale(1.1); }
+    .notification-count {
+        position: absolute; top: -2px; right: -2px; background-color: #DC2626; color: white;
+        font-size: 0.65rem; width: 18px; height: 18px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 600; border: 2px solid #1F1612;
+    }
+    .notifications-dropdown {
+        position: absolute; top: 35px; right: 0; width: 320px; background: #2a1d17;
+        border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); overflow: hidden;
+        display: none; z-index: 1002; border: 1px solid var(--border-glass);
+    }
+    .notifications-dropdown.show { display: block; animation: slideDown 0.3s ease; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .notification-header { padding: 14px 16px; font-weight: 600; color: var(--text-light); border-bottom: 1px solid var(--border-glass); background: rgba(0,0,0,0.1); }
+    .notification-item { padding: 14px 16px; border-bottom: 1px solid var(--border-glass); font-size: 0.9rem; color: var(--text-dark); transition: background 0.2s ease; }
+    .notification-item:hover { background: rgba(255,255,255,0.05); }
+    .notification-item:last-child { border-bottom: none; }
+    .notification-item p { margin: 0; line-height: 1.5; }
+    .notification-item strong { color: #D4A373; }
+    .faq-link { color: var(--text-light); text-decoration: none; font-weight: 500; padding: 8px 12px; border-radius: 6px; transition: all 0.3s ease; }
+    .faq-link:hover { color: #D4A373; }
+    .signup-btn { background: var(--gradient-primary); border: none; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+    .signup-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px var(--glow-primary); }
+    
+    #announcement-banner {
+        position: fixed; 
+        top: -100px; 
+        left: 50%; 
+        transform: translateX(-50%);
+        background: var(--gradient-primary); 
+        color: white; 
+        padding: 12px 30px;
+        border-radius: 50px; 
+        text-align: center; 
+        font-size: 1rem; 
+        font-weight: 600;
+        transition: all 0.5s ease; 
+        z-index: 999; 
+        opacity: 0; 
+        visibility: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+        max-width: 90%;
+    }
+    #announcement-banner.active { 
+        top: calc(var(--nav-height) + 10px); 
+        opacity: 1; 
+        visibility: visible; 
+    }
+
+    /* Section Styling */
+    .hero-section { 
+        background: none; 
+        color: var(--text-light); 
+        padding: 80px 20px; 
+        text-align: center; 
+    }
+    
+    .hero-content { 
+        max-width: 1200px; 
+        margin: 0 auto; 
+    }
+    
+    .hero-content h2 { 
+        font-size: 2.8rem; 
+        margin-bottom: 25px; 
+        font-weight: 700; 
+        line-height: 1.2; 
+    }
+    
+    .hero-description { 
+        color: var(--text-dark); 
+        font-size: 1.15rem; 
+        margin-bottom: 40px; 
+        line-height: 1.7; 
+        max-width: 800px; 
+        margin-left: auto; 
+        margin-right: auto; 
+    }
+    
+    .hero-content-wrapper { 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 40px; 
+        align-items: center; 
+        max-width: 1200px; 
+        margin: 40px auto; 
+    }
+    
+    .hero-text { 
+        flex: 1; 
+        min-width: 300px; 
+    }
+    
+    .hero-image { 
+        flex: 1; 
+        min-width: 300px; 
+        display: flex; 
+        justify-content: center; 
+    }
+    
+    .hero-cta { 
+        margin-top: 40px; 
+    }
+
+    /* Problem Section */
+    .problem-section {
+        padding: 80px 20px;
+        background-color: transparent;
+    }
+    
+    .problem-content {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .problem-content h2 {
+        color: var(--text-light);
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 50px;
+        font-weight: 700;
+    }
+    
+    .problem-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+        align-items: center;
+    }
+    
+    .problem-text {
+        flex: 1;
+        min-width: 300px;
+    }
+    
+    .problem-image {
+        flex: 1;
+        min-width: 300px;
+        display: flex;
+        justify-content: center;
+    }
+
+    /* Passion Purpose Section */
+    .passion-section {
+        padding: 80px 20px;
+        background-color: transparent;
+    }
+    
+    .passion-content {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .passion-content h2 {
+        color: #D4A373;
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 30px;
+        font-weight: 700;
+    }
+    
+    .passion-text {
+        color: var(--text-dark);
+        font-size: 1.1rem;
+        line-height: 1.8;
+        margin-bottom: 30px;
+        text-align: center;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .passion-image-wrapper {
+        max-width: 600px;
+        margin: 40px auto;
+        text-align: center;
+    }
+    
+    .video-container { 
+        max-width: 800px; 
+        margin: 50px auto; 
+        border-radius: 12px; 
+        overflow: hidden; 
+        box-shadow: 0 15px 40px rgba(0,0,0,0.5); 
+    }
+    
+    .video-container iframe { 
+        display: block; 
+    }
+
+    .banner { 
+        background: none; 
+        padding: 80px 20px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        overflow: hidden; 
+    }
+    
+    .banner-wrapper { 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        width: 100%; 
+        max-width: 1200px; 
+        gap: 40px; 
+    }
+    
+    .banner .solution-info { 
+        flex: 1; 
+        max-width: 450px; 
+        text-align: left; 
+        z-index: 1; 
+    }
+    
+    .banner .solution-info h1 { 
+        color: var(--text-light); 
+        font-size: 3rem; 
+        line-height: 1.2; 
+        margin-bottom: 25px; 
+        font-weight: 700; 
+    }
+    
+    .banner .solution-info h2 { 
+        color: #D4A373; 
+        font-size: 1.8rem; 
+        margin-bottom: 20px; 
+        font-weight: 600; 
+    }
+    
+    .banner .solution-info p { 
+        color: var(--text-dark); 
+        line-height: 1.7; 
+        font-size: 1.05rem; 
+        margin-bottom: 15px; 
+    }
+    
+    .banner .solution-info p b { 
+        color: var(--text-light); 
+        font-weight: 600; 
+    }
+    
+    .banner .slider { 
+        flex: 1; 
+        max-width: 500px; 
+        min-height: 400px; 
+        position: relative; 
+        transform-style: preserve-3d; 
+        animation: autoRun 25s linear infinite; 
+        perspective: 1200px; 
+    }
+    
+    .banner .slider:hover { 
+        animation-play-state: paused; 
+    }
+    
+    @keyframes autoRun { 
+        from { transform: rotateX(-10deg) rotateY(0deg); } 
+        to { transform: rotateX(-10deg) rotateY(360deg); } 
+    }
+    
+    .banner .slider .item { 
+        position: absolute; 
+        inset: 0; 
+        width: 240px; 
+        height: 320px; 
+        margin: auto; 
+        transform: rotateY(calc((var(--position) - 1) * 90deg)) translateZ(300px); 
+    }
+    
+    .carousel-card {
+        width: 100%; 
+        height: 100%; 
+        background: var(--bg-glass); 
+        border: 1px solid var(--border-glass);
+        backdrop-filter: blur(5px); 
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3); 
+        border-radius: 16px;
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        padding: 30px 20px;
+    }
+    
+    .carousel-card-icon { 
+        font-size: 4rem; 
+        margin-bottom: 20px; 
+    }
+    
+    .carousel-card-title { 
+        color: var(--text-light); 
+        font-size: 1.2rem; 
+        font-weight: 600; 
+        text-align: center; 
+        line-height: 1.3; 
+    }
+    
+    .features-section, .how-it-works, .faq-section { 
+        padding: 80px 20px; 
+        background-color: transparent; 
+    }
+    
+    .features-section h2, .how-it-works h2, .faq-section h2 { 
+        color: var(--text-light); 
+        text-align: center; 
+        font-size: 2.5rem; 
+        margin-bottom: 50px; 
+        font-weight: 700; 
+    }
+    
+    .features-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+        gap: 30px; 
+        max-width: 1200px; 
+        margin: 0 auto; 
+    }
+    
+    .feature-card { 
+        background: var(--bg-glass); 
+        border: 1px solid var(--border-glass); 
+        backdrop-filter: blur(5px); 
+        transition: all 0.3s ease; 
+        padding: 35px; 
+        border-radius: 12px; 
+    }
+    
+    .feature-card:hover { 
+        transform: translateY(-8px); 
+        border-color: #D4A373; 
+        box-shadow: 0 10px 30px rgba(138, 90, 68, 0.3); 
+    }
+    
+    .feature-card h3 { 
+        color: var(--text-light); 
+        font-size: 1.4rem; 
+        font-weight: 600; 
+        margin-bottom: 15px; 
+    }
+    
+    .feature-card p { 
+        color: var(--text-dark); 
+        line-height: 1.7; 
+        font-size: 0.95rem; 
+    }
+    
+    .faq-container { 
+        max-width: 800px; 
+        margin: 0 auto; 
+    }
+    
+    .faq-item { 
+        background: var(--bg-glass); 
+        border: 1px solid var(--border-glass); 
+        margin-bottom: 15px; 
+        border-radius: 10px; 
+        overflow: hidden; 
+        transition: all 0.3s ease; 
+    }
+    
+    .faq-item:hover { 
+        border-color: #D4A373; 
+    }
+    
+    .faq-question { 
+        padding: 22px; 
+        cursor: pointer; 
+        color: var(--text-light); 
+        font-size: 1.1rem; 
+        font-weight: 600; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        transition: background 0.3s ease; 
+    }
+    
+    .faq-question:hover { 
+        background: rgba(255,255,255,0.05); 
+    }
+    
+    .faq-question::after { 
+        content: '▾'; 
+        font-size: 1.8rem; 
+        color: #D4A373; 
+        transition: transform 0.3s ease; 
+    }
+    
+    .faq-item.active .faq-question::after { 
+        transform: rotate(180deg); 
+    }
+    
+    .faq-answer { 
+        padding: 0 22px; 
+        max-height: 0; 
+        overflow: hidden; 
+        transition: all 0.3s ease; 
+        color: var(--text-dark); 
+        line-height: 1.7; 
+    }
+    
+    .faq-item.active .faq-answer { 
+        padding: 0 22px 22px; 
+        max-height: 300px; 
+    }
+    
+    .landing-footer { 
+        background: transparent; 
+        border-top: 1px solid var(--border-glass); 
+        color: var(--text-dark); 
+        padding: 50px 20px; 
+        text-align: center; 
+    }
+    
+    .footer-content { 
+        max-width: 1200px; 
+        margin: 0 auto; 
+    }
+    
+    .footer-content p { 
+        margin-bottom: 20px; 
+        opacity: 0.9; 
+    }
+
+    @media (max-width: 992px) {
+         .banner .solution-info h1 { font-size: 2.8rem; }
+         .banner .solution-info h2 { font-size: 1.5rem; }
+         .banner .slider .item { transform: rotateY(calc((var(--position) - 1) * 90deg)) translateZ(240px); }
+    }
+    
+    @media (max-width: 768px) {
+        :root {
+            --nav-height: 70px;
+        }
+        
+        nav { 
+            padding: 10px 15px; 
+        }
+        
+        .brand-name {
+            font-size: 1.1rem;
+        }
+        
+        .beta-badge {
+            font-size: 0.6rem;
+            padding: 2px 6px;
+        }
+        
+        #announcement-banner.active { 
+            top: calc(var(--nav-height) + 10px); 
+        }
+        
+        .hero-section { 
+            padding-top: 60px; 
+        }
+        
+        .hero-content h2, .features-section h2, .how-it-works h2, .faq-section h2, .problem-content h2, .passion-content h2 { 
+            font-size: 2.2rem; 
+        }
+        
+        .banner-wrapper { 
+            flex-direction: column; 
+            gap: 50px; 
+        }
+        
+        .banner .solution-info { 
+            text-align: center; 
+        }
+        
+        .banner .slider { 
+            animation: none; 
+            transform: rotateX(-10deg) rotateY(20deg); 
+            min-height: 320px; 
+        }
+        
+        .banner .slider .item { 
+            width: 180px; 
+            height: 240px; 
+            transform: rotateY(calc((var(--position) - 1) * 90deg)) translateZ(200px); 
+        }
+        
+        .problem-wrapper {
+            flex-direction: column;
+        }
+    }
+</style>
 </head>
 <body>
-    <div id="app">
-        <!-- Navigation -->
-        <nav class="navbar">
-            <div class="nav-container">
-                <div class="nav-brand">
-                    <h1>☕ Chai Platform</h1>
-                </div>
-                <div class="nav-menu">
-                    <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-                    <button class="nav-btn" data-view="farmer">Farmer Portal</button>
-                    <button class="nav-btn" data-view="investor">Investor Portal</button>
-                </div>
-                <div class="nav-user">
-                    <div class="wallet-connection">
-                        <button id="connectWallet" class="btn btn-primary">Connect Wallet</button>
-                        <div id="walletInfo" class="wallet-info hidden">
-                            <span id="walletAddress"></span>
-                            <button id="disconnectWallet" class="btn btn-secondary">Disconnect</button>
-                        </div>
-                    </div>
-                </div>
+    <div class="background-glow glow-1"></div>
+    <div class="background-glow glow-2"></div>
+    <div class="background-glow glow-3"></div>
+<nav>
+    <div class="brand-section">
+        <img class="brand-logo" src="public/chai.png" alt="Chai Platform Logo" width="50" height="50">
+        <div class="brand-text">
+            <div class="brand-name-wrapper">
+                <h1 class="brand-name">Chai Platform</h1>
+                <span class="beta-badge">Beta</span>
             </div>
-        </nav>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Dashboard View -->
-            <div id="dashboardView" class="view active">
-                <div class="dashboard-header">
-                    <h2>Platform Overview</h2>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <h3>Total Groves</h3>
-                            <div class="stat-value" id="totalGroves">-</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Active Farmers</h3>
-                            <div class="stat-value" id="activeFarmers">-</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Total Revenue</h3>
-                            <div class="stat-value" id="totalRevenue">-</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Coffee Price</h3>
-                            <div class="stat-value" id="coffeePrice">-</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Wallet Connection Prompt -->
-                    <div id="walletPrompt" class="wallet-prompt">
-                        <div class="prompt-card">
-                            <h3>🔗 Connect Your Wallet to Get Started</h3>
-                            <p>Connect your Hedera wallet to access farmer and investor features:</p>
-                            <ul>
-                                <li><strong>Farmers:</strong> Register groves, report harvests, track revenue</li>
-                                <li><strong>Investors:</strong> Browse groves, purchase tokens, manage portfolio</li>
-                            </ul>
-                            <button class="btn btn-primary btn-large" onclick="window.walletManager.connectWallet()">
-                                Connect Wallet Now
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Farmer Portal View -->
-            <div id="farmerView" class="view">
-                <div class="farmer-dashboard">
-                    <div class="dashboard-sidebar">
-                        <div class="sidebar-menu">
-                            <button class="menu-item active" data-section="groves">My Groves</button>
-                            <button class="menu-item" data-section="harvest">Harvest Reports</button>
-                            <button class="menu-item" data-section="revenue">Revenue Tracking</button>
-                            <button class="menu-item" data-section="health">Tree Health</button>
-                            <button class="menu-item" data-section="verification">Verification</button>
-                        </div>
-                    </div>
-                    
-                    <div class="dashboard-content">
-                        <!-- Grove Management Section -->
-                        <div id="grovesSection" class="section active">
-                            <div class="section-header">
-                                <h3>Grove Management</h3>
-                                <button id="addGroveBtn" class="btn btn-primary">Register New Grove</button>
-                            </div>
-                            
-                            <div class="groves-grid" id="grovesGrid">
-                                <!-- Grove cards will be populated here -->
-                            </div>
-                            
-                            <!-- Grove Registration Modal -->
-                            <div id="groveModal" class="modal">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h4>Register Coffee Grove</h4>
-                                        <button class="modal-close">&times;</button>
-                                    </div>
-                                    <form id="groveForm" class="modal-body">
-                                        <div class="form-group">
-                                            <label for="groveName">Grove Name</label>
-                                            <input type="text" id="groveName" name="groveName" required>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label for="location">Location</label>
-                                            <input type="text" id="location" name="location" placeholder="e.g., Costa Rica, Central Valley" required>
-                                        </div>
-                                        
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label for="latitude">Latitude</label>
-                                                <input type="number" id="latitude" name="latitude" step="any" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="longitude">Longitude</label>
-                                                <input type="number" id="longitude" name="longitude" step="any" required>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label for="treeCount">Number of Trees</label>
-                                                <input type="number" id="treeCount" name="treeCount" min="1" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="coffeeVariety">Coffee Variety</label>
-                                                <select id="coffeeVariety" name="coffeeVariety" required>
-                                                    <option value="">Select variety</option>
-                                                    <option value="Arabica">Arabica</option>
-                                                    <option value="Robusta">Robusta</option>
-                                                    <option value="Bourbon">Bourbon</option>
-                                                    <option value="Typica">Typica</option>
-                                                    <option value="Caturra">Caturra</option>
-                                                    <option value="Geisha">Geisha</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label for="expectedYield">Expected Yield per Tree (kg/year)</label>
-                                            <input type="number" id="expectedYield" name="expectedYield" step="0.1" min="0" required>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label>Location on Map</label>
-                                            <div id="groveMap" class="map-container"></div>
-                                            <small>Click on the map to set grove location</small>
-                                        </div>
-                                        
-                                        <div class="modal-actions">
-                                            <button type="button" class="btn btn-secondary" id="cancelGrove">Cancel</button>
-                                            <button type="submit" class="btn btn-primary">Register Grove</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Harvest Reports Section -->
-                        <div id="harvestSection" class="section">
-                            <div class="section-header">
-                                <h3>Harvest Reports</h3>
-                                <button id="addHarvestBtn" class="btn btn-primary">Report New Harvest</button>
-                            </div>
-                            
-                            <div class="harvest-list" id="harvestList">
-                                <!-- Harvest reports will be populated here -->
-                            </div>
-                            
-                            <!-- Harvest Report Modal -->
-                            <div id="harvestModal" class="modal">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h4>Report Harvest</h4>
-                                        <button class="modal-close">&times;</button>
-                                    </div>
-                                    <form id="harvestForm" class="modal-body">
-                                        <div class="form-group">
-                                            <label for="harvestGrove">Select Grove</label>
-                                            <select id="harvestGrove" name="groveId" required>
-                                                <option value="">Select a grove</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label for="harvestDate">Harvest Date</label>
-                                            <input type="date" id="harvestDate" name="harvestDate" required>
-                                        </div>
-                                        
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label for="yieldKg">Total Yield (kg)</label>
-                                                <input type="number" id="yieldKg" name="yieldKg" step="0.1" min="0" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="qualityGrade">Quality Grade (1-10)</label>
-                                                <input type="number" id="qualityGrade" name="qualityGrade" min="1" max="10" required>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label for="salePrice">Sale Price per kg (USDC)</label>
-                                            <input type="number" id="salePrice" name="salePrice" step="0.01" min="0" required>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label for="notes">Additional Notes</label>
-                                            <textarea id="notes" name="notes" rows="3" placeholder="Weather conditions, processing method, etc."></textarea>
-                                        </div>
-                                        
-                                        <div class="modal-actions">
-                                            <button type="button" class="btn btn-secondary" id="cancelHarvest">Cancel</button>
-                                            <button type="submit" class="btn btn-primary">Submit Report</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Revenue Tracking Section -->
-                        <div id="revenueSection" class="section">
-                            <div class="section-header">
-                                <h3>Revenue Tracking</h3>
-                            </div>
-                            
-                            <div class="revenue-overview">
-                                <div class="revenue-stats">
-                                    <div class="stat-card">
-                                        <h4>Total Earnings</h4>
-                                        <div class="stat-value" id="totalEarnings">$0.00</div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <h4>This Month</h4>
-                                        <div class="stat-value" id="monthlyEarnings">$0.00</div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <h4>Pending Distributions</h4>
-                                        <div class="stat-value" id="pendingDistributions">$0.00</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="revenue-chart">
-                                    <canvas id="revenueChart"></canvas>
-                                </div>
-                            </div>
-                            
-                            <div class="distributions-list" id="distributionsList">
-                                <!-- Distribution history will be populated here -->
-                            </div>
-                        </div>
-
-                        <!-- Tree Health Section -->
-                        <div id="healthSection" class="section">
-                            <div class="section-header">
-                                <h3>Tree Health Monitoring</h3>
-                            </div>
-                            
-                            <div class="health-overview" id="healthOverview">
-                                <!-- Health monitoring cards will be populated here -->
-                            </div>
-                        </div>
-
-                        <!-- Verification Section -->
-                        <div id="verificationSection" class="section">
-                            <div class="section-header">
-                                <h3>Farmer Verification</h3>
-                            </div>
-                            
-                            <div class="verification-status" id="verificationStatus">
-                                <!-- Verification status will be populated here -->
-                            </div>
-                            
-                            <div class="verification-form" id="verificationForm">
-                                <h4>Submit Verification Documents</h4>
-                                <div class="form-instructions">
-                                    <p>Please upload clear, legible copies of the following documents. All documents must be current and valid.</p>
-                                </div>
-                                <form id="documentsForm">
-                                    <div class="form-group">
-                                        <label for="landOwnership">📄 Land Ownership Documents</label>
-                                        <small class="form-help">Land title, deed, lease agreement, or property certificate proving your right to farm the land</small>
-                                        <input type="file" id="landOwnership" name="landOwnership" accept=".pdf,.jpg,.png" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="farmingLicense">🌾 Farming License or Permit</label>
-                                        <small class="form-help">Agricultural license, farming permit, cooperative membership, or coffee grower registration</small>
-                                        <input type="file" id="farmingLicense" name="farmingLicense" accept=".pdf,.jpg,.png" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="identityDocument">🆔 Government-Issued Identity Document</label>
-                                        <small class="form-help">National ID, passport, driver's license, or voter registration card</small>
-                                        <input type="file" id="identityDocument" name="identityDocument" accept=".pdf,.jpg,.png" required>
-                                    </div>
-                                    
-                                    <div class="form-requirements">
-                                        <h6>Document Requirements:</h6>
-                                        <ul>
-                                            <li>✅ Accepted formats: PDF, JPG, PNG</li>
-                                            <li>✅ Maximum file size: 10MB per document</li>
-                                            <li>✅ Documents must be clear and legible</li>
-                                            <li>✅ All text must be readable</li>
-                                            <li>✅ Documents must be current and valid</li>
-                                        </ul>
-                                    </div>
-                                    
-                                    <button type="submit" class="btn btn-primary">Submit Documents for Review</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Investor Portal View -->
-            <div id="investorView" class="view">
-                <div class="investor-dashboard">
-                    <div class="dashboard-sidebar">
-                        <div class="sidebar-menu">
-                            <button class="menu-item active" data-section="browse">Browse Groves</button>
-                            <button class="menu-item" data-section="portfolio">My Portfolio</button>
-                            <button class="menu-item" data-section="marketplace">Marketplace</button>
-                            <button class="menu-item" data-section="earnings">Earnings</button>
-                            <button class="menu-item" data-section="verification">Verification</button>
-                        </div>
-                    </div>
-                    
-                    <div class="dashboard-content">
-                        <!-- Browse Groves Section -->
-                        <div id="browseSection" class="section active">
-                            <div class="section-header">
-                                <h3>Available Coffee Groves</h3>
-                                <div class="filters">
-                                    <select id="varietyFilter">
-                                        <option value="">All Varieties</option>
-                                        <option value="Arabica">Arabica</option>
-                                        <option value="Robusta">Robusta</option>
-                                        <option value="Bourbon">Bourbon</option>
-                                        <option value="Typica">Typica</option>
-                                        <option value="Caturra">Caturra</option>
-                                        <option value="Geisha">Geisha</option>
-                                    </select>
-                                    <select id="locationFilter">
-                                        <option value="">All Locations</option>
-                                    </select>
-                                    <input type="range" id="yieldFilter" min="0" max="10" step="0.1" placeholder="Min Yield">
-                                </div>
-                            </div>
-                            
-                            <div class="groves-marketplace" id="grovesMarketplace">
-                                <!-- Available groves will be populated here -->
-                            </div>
-                        </div>
-
-                        <!-- Portfolio Section -->
-                        <div id="portfolioSection" class="section">
-                            <div class="section-header">
-                                <h3>My Investment Portfolio</h3>
-                            </div>
-                            
-                            <div class="portfolio-overview">
-                                <div class="portfolio-stats">
-                                    <div class="stat-card">
-                                        <h4>Total Investment</h4>
-                                        <div class="stat-value" id="totalInvestment">$0.00</div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <h4>Current Value</h4>
-                                        <div class="stat-value" id="currentValue">$0.00</div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <h4>Total Returns</h4>
-                                        <div class="stat-value" id="totalReturns">$0.00</div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <h4>ROI</h4>
-                                        <div class="stat-value" id="roi">0%</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="portfolio-chart">
-                                    <canvas id="portfolioChart"></canvas>
-                                </div>
-                            </div>
-                            
-                            <div class="holdings-list" id="holdingsList">
-                                <!-- Token holdings will be populated here -->
-                            </div>
-                        </div>
-
-                        <!-- Marketplace Section -->
-                        <div id="marketplaceSection" class="section">
-                            <div class="section-header">
-                                <h3>Secondary Market</h3>
-                                <div class="section-actions">
-                                    <button class="btn btn-secondary" onclick="marketplace.loadTradeHistory()">
-                                        View Trade History
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="marketplace-content">
-                                <div class="market-listings" id="marketListings">
-                                    <!-- Market listings will be populated here -->
-                                </div>
-                                
-                                <div class="trade-history" id="tradeHistory" style="display: none;">
-                                    <!-- Trade history will be populated here -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Earnings Section -->
-                        <div id="earningsSection" class="section">
-                            <div class="section-header">
-                                <h3>Earnings History</h3>
-                            </div>
-                            
-                            <div class="earnings-overview">
-                                <div class="earnings-chart">
-                                    <canvas id="earningsChart"></canvas>
-                                </div>
-                                
-                                <div class="earnings-list" id="earningsList">
-                                    <!-- Earnings history will be populated here -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Investor Verification Section -->
-                        <div id="verificationSection" class="section">
-                            <div class="section-header">
-                                <h3>Investor Verification</h3>
-                            </div>
-                            
-                            <div class="verification-status" id="investorVerificationStatus">
-                                <!-- Verification status will be populated here -->
-                            </div>
-                            
-                            <div class="verification-form" id="investorVerificationForm">
-                                <h4>Submit Verification Documents</h4>
-                                <div class="form-instructions">
-                                    <p>Please upload clear, legible copies of the following documents. All documents must be current and valid.</p>
-                                </div>
-                                <form id="investorDocumentsForm">
-                                    <div class="form-group">
-                                        <label for="investorIdentityDocument">🆔 Government-Issued Identity Document</label>
-                                        <small class="form-help">National ID, passport, driver's license, or state-issued ID card</small>
-                                        <input type="file" id="investorIdentityDocument" name="identityDocument" accept=".pdf,.jpg,.png" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="proofOfAddress">🏠 Proof of Address</label>
-                                        <small class="form-help">Utility bill, bank statement, lease agreement, or government correspondence (last 3 months)</small>
-                                        <input type="file" id="proofOfAddress" name="proofOfAddress" accept=".pdf,.jpg,.png" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="financialInformation">💼 Financial Information</label>
-                                        <small class="form-help">Bank statement, income verification, investment account statement, or tax return</small>
-                                        <input type="file" id="financialInformation" name="financialInformation" accept=".pdf,.jpg,.png" required>
-                                    </div>
-                                    
-                                    <div class="form-requirements">
-                                        <h6>Document Requirements:</h6>
-                                        <ul>
-                                            <li>✅ Accepted formats: PDF, JPG, PNG</li>
-                                            <li>✅ Maximum file size: 10MB per document</li>
-                                            <li>✅ Documents must be clear and legible</li>
-                                            <li>✅ All text must be readable</li>
-                                            <li>✅ Documents must be current and valid</li>
-                                            <li>✅ Address documents must be from last 3 months</li>
-                                        </ul>
-                                    </div>
-                                    
-                                    <button type="submit" class="btn btn-primary">Submit Documents for Review</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Loading Overlay -->
-        <div id="loadingOverlay" class="loading-overlay hidden">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">Loading...</div>
+            <p class="brand-tagline">Invest in Sustainable Coffee Production</p>
         </div>
+    </div>
+    <div class="nav-section">
+        <div class="notification-container" aria-label="Notifications">
+            <span class="notification-bell" role="img" aria-label="Notifications">🔔</span>
+            <span class="notification-count">2</span>
+            <div class="notifications-dropdown" id="notificationsDropdown" role="menu">
+                <div class="notification-header">Notifications</div>
+                <div class="notification-item" role="menuitem">
+                    <p><strong>Update:</strong> Harvest season has officially begun for the 'Mountain Gold' batch.</p>
+                </div>
+                <div class="notification-item" role="menuitem">
+                    <p><strong>Welcome!</strong> Thank you for joining the Chai Platform.</p>
+                </div>
+            </div>
+        </div>
+        <a href="#faq" class="faq-link">FAQs</a>
+        <button class="signup-btn" aria-label="Sign up for Chai Platform" onclick="window.location.href='app.html'">Sign Up</button>
+    </div>
+</nav>
 
-        <!-- Toast Notifications -->
-        <div id="toastContainer" class="toast-container"></div>
+<div id="announcement-banner" role="alert" aria-live="polite">
+    2000 Tokenized Coffee Trees DROPPING SOON!
+</div>
+
+<div id="app">
+    <div id="landingPage" class="landing-page">
+        <main class="landing-main">
+            <!-- HERO SECTION -->
+            <section class="hero-section">
+                <div class="hero-content">
+                    <h2>Empowering Smallholder Coffee Farmers Through Blockchain</h2>
+                    <p class="hero-description">
+                        Despite Kenya, Ethiopia, and Uganda being renowned for their coffee, smallholder farmers who constitute over 70% of production face significant challenges accessing capital, fair markets, and modern technology.
+                    </p>
+                    <div class="hero-content-wrapper">
+                        <div class="hero-text">
+                            <p style="color: var(--text-dark); font-size: 1.05rem; line-height: 1.8; text-align: left;">
+                                Chai Platform uses Hedera Hashgraph to tokenize coffee trees, providing farmers with immediate capital, promoting sustainable practices, and ensuring fair compensation through transparent smart contracts.
+                            </p>
+                        </div>
+                        <div class="hero-image">
+                            <img src="public/farmer.png" alt="Coffee farmer working in field" style="width: 100%; max-width: 500px; height: auto; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);">
+                        </div>
+                    </div>
+                    <div class="hero-cta">
+                        <button id="heroConnectWallet" class="btn btn-primary btn-large" onclick="window.location.href='app.html'">Get Started</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PROBLEM SECTION -->
+            <section class="problem-section">
+                <div class="problem-content">
+                        <h2>The Challenge</h2>
+                        <div class="problem-wrapper">
+                            <div class="problem-text">
+                                <p style="color: var(--text-dark); font-size: 1.1rem; line-height: 1.8; margin-bottom: 20px;">
+                                    Smallholder coffee farmers face multiple interconnected challenges that prevent them from achieving economic stability and sustainable growth.
+                                </p>
+                                <ul style="list-style-type: none; padding: 0; color: var(--text-dark); font-size: 1.05rem; line-height: 2;">
+                                    <li style="margin-bottom: 12px; position: relative; padding-left: 20px;">Limited access to fair financing and capital<span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span></li>
+                                    <li style="margin-bottom: 12px; position: relative; padding-left: 20px;">Exploitation by middlemen reducing profits<span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span></li>
+                                    <li style="margin-bottom: 12px; position: relative; padding-left: 20px;">Lack of resources for sustainable farming practices<span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span></li>
+                                    <li style="margin-bottom: 12px; position: relative; padding-left: 20px;">No transparency in supply chains<span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span></li>
+                                    <li style="margin-bottom: 12px; position: relative; padding-left: 20px;">Limited access to modern agricultural technology<span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span></li>
+                                </ul>
+                            </div>
+                            <div class="problem-image">
+                                <img src="public/problems.png" alt="Challenges faced by smallholder coffee farmers" style="width: 100%; max-width: 500px; height: auto; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PASSION & PURPOSE SECTION -->
+                <section class="passion-section">
+                    <div class="passion-content">
+                        <h2>Turn Passion Into Purpose</h2>
+                        <p class="passion-text">
+                            At Chai Platform, we believe coffee is more than a beverage—it's a bridge between people, cultures, and futures. By partnering with ethical farmers, especially in Kenya, Uganda, and Ethiopia, we ensure every bean uplifts communities, protects the environment, and empowers you to be part of lasting change.
+                        </p>
+                        <p class="passion-text" style="font-weight: 600; color: var(--text-light); font-size: 1.2rem;">
+                            We turn your passion into purpose. Invest in coffee trees, empower farmers, and share in the profits of a more sustainable future.
+                        </p>
+                        <div class="passion-image-wrapper">
+                            <img src="public/transform.png" alt="Transform your passion into purpose" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);">
+                        </div>
+                        <div class="video-container">
+                            <iframe width="100%" height="450" src="https://www.youtube.com/embed/jNQXAC9IVRw" title="Introduction to Blockchain and Coffee Farming" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SOLUTION SECTION -->
+                <section class="banner">
+                    <div class="banner-wrapper">
+                        <div class="solution-info">
+                            <h1>Our Solution</h1>
+                            <h2>Blockchain for Impact</h2>
+                            <p><b>Empowering Coffee Farmers</b></p>
+                            <p>Tokenizing coffee trees to provide capital, promote sustainability, ensure fair compensation, and build a global community.</p>
+                        </div>
+                        <div class="slider" style="--quantity: 4">
+                            <div class="item" style="--position: 1">
+                                <div class="carousel-card">
+                                    <span class="carousel-card-icon">💰</span>
+                                    <h3 class="carousel-card-title">Access to Capital</h3>
+                                </div>
+                            </div>
+                            <div class="item" style="--position: 2">
+                                <div class="carousel-card">
+                                    <span class="carousel-card-icon">🌿</span>
+                                    <h3 class="carousel-card-title">Sustainable Practices</h3>
+                                </div>
+                            </div>
+                            <div class="item" style="--position: 3">
+                                <div class="carousel-card">
+                                    <span class="carousel-card-icon">⚖️</span>
+                                    <h3 class="carousel-card-title">Fair Compensation</h3>
+                                </div>
+                            </div>
+                            <div class="item" style="--position: 4">
+                                <div class="carousel-card">
+                                    <span class="carousel-card-icon">🤝</span>
+                                    <h3 class="carousel-card-title">Impact Community</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PLATFORM TECHNOLOGY -->
+                <section class="features-section">
+                    <h2>Platform Technology</h2>
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <img src="public/blockchain.png" alt="Hedera Hashgraph blockchain technology" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                            <h3>Hedera Hashgraph</h3>
+                            <p>Lightning-fast, secure tokenization of coffee trees with minimal environmental impact and transaction costs</p>
+                        </div>
+                        <div class="feature-card">
+                            <img src="public/iot.png" alt="IoT sensors and data analytics" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                            <h3>IoT & Data Analytics</h3>
+                            <p>Real-time monitoring with IoT sensors tracking tree health, soil conditions, and yield predictions</p>
+                        </div>
+                        <div class="feature-card">
+                            <img src="public/data.png" alt="Transparent tracking and blockchain records" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                            <h3>Transparent Tracking</h3>
+                            <p>Full supply chain visibility from farm to cup with immutable blockchain records</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- WHAT INVESTORS & FARMERS GET -->
+                <section class="how-it-works">
+                    <h2>What Investors & Farmers Get</h2>
+                    <div style="max-width: 1200px; margin: 0 auto;">
+                        <div class="features-grid" style="grid-template-columns: 1fr 1fr; gap: 50px;">
+                            <div class="feature-card">
+                                <div style="text-align: center; margin-bottom: 20px;">
+                                    <div style="width: 200px; height: 200px; border-radius: 50%; overflow: hidden; margin: 0 auto 20px; border: 3px solid #D4A373;">
+                                        <img src="public/solving.png" alt="Benefits for Farmers" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                </div>
+                                <h3 style="color: #D4A373; font-size: 1.9rem; margin-bottom: 25px; text-align: center; font-weight: 600;">What Farmers Get</h3>
+                                <ul style="list-style-type: none; padding: 0; margin: 0;">
+                                    <li style="margin-bottom: 15px; font-size: 1.1rem; text-align: center; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span>
+                                        Immediate capital through fractioco
+                                    </li>
+                                    <li style="margin-bottom: 15px; font-size: 1.1rem; text-align: center; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span>
+                                        Potential yield increase by up to 5x
+                                    </li>
+                                    <li style="margin-bottom: 15px; font-size: 1.1rem; text-align: center; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span>
+                                        IoT sensors and data analytics for sustainable farming
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="feature-card">
+                                <div style="text-align: center; margin-bottom: 20px;">
+                                    <div style="width: 200px; height: 200px; border-radius: 50%; overflow: hidden; margin: 0 auto 20px; border: 3px solid #D4A373;">
+                                        <img src="public/investor.png" alt="Benefits for Investors" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                </div>
+                                <h3 style="color: #D4A373; font-size: 1.9rem; margin-bottom: 25px; text-align: center; font-weight: 600;">What Investors Get</h3>
+                                <ul style="list-style-type: none; padding: 0; margin: 0;">
+                                    <li style="margin-bottom: 15px; font-size: 1.1rem; text-align: center; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span>
+                                        Economic rights to the coffee trees
+                                    </li>
+                                    <li style="margin-bottom: 15px; font-size: 1.1rem; text-align: center; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span>
+                                        Transparent revenue-sharing through smart contracts
+                                    </li>
+                                    <li style="margin-bottom: 15px; font-size: 1.1rem; text-align: center; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">✓</span>
+                                        Share of sustainable coffee revenues
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- WORLD MAP -->
+                <section class="world-map-section" style="padding: 80px 20px; background-color: transparent; position: relative; text-align: center;">
+                    <div style="max-width: 1200px; margin: 0 auto; position: relative;">
+                        <img src="public/world.svg" alt="World Map" style="width: 100%; max-width: 800px; height: auto; display: block; margin: 0 auto; border-radius: 12px;">
+                    </div>
+                </section>
+
+                <!-- FAQ SECTION -->
+                <section class="faq-section" id="faq">
+                    <h2>Frequently Asked Questions</h2>
+                    <div class="faq-container">
+                        <div class="faq-item">
+                            <h3 class="faq-question">What is the Chai Platform?</h3>
+                            <p class="faq-answer">Our platform connects coffee farmers with investors through blockchain technology, enabling transparent and fair trade while promoting sustainable farming practices.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3 class="faq-question">How do I invest in coffee trees?</h3>
+                            <p class="faq-answer">After signing up, you can browse available coffee trees, review their details and performance history, and purchase ownership shares through our secure smart contracts.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3 class="faq-question">What are the risks involved?</h3>
+                            <p class="faq-answer">Like any agricultural investment, coffee tree investments carry risks including weather conditions, pests, and market fluctuations. We provide transparent reporting to help you make informed decisions.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3 class="faq-question">How are revenues distributed?</h3>
+                            <p class="faq-answer">Revenues from coffee sales are automatically distributed to investors through smart contracts, with full transparency and minimal fees.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3 class="faq-question">What blockchain technology do you use?</h3>
+                            <p class="faq-answer">We use Hedera Hashgraph for its speed, security, low transaction costs, and minimal environmental impact compared to traditional blockchains.</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- FOOTER -->
+            <footer class="landing-footer">
+                <div class="footer-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+                        <div style="text-align: left;">
+                            <p style="margin-bottom: 10px;">Proudly built on:</p>
+                            <img src="public/hedera.webp" alt="Hedera Hashgraph" style="height: 30px;">
+                        </div>
+                        <div>
+                            <p style="text-align: center;">&copy; 2025 Chai Platform. All rights reserved.</p>
+                        </div>
+                        <div></div>
+                    </div>
+                </div>
+            </footer>
+        </div>
     </div>
 
-    <script src="js/api.js"></script>
-    <script src="js/wallet.js"></script>
-    <script src="js/marketplace.js"></script>
-    <script src="js/farmer-dashboard.js"></script>
-    <script src="js/investor-portal.js"></script>
-    <script src="js/main.js"></script>
-    <script src="demo-helper.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const banner = document.getElementById('announcement-banner');
+            let bannerVisible = false;
+            let lastScrollTop = 0;
+
+            function showBanner() {
+                if (banner) {
+                    banner.classList.add('active');
+                    bannerVisible = true;
+                }
+            }
+
+            function hideBanner() {
+                if (banner) {
+                    banner.classList.remove('active');
+                    bannerVisible = false;
+                }
+            }
+
+            setTimeout(showBanner, 2000);
+
+            window.addEventListener('scroll', function() {
+                const currentScrollTop = window.scrollY || document.documentElement.scrollTop;
+
+                if (currentScrollTop > 100 && bannerVisible && currentScrollTop > lastScrollTop) {
+                    hideBanner();
+                } else if (currentScrollTop < 100 && !bannerVisible && currentScrollTop < lastScrollTop) {
+                    showBanner();
+                } else if (currentScrollTop === 0) {
+                    showBanner();
+                }
+
+                lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop;
+            });
+
+            const heroBtn = document.getElementById('heroConnectWallet');
+            const signUpBtn = document.querySelector('.signup-btn');
+
+            function handleSignUp() {
+                window.location.href = 'app.html';
+            }
+
+            if (heroBtn) {
+                heroBtn.addEventListener('click', handleSignUp);
+            }
+
+            if (signUpBtn) {
+                signUpBtn.addEventListener('click', handleSignUp);
+            }
+
+            const faqItems = document.querySelectorAll('.faq-item');
+            faqItems.forEach(item => {
+                const question = item.querySelector('.faq-question');
+                question.addEventListener('click', () => {
+                    const isActive = item.classList.contains('active');
+                    faqItems.forEach(otherItem => {
+                        otherItem.classList.remove('active');
+                    });
+                    if (!isActive) {
+                        item.classList.add('active');
+                    }
+                });
+            });
+
+            const notificationContainer = document.querySelector('.notification-container');
+            const notificationsDropdown = document.getElementById('notificationsDropdown');
+
+            if (notificationContainer && notificationsDropdown) {
+                notificationContainer.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    notificationsDropdown.classList.toggle('show');
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (notificationsDropdown.classList.contains('show') &&
+                        !notificationContainer.contains(event.target)) {
+                        notificationsDropdown.classList.remove('show');
+                    }
+                });
+            }
+
+            const faqLink = document.querySelector('.faq-link');
+            if (faqLink) {
+                faqLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const faqSection = document.getElementById('faq');
+                    if (faqSection) {
+                        faqSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            }
+
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            const animatedElements = document.querySelectorAll('.feature-card');
+            animatedElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        });
+    </script>
 </body>
 </html>

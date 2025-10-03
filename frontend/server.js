@@ -72,9 +72,9 @@ const server = http.createServer((req, res) => {
     // Check if file exists
     fs.stat(filePath, (err, stats) => {
         if (err || !stats.isFile()) {
-            // If file doesn't exist, serve index.html for SPA routing
+            // If file doesn't exist, serve app.html for SPA routing (not index.html)
             if (req.url !== '/' && !path.extname(req.url)) {
-                filePath = path.join(__dirname, 'index.html');
+                filePath = path.join(__dirname, 'app.html');
             }
         }
 
@@ -86,9 +86,10 @@ server.listen(PORT, () => {
     console.log(`Coffee Tree Platform Frontend running on http://localhost:${PORT}`);
     console.log('');
     console.log('Available views:');
-    console.log('  Dashboard: http://localhost:' + PORT);
-    console.log('  Farmer Portal: Connect wallet as farmer');
-    console.log('  Investor Portal: Connect wallet as investor');
+    console.log('  Landing Page: http://localhost:' + PORT);
+    console.log('  Main Application: http://localhost:' + PORT + '/app.html');
+    console.log('  Farmer Portal: Connect wallet as farmer in main app');
+    console.log('  Investor Portal: Connect wallet as investor in main app');
     console.log('');
     console.log('Make sure the API server is running on port 3001');
 });

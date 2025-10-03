@@ -1,6 +1,69 @@
-# Project Documentation
+# Chai Platform - Tokenized Coffee Trees on Hedera
 
 ## Overview
+
+The Chai Platform is a blockchain-based solution that empowers smallholder coffee farmers in Kenya, Ethiopia, and Uganda by tokenizing coffee trees. Using Hedera Hashgraph technology, the platform provides farmers with immediate capital, promotes sustainable practices, and ensures fair compensation through transparent smart contracts.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (version 14 or higher)
+- pnpm package manager
+- A Hedera testnet account (for smart contract interactions)
+- A modern web browser
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd chai-project
+   ```
+
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+### Running the Project
+
+The easiest way to start the project is by using the provided batch script:
+
+#### Windows (Recommended)
+```bash
+start-demo.bat
+```
+
+This will:
+1. Start the Mock API Server on port 3001
+2. Start the Frontend Server on port 3000
+3. Automatically open your browser to the landing page
+
+#### Manual Start
+
+If you prefer to start the services manually:
+
+1. Start the API server:
+   ```bash
+   node frontend/api-server.js
+   ```
+
+2. In a new terminal, start the frontend server:
+   ```bash
+   node frontend/server.js
+   ```
+
+3. Open your browser and visit `http://localhost:3000`
+
+### Navigating the Application
+
+1. **Landing Page**: Visit `http://localhost:3000` to see the main landing page
+2. **Main Application**: Click "Sign Up" or "Get Started" buttons to navigate to `http://localhost:3000/app.html`
+3. **Farmer Portal**: Connect wallet as farmer in the main app
+4. **Investor Portal**: Connect wallet as investor in the main app
+
+### Project Structure
 
 This project on the Hedera blockchain consists of two main modules:
 
@@ -370,7 +433,7 @@ Users lock up collateral (SAF tokens) to obtain a USDC loan from the lending poo
 
 **Example Code:**
 
-```javascript
+```
 import { ContractExecuteTransaction, ContractFunctionParameters } from "@hashgraph/sdk";
 
 async function takeOutLoan(safTokenAddress, loanAmount, userPrivateKey) {
@@ -435,7 +498,7 @@ Users repay their outstanding loan to unlock their collateral.
 
 **Example Code:**
 
-```javascript
+```
 import { ContractExecuteTransaction, ContractFunctionParameters } from "@hashgraph/sdk";
 
 async function repayLoan(safTokenAddress, userPrivateKey) {
