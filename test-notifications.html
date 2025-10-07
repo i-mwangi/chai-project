@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification System Test</title>
+    <link rel="stylesheet" href="frontend/styles/main.css">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h2 {
+            color: #8B4513;
+            margin-bottom: 1.5rem;
+        }
+        
+        .test-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .test-btn {
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .test-btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .test-btn-error {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .test-btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .test-btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .test-btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #17a2b8;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+        
+        .info-box h4 {
+            margin: 0 0 0.5rem 0;
+            color: #17a2b8;
+        }
+        
+        .info-box p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-section">
+            <h2>🔔 Notification System Test</h2>
+            
+            <div class="info-box">
+                <h4>Test Instructions</h4>
+                <p>Click the buttons below to test different notification types. Notifications will appear in the top-right corner.</p>
+            </div>
+            
+            <h3>Basic Notification Types</h3>
+            <div class="test-buttons">
+                <button class="test-btn test-btn-success" onclick="testSuccess()">
+                    ✓ Success Notification
+                </button>
+                <button class="test-btn test-btn-error" onclick="testError()">
+                    ✗ Error Notification
+                </button>
+                <button class="test-btn test-btn-warning" onclick="testWarning()">
+                    ⚠ Warning Notification
+                </button>
+                <button class="test-btn test-btn-info" onclick="testInfo()">
+                    ℹ Info Notification
+                </button>
+            </div>
+            
+            <h3>Advanced Features</h3>
+            <div class="test-buttons">
+                <button class="test-btn test-btn-success" onclick="testWithTitle()">
+                    With Title
+                </button>
+                <button class="test-btn test-btn-info" onclick="testWithAction()">
+                    With Action Button
+                </button>
+                <button class="test-btn test-btn-warning" onclick="testNonDismissible()">
+                    Non Auto-Dismiss
+                </button>
+                <button class="test-btn test-btn-secondary" onclick="testMultiple()">
+                    Multiple Notifications
+                </button>
+            </div>
+            
+            <h3>Real-World Scenarios</h3>
+            <div class="test-buttons">
+                <button class="test-btn test-btn-success" onclick="testDistributionClaim()">
+                    Distribution Claimed
+                </button>
+                <button class="test-btn test-btn-success" onclick="testWithdrawalSuccess()">
+                    Withdrawal Success
+                </button>
+                <button class="test-btn test-btn-warning" onclick="testLoanHealthWarning()">
+                    Loan Health Warning
+                </button>
+                <button class="test-btn test-btn-warning" onclick="testLowLiquidity()">
+                    Low Liquidity Alert
+                </button>
+            </div>
+            
+            <h3>Controls</h3>
+            <div class="test-buttons">
+                <button class="test-btn test-btn-secondary" onclick="dismissAll()">
+                    Dismiss All
+                </button>
+                <button class="test-btn test-btn-secondary" onclick="showStats()">
+                    Show Stats
+                </button>
+            </div>
+            
+            <div id="statsDisplay" class="stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-label">Active</div>
+                    <div class="stat-value" id="activeCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Success</div>
+                    <div class="stat-value" id="successCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Errors</div>
+                    <div class="stat-value" id="errorCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Warnings</div>
+                    <div class="stat-value" id="warningCount">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="frontend/js/notification-manager.js"></script>
+    <script>
+        // Basic notification tests
+        function testSuccess() {
+            notificationManager.success('Operation completed successfully!');
+        }
+        
+        function testError() {
+            notificationManager.error('An error occurred while processing your request.');
+        }
+        
+        function testWarning() {
+            notificationManager.warning('Please review your input before proceeding.');
+        }
+        
+        function testInfo() {
+            notificationManager.info('Your transaction is being processed.');
+        }
+        
+        // Advanced feature tests
+        function testWithTitle() {
+            notificationManager.success('Your changes have been saved.', {
+                title: 'Success!'
+            });
+        }
+        
+        function testWithAction() {
+            notificationManager.info('You have a new message waiting.', {
+                title: 'New Message',
+                action: () => {
+                    alert('Action button clicked!');
+                },
+                actionLabel: 'View Message'
+            });
+        }
+        
+        function testNonDismissible() {
+            notificationManager.error('This error requires your attention.', {
+                title: 'Critical Error',
+                autoDismiss: false
+            });
+        }
+        
+        function testMultiple() {
+            notificationManager.info('First notification');
+            setTimeout(() => notificationManager.success('Second notification'), 300);
+            setTimeout(() => notificationManager.warning('Third notification'), 600);
+            setTimeout(() => notificationManager.error('Fourth notification'), 900);
+        }
+        
+        // Real-world scenario tests
+        function testDistributionClaim() {
+            notificationManager.success('Successfully claimed 125.50 USDC from harvest distribution!', {
+                title: 'Earnings Claimed',
+                autoDismiss: true,
+                duration: 7000
+            });
+        }
+        
+        function testWithdrawalSuccess() {
+            notificationManager.success('Withdrawal of 500 USDC has been processed successfully.', {
+                title: 'Withdrawal Complete',
+                autoDismiss: true,
+                duration: 7000
+            });
+        }
+        
+        function testLoanHealthWarning() {
+            notificationManager.warning('Your loan health factor is 1.15. Consider adding collateral to avoid liquidation.', {
+                title: 'Loan Health Warning',
+                autoDismiss: false,
+                action: () => {
+                    alert('Navigating to loan management...');
+                },
+                actionLabel: 'Manage Loan'
+            });
+        }
+        
+        function testLowLiquidity() {
+            notificationManager.warning('USDC lending pool utilization is at 92%. Limited liquidity available.', {
+                title: 'Low Liquidity Alert',
+                autoDismiss: false,
+                action: () => {
+                    alert('Navigating to lending pools...');
+                },
+                actionLabel: 'View Pools'
+            });
+        }
+        
+        // Control functions
+        function dismissAll() {
+            notificationManager.dismissAll();
+        }
+        
+        function showStats() {
+            const statsDisplay = document.getElementById('statsDisplay');
+            const active = notificationManager.getActiveNotifications();
+            
+            document.getElementById('activeCount').textContent = active.length;
+            document.getElementById('successCount').textContent = 
+                active.filter(n => n.type === 'success').length;
+            document.getElementById('errorCount').textContent = 
+                active.filter(n => n.type === 'error').length;
+            document.getElementById('warningCount').textContent = 
+                active.filter(n => n.type === 'warning').length;
+            
+            statsDisplay.style.display = 'grid';
+            
+            setTimeout(() => {
+                statsDisplay.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

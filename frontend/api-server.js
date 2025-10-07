@@ -673,6 +673,339 @@ const server = http.createServer(async (req, res) => {
             });
         }
         
+        // Revenue Distribution endpoints
+        else if (pathname === '/api/revenue/farmer-balance' && method === 'GET') {
+            const farmerAddress = parsedUrl.query.farmerAddress;
+            
+            // Calculate farmer's available balance from harvests
+            const farmerHarvests = mockData.harvests.filter(h => h.farmerAddress === farmerAddress);
+            const totalRevenue = farmerHarvests.reduce((sum, h) => sum + (h.totalRevenue || 0), 0);
+            const farmerShare = totalRevenue * 0.3; // 30% farmer share
+            const withdrawn = 0; // Mock: no withdrawals yet
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    farmerAddress,
+                    availableBalance: farmerShare - withdrawn,
+                    pendingBalance: 0,
+                    totalWithdrawn: withdrawn,
+                    lastWithdrawal: null
+                }
+            });
+        }
+        
+        else if (pathname === '/api/revenue/withdrawal-history' && method === 'GET') {
+            const farmerAddress = parsedUrl.query.farmerAddress;
+            
+            // Mock: return empty withdrawal history
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    farmerAddress,
+                    withdrawals: [],
+                    pagination: {
+                        total: 0,
+                        limit: 20,
+                        offset: 0
+                    }
+                }
+            });
+        }
+        
+        else if (pathname === '/api/revenue/withdraw-farmer-share' && method === 'POST') {
+            const { groveId, amount, farmerAddress } = body || {};
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    withdrawalId: `withdraw_${Date.now()}`,
+                    farmerAddress,
+                    amount,
+                    transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+                    withdrawnAt: new Date().toISOString(),
+                    remainingBalance: 0
+                }
+            });
+        }
+        
+        else if (pathname === '/api/revenue/distribution-history' && method === 'GET') {
+            const holderAddress = parsedUrl.query.holderAddress;
+            
+            // Mock: return empty distribution history
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    holderAddress,
+                    totalEarnings: 0,
+                    distributions: [],
+                    pagination: {
+                        total: 0,
+                        limit: 20,
+                        offset: 0
+                    }
+                }
+            });
+        }
+        
+        else if (pathname === '/api/pricing/all-varieties' && method === 'GET') {
+            // Mock coffee pricing data
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    varieties: [
+                        {
+                            variety: 'ARABICA',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 2.50 + (i * 0.35)
+                            }))
+                        },
+                        {
+                            variety: 'ROBUSTA',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 1.80 + (i * 0.24)
+                            }))
+                        },
+                        {
+                            variety: 'SPECIALTY',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 3.50 + (i * 0.55)
+                            }))
+                        },
+                        {
+                            variety: 'ORGANIC',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 3.00 + (i * 0.45)
+                            }))
+                        },
+                        {
+                            variety: 'TYPICA',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 3.20 + (i * 0.40)
+                            }))
+                        }
+                    ],
+                    lastUpdated: new Date().toISOString()
+                }
+            });
+        }
+        
+        // Add the missing pricing endpoints
+        else if (pathname === '/api/pricing/projected-revenue' && method === 'POST') {
+            const { groveTokenAddress, variety, grade, expectedYieldKg, harvestMonth } = body || {};
+            
+            // Validate required parameters
+            if (!variety || grade === undefined || !expectedYieldKg || !harvestMonth) {
+                sendError(res, 400, 'variety, grade, expectedYieldKg, and harvestMonth are required');
+                return;
+            }
+            
+            // Normalize variety to uppercase
+            const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
+            
+            try {
+                // Mock seasonal multipliers
+                const seasonalMultipliers = {
+                    1: 0.9,  // January - Low season
+                    2: 0.85, // February - Low season
+                    3: 0.95, // March - Low season
+                    4: 1.1,  // April - Harvest season
+                    5: 1.2,  // May - Harvest season
+                    6: 1.3,  // June - Peak harvest
+                    7: 1.25, // July - Peak harvest
+                    8: 1.2,  // August - Harvest season
+                    9: 1.1,  // September - Harvest season
+                    10: 1.0, // October - Normal
+                    11: 0.95,// November - Normal
+                    12: 0.9  // December - Low season
+                };
+                
+                // Base prices by variety
+                const basePrices = {
+                    'ARABICA': 4.50,
+                    'ROBUSTA': 2.80,
+                    'SPECIALTY': 6.00,
+                    'ORGANIC': 5.20,
+                    'TYPICA': 4.20
+                };
+                
+                const basePrice = basePrices[normalizedVariety] || 4.00;
+                const multiplier = seasonalMultipliers[harvestMonth] || 1.0;
+                const pricePerKg = basePrice * multiplier;
+                const projectedRevenue = expectedYieldKg * pricePerKg;
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    data: {
+                        projectedRevenue: parseFloat(projectedRevenue.toFixed(2)),
+                        pricePerKg: parseFloat(pricePerKg.toFixed(2)),
+                        basePrice: parseFloat(basePrice.toFixed(2)),
+                        seasonalMultiplier: multiplier,
+                        expectedYieldKg,
+                        variety: normalizedVariety,
+                        grade,
+                        harvestMonth
+                    }
+                });
+            } catch (error) {
+                console.error('Error calculating projected revenue:', error);
+                sendError(res, 500, 'Failed to calculate projected revenue');
+            }
+        }
+        else if (pathname === '/api/pricing/validate-price' && method === 'POST') {
+            const { variety, grade, proposedPrice } = body || {};
+            
+            if (!variety || grade === undefined || !proposedPrice) {
+                sendError(res, 400, 'variety, grade, and proposedPrice are required');
+                return;
+            }
+            
+            // Normalize variety to uppercase
+            const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
+            
+            try {
+                // Base prices by variety
+                const basePrices = {
+                    'ARABICA': 4.50,
+                    'ROBUSTA': 2.80,
+                    'SPECIALTY': 6.00,
+                    'ORGANIC': 5.20,
+                    'TYPICA': 4.20
+                };
+                
+                const marketPrice = basePrices[normalizedVariety] || 4.00;
+                const minPrice = marketPrice * 0.5;
+                const maxPrice = marketPrice * 2.0;
+                
+                const isValid = proposedPrice >= minPrice && proposedPrice <= maxPrice;
+                let message = '';
+                
+                if (isValid) {
+                    message = 'Price is within acceptable range';
+                } else if (proposedPrice < minPrice) {
+                    message = `Price too low. Minimum acceptable: $${minPrice.toFixed(2)}/kg`;
+                } else {
+                    message = `Price too high. Maximum acceptable: $${maxPrice.toFixed(2)}/kg`;
+                }
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    data: {
+                        isValid,
+                        message,
+                        marketPrice: parseFloat(marketPrice.toFixed(2)),
+                        minPrice: parseFloat(minPrice.toFixed(2)),
+                        maxPrice: parseFloat(maxPrice.toFixed(2)),
+                        proposedPrice: parseFloat(proposedPrice.toFixed(2))
+                    }
+                });
+            } catch (error) {
+                console.error('Error validating price:', error);
+                sendError(res, 500, 'Failed to validate price');
+            }
+        }
+        else if (pathname === '/api/pricing/seasonal-multipliers' && method === 'GET') {
+            try {
+                // Mock seasonal multipliers
+                const seasonalMultipliers = {
+                    1: 0.9,  // January - Low season
+                    2: 0.85, // February - Low season
+                    3: 0.95, // March - Low season
+                    4: 1.1,  // April - Harvest season
+                    5: 1.2,  // May - Harvest season
+                    6: 1.3,  // June - Peak harvest
+                    7: 1.25, // July - Peak harvest
+                    8: 1.2,  // August - Harvest season
+                    9: 1.1,  // September - Harvest season
+                    10: 1.0, // October - Normal
+                    11: 0.95,// November - Normal
+                    12: 0.9  // December - Low season
+                };
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    data: {
+                        seasonalMultipliers,
+                        lastUpdated: new Date().toISOString()
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching seasonal multipliers:', error);
+                sendError(res, 500, 'Failed to fetch seasonal multipliers');
+            }
+        }
+        
+        // Balance endpoints
+        else if (pathname === '/api/balance/usdc' && method === 'GET') {
+            const accountId = parsedUrl.query.accountId;
+            
+            // Mock USDC balance
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    accountId,
+                    balance: 10000.00, // Mock: 10,000 USDC
+                    tokenId: '0.0.429274', // Mock testnet USDC
+                    lastUpdated: new Date().toISOString()
+                }
+            });
+        }
+        
+        else if (pathname === '/api/balance/tokens' && method === 'GET') {
+            const accountId = parsedUrl.query.accountId;
+            
+            // Mock token balances for groves
+            const tokenBalances = mockData.groves.map(grove => ({
+                groveId: grove.id,
+                groveName: grove.groveName,
+                tokenId: `0.0.${100000 + parseInt(grove.id)}`, // Mock token IDs
+                balance: Math.floor(Math.random() * 500) + 100, // Random balance 100-600
+                value: (Math.floor(Math.random() * 500) + 100) * 10 // Mock value
+            }));
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    accountId,
+                    groves: tokenBalances,
+                    totalValue: tokenBalances.reduce((sum, t) => sum + t.value, 0),
+                    lastUpdated: new Date().toISOString()
+                }
+            });
+        }
+        
+        else if (pathname === '/api/balance/all' && method === 'GET') {
+            const accountId = parsedUrl.query.accountId;
+            
+            // Mock all balances
+            const tokenBalances = mockData.groves.map(grove => ({
+                groveId: grove.id,
+                groveName: grove.groveName,
+                tokenId: `0.0.${100000 + parseInt(grove.id)}`,
+                balance: Math.floor(Math.random() * 500) + 100,
+                value: (Math.floor(Math.random() * 500) + 100) * 10
+            }));
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    accountId,
+                    usdc: {
+                        balance: 10000.00,
+                        tokenId: '0.0.429274'
+                    },
+                    tokens: tokenBalances,
+                    totalValue: tokenBalances.reduce((sum, t) => sum + t.value, 0),
+                    lastUpdated: new Date().toISOString()
+                }
+            });
+        }
+        
         // Default 404
         else {
             sendError(res, 404, 'Endpoint not found');
@@ -706,6 +1039,10 @@ server.listen(PORT, () => {
     console.log('  POST /api/investment/purchase-tokens');
     console.log('  GET  /api/user/settings/:accountId');
     console.log('  PUT  /api/user/settings/:accountId');
+    console.log('  POST /api/pricing/projected-revenue');
+    console.log('  POST /api/pricing/validate-price');
+    console.log('  GET  /api/pricing/all-varieties');
+    console.log('  GET  /api/pricing/seasonal-multipliers');
 });
 
 // Graceful shutdown

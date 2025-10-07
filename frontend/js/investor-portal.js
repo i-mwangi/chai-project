@@ -15,6 +15,71 @@ class InvestorPortal {
 
     init() {
         this.setupEventListeners();
+        this.setupBalanceListeners();
+    }
+
+    setupBalanceListeners() {
+        // Listen for balance updates from the balance poller
+        if (window.balancePoller) {
+            // Listen for token balance updates
+            window.balancePoller.addListener('tokenBalances', (balances) => {
+                this.handleTokenBalanceUpdate(balances);
+            });
+
+            // Listen for USDC balance updates
+            window.balancePoller.addListener('usdcBalance', (balance) => {
+                this.handleUSDCBalanceUpdate(balance);
+            });
+
+            // Listen for LP token balance updates
+            window.balancePoller.addListener('lpBalances', (balances) => {
+                this.handleLPBalanceUpdate(balances);
+            });
+
+            // Listen for pending distributions
+            window.balancePoller.addListener('pendingDistributions', (distributions) => {
+                this.handlePendingDistributionsUpdate(distributions);
+            });
+        }
+    }
+
+    handleTokenBalanceUpdate(balances) {
+        // Update portfolio display if on portfolio section
+        if (this.currentSection === 'portfolio' && this.portfolio) {
+            // Refresh portfolio data
+            const investorAddress = window.walletManager.getAccountId();
+            if (investorAddress) {
+                this.loadPortfolio(investorAddress);
+            }
+        }
+    }
+
+    handleUSDCBalanceUpdate(balance) {
+        // Update USDC balance display
+        const usdcBalanceEl = document.getElementById('investorUSDCBalance');
+        if (usdcBalanceEl) {
+            usdcBalanceEl.textContent = `${balance.toLocaleString()} USDC`;
+        }
+    }
+
+    handleLPBalanceUpdate(balances) {
+        // Update LP token displays if on lending section
+        if (this.currentSection === 'lending') {
+            const investorAddress = window.walletManager.getAccountId();
+            if (investorAddress) {
+                this.loadLendingPools(investorAddress);
+            }
+        }
+    }
+
+    handlePendingDistributionsUpdate(distributions) {
+        // Update earnings display if on earnings section
+        if (this.currentSection === 'earnings') {
+            const investorAddress = window.walletManager.getAccountId();
+            if (investorAddress) {
+                this.loadEarnings(investorAddress);
+            }
+        }
     }
 
     setupEventListeners() {
@@ -55,7 +120,7 @@ class InvestorPortal {
         document.querySelectorAll('.investor-dashboard .section').forEach(sec => {
             sec.classList.remove('active');
         });
-        
+
         const targetSection = document.getElementById(`${section}Section`);
         if (targetSection) {
             targetSection.classList.add('active');
@@ -92,6 +157,13 @@ class InvestorPortal {
                 case 'earnings':
                     await this.loadEarnings(investorAddress);
                     break;
+                case 'lending':
+                    await this.loadLendingPools(investorAddress);
+                    await this.loadLoanData(investorAddress);
+                    break;
+                case 'transactions':
+                    await this.loadTransactionHistory(investorAddress);
+                    break;
             }
         } catch (error) {
             console.error(`Failed to load ${section} data:`, error);
@@ -101,10 +173,10 @@ class InvestorPortal {
 
     async loadAvailableGroves() {
         window.walletManager.showLoading('Loading available groves...');
-        
+
         try {
             const response = await window.coffeeAPI.getAvailableGroves();
-            
+
             if (response.success) {
                 this.availableGroves = response.groves;
                 this.populateLocationFilter();
@@ -121,10 +193,10 @@ class InvestorPortal {
 
         // Get unique locations
         const locations = [...new Set(this.availableGroves.map(grove => grove.location))];
-        
+
         // Clear existing options except the first one
         locationFilter.innerHTML = '<option value="">All Locations</option>';
-        
+
         locations.forEach(location => {
             const option = document.createElement('option');
             option.value = location;
@@ -220,7 +292,7 @@ class InvestorPortal {
             const varietyMatch = !varietyFilter || grove.coffeeVariety === varietyFilter;
             const locationMatch = !locationFilter || grove.location === locationFilter;
             const yieldMatch = !yieldFilter || grove.expectedYieldPerTree >= yieldFilter;
-            
+
             return varietyMatch && locationMatch && yieldMatch;
         });
 
@@ -299,7 +371,7 @@ class InvestorPortal {
             const amount = parseInt(tokenAmountInput.value) || 0;
             const totalInvestment = amount * grove.pricePerToken;
             const projectedEarnings = totalInvestment * (grove.projectedAnnualReturn / 100);
-            
+
             totalInvestmentSpan.textContent = `$${totalInvestment.toFixed(2)}`;
             projectedEarningsSpan.textContent = `$${projectedEarnings.toFixed(2)}`;
         });
@@ -316,47 +388,267 @@ class InvestorPortal {
                 document.body.removeChild(modal);
             }
         });
+    }
 
-        // Purchase form handler
-        const purchaseForm = modal.querySelector('#purchaseForm');
-        purchaseForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleTokenPurchase(groveId, parseInt(tokenAmountInput.value));
-            document.body.removeChild(modal);
+    viewGroveDetails(groveId) {
+        const grove = this.availableGroves.find(g => g.id === groveId);
+        if (!grove) {
+            window.walletManager.showToast('Grove not found', 'error');
+            return;
+        }
+
+        // Create detailed grove modal
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4>Grove Details: ${grove.groveName}</h4>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="grove-details-grid">
+                        <div class="detail-section">
+                            <h5>Basic Information</h5>
+                            <div class="detail-list">
+                                <div class="detail-row">
+                                    <span class="label">Grove Name:</span>
+                                    <span class="value">${grove.groveName}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Location:</span>
+                                    <span class="value">${grove.location}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Coffee Variety:</span>
+                                    <span class="value">${grove.coffeeVariety}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Number of Trees:</span>
+                                    <span class="value">${grove.treeCount}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Expected Yield per Tree:</span>
+                                    <span class="value">${grove.expectedYieldPerTree} kg/year</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h5>Investment Information</h5>
+                            <div class="detail-list">
+                                <div class="detail-row">
+                                    <span class="label">Health Score:</span>
+                                    <span class="value">
+                                        <span class="health-score ${this.getHealthClass(grove.healthScore)}">
+                                            ${grove.healthScore}
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Tokens Available:</span>
+                                    <span class="value">${grove.tokensAvailable}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Price per Token:</span>
+                                    <span class="value">$${grove.pricePerToken.toFixed(2)}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Projected Annual Return:</span>
+                                    <span class="value">${grove.projectedAnnualReturn}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary modal-close">Close</button>
+                        <button class="btn btn-primary" onclick="investorPortal.showPurchaseModal('${grove.id}'); document.body.removeChild(this.closest('.modal'));">
+                            Invest Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Close modal handlers
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
         });
     }
 
-    async handleTokenPurchase(groveId, tokenAmount) {
-        const investorAddress = window.walletManager.getAccountId();
-
-        try {
-            window.walletManager.showLoading('Processing token purchase...');
-            
-            const response = await window.coffeeAPI.purchaseTokens(groveId, tokenAmount, investorAddress);
-            
-            if (response.success) {
-                window.walletManager.showToast('Tokens purchased successfully!', 'success');
-                
-                // Refresh available groves and portfolio
-                await this.loadAvailableGroves();
-                if (this.currentSection === 'portfolio') {
-                    await this.loadPortfolio(investorAddress);
-                }
-            }
-        } catch (error) {
-            console.error('Token purchase failed:', error);
-            window.walletManager.showToast('Failed to purchase tokens', 'error');
-        } finally {
-            window.walletManager.hideLoading();
+    viewHoldingDetails(groveId) {
+        const holding = this.activeHoldings.find(h => h.groveId === groveId);
+        if (!holding) {
+            window.walletManager.showToast('Holding not found', 'error');
+            return;
         }
+
+        const grove = this.availableGroves.find(g => g.id === holding.groveId);
+        if (!grove) {
+            window.walletManager.showToast('Grove not found', 'error');
+            return;
+        }
+
+        // Create detailed holding modal
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4>Holding Details: ${grove.groveName}</h4>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="holding-details-grid">
+                        <div class="detail-section">
+                            <h5>Basic Information</h5>
+                            <div class="detail-list">
+                                <div class="detail-row">
+                                    <span class="label">Grove Name:</span>
+                                    <span class="value">${grove.groveName}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Location:</span>
+                                    <span class="value">${grove.location}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Coffee Variety:</span>
+                                    <span class="value">${grove.coffeeVariety}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Number of Trees:</span>
+                                    <span class="value">${grove.treeCount}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Expected Yield per Tree:</span>
+                                    <span class="value">${grove.expectedYieldPerTree} kg/year</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h5>Investment Information</h5>
+                            <div class="detail-list">
+                                <div class="detail-row">
+                                    <span class="label">Health Score:</span>
+                                    <span class="value">
+                                        <span class="health-score ${this.getHealthClass(grove.healthScore)}">
+                                            ${grove.healthScore}
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Tokens Available:</span>
+                                    <span class="value">${grove.tokensAvailable}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Price per Token:</span>
+                                    <span class="value">$${grove.pricePerToken.toFixed(2)}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Projected Annual Return:</span>
+                                    <span class="value">${grove.projectedAnnualReturn}%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h5>Your Holding</h5>
+                            <div class="detail-list">
+                                <div class="detail-row">
+                                    <span class="label">Number of Tokens:</span>
+                                    <span class="value">${holding.tokenCount}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Investment Value:</span>
+                                    <span class="value">$${holding.investmentValue.toFixed(2)}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Annual Earnings:</span>
+                                    <span class="value">$${holding.expectedAnnualEarnings.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary modal-close">Close</button>
+                        <button class="btn btn-primary" onclick="investorPortal.showSellModal('${grove.id}'); document.body.removeChild(this.closest('.modal'));">
+                            Sell Tokens
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Close modal handlers
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    // Purchase form handler
+    const purchaseForm = modal.querySelector('#purchaseForm');
+    purchaseForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await this.handleTokenPurchase(groveId, parseInt(tokenAmountInput.value));
+        document.body.removeChild(modal);
+    });
+}
+
+async handleTokenPurchase(groveId, tokenAmount) {
+    const investorAddress = window.walletManager.getAccountId();
+    window.walletManager.showLoading('Processing token purchase...');
+
+    try {
+        const response = await window.coffeeAPI.purchaseTokens(groveId, tokenAmount);
+
+        if (response.success) {
+            window.walletManager.showToast('Tokens purchased successfully!', 'success');
+            
+            // Refresh balances after transaction within 5 seconds
+            if (window.balancePoller && response.transactionHash) {
+                await window.balancePoller.refreshAfterTransaction(response.transactionHash, ['usdc', 'token']);
+            }
+            
+            // Reload portfolio
+            await this.loadPortfolio(investorAddress);
+        } else {
+            throw new Error(response.error || 'Failed to purchase tokens');
+        }
+    } catch (error) {
+        console.error('Token purchase failed:', error);
+        window.walletManager.showToast('Failed to purchase tokens', 'error');
+    } finally {
+        window.walletManager.hideLoading();
     }
+}
 
     async loadPortfolio(investorAddress) {
         window.walletManager.showLoading('Loading portfolio...');
-        
+
         try {
             const response = await window.coffeeAPI.getPortfolio(investorAddress);
-            
+
             if (response.success) {
                 this.portfolio = response.portfolio;
                 this.renderPortfolioStats();
@@ -382,7 +674,7 @@ class InvestorPortal {
         if (!canvas || !this.portfolio) return;
 
         const ctx = canvas.getContext('2d');
-        
+
         // Destroy existing chart if it exists
         if (this.portfolioChart) {
             this.portfolioChart.destroy();
@@ -390,7 +682,7 @@ class InvestorPortal {
 
         // Create pie chart showing portfolio distribution
         const holdings = this.portfolio.holdings;
-        
+
         this.portfolioChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -416,7 +708,7 @@ class InvestorPortal {
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 const value = context.parsed;
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                 const percentage = ((value / total) * 100).toFixed(1);
@@ -503,10 +795,10 @@ class InvestorPortal {
 
     async loadMarketplace() {
         window.walletManager.showLoading('Loading marketplace...');
-        
+
         try {
             const response = await window.coffeeAPI.getMarketplaceListings();
-            
+
             if (response.success) {
                 this.marketListings = response.listings;
             } else {
@@ -623,16 +915,260 @@ class InvestorPortal {
     }
 
     async loadEarnings(investorAddress) {
-        window.walletManager.showLoading('Loading earnings history...');
-        
+        window.walletManager.showLoading('Loading earnings data...');
+
         try {
-            const response = await window.coffeeAPI.getHolderEarnings(investorAddress);
-            
-            if (response.success) {
-                const earnings = response.earnings?.earningsHistory || [];
-                this.renderEarningsChart(earnings);
-                this.renderEarningsList(earnings);
+            // Fetch earnings data
+            const earningsResponse = await window.coffeeAPI.getHolderEarnings(investorAddress);
+
+            // Fetch pending distributions
+            const pendingResponse = await window.coffeeAPI.getPendingDistributions(investorAddress);
+
+            // Fetch distribution history
+            const historyResponse = await window.coffeeAPI.getDistributionHistory(investorAddress);
+
+            if (earningsResponse.success) {
+                const earningsData = earningsResponse.earnings || {};
+                const pendingDistributions = pendingResponse.success ? (pendingResponse.distributions || []) : [];
+                const distributionHistory = historyResponse.success ? (historyResponse.distributions || []) : [];
+
+                // Render all earnings components
+                this.renderEarningsStats(earningsData, pendingDistributions);
+                this.renderPendingDistributions(pendingDistributions);
+                this.renderEarningsChart(earningsData.earningsHistory || []);
+                this.renderEarningsHistory(distributionHistory);
             }
+        } catch (error) {
+            console.error('Failed to load earnings:', error);
+            window.walletManager.showToast('Failed to load earnings data', 'error');
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    /**
+     * Render earnings statistics cards
+     * @param {Object} earningsData - Earnings data object
+     * @param {Array} pendingDistributions - Array of pending distributions
+     */
+    renderEarningsStats(earningsData, pendingDistributions) {
+        // Calculate stats
+        const totalEarnings = earningsData.totalEarnings || 0;
+        const claimedEarnings = earningsData.claimedEarnings || 0;
+
+        // Calculate pending earnings
+        const pendingEarnings = pendingDistributions.reduce((sum, dist) => {
+            return sum + (dist.shareAmount || 0);
+        }, 0);
+
+        // Calculate monthly earnings (current month)
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const monthlyEarnings = (earningsData.earningsHistory || [])
+            .filter(earning => {
+                const earningDate = new Date(earning.date);
+                return earningDate.getMonth() === currentMonth &&
+                    earningDate.getFullYear() === currentYear;
+            })
+            .reduce((sum, earning) => sum + (earning.amount || 0), 0);
+
+        // Update DOM elements
+        document.getElementById('totalEarningsValue').textContent = `$${totalEarnings.toFixed(2)}`;
+        document.getElementById('pendingEarningsValue').textContent = `$${pendingEarnings.toFixed(2)}`;
+        document.getElementById('monthlyEarningsValue').textContent = `$${monthlyEarnings.toFixed(2)}`;
+        document.getElementById('claimedEarningsValue').textContent = `$${claimedEarnings.toFixed(2)}`;
+    }
+
+    /**
+     * Render pending distributions list
+     * @param {Array} pendingDistributions - Array of pending distribution objects
+     */
+    renderPendingDistributions(pendingDistributions) {
+        const container = document.getElementById('pendingDistributionsList');
+        if (!container) return;
+
+        if (!pendingDistributions || pendingDistributions.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No pending distributions</p>
+                    <small>Distributions will appear here when harvests are processed</small>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = pendingDistributions.map(distribution => `
+            <div class="distribution-item">
+                <div class="distribution-header">
+                    <div class="distribution-info">
+                        <h5>${distribution.groveName || 'Unknown Grove'}</h5>
+                        <small>Harvest: ${distribution.harvestId || 'N/A'}</small>
+                    </div>
+                    <div class="distribution-amount">
+                        <span class="amount-value">$${(distribution.shareAmount || 0).toFixed(2)}</span>
+                        <small>Your share</small>
+                    </div>
+                </div>
+                <div class="distribution-details">
+                    <div class="detail-item">
+                        <span class="label">Distribution Date:</span>
+                        <span class="value">${new Date(distribution.distributionDate).toLocaleDateString()}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Your Tokens:</span>
+                        <span class="value">${distribution.tokenBalance || 0}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Total Revenue:</span>
+                        <span class="value">$${(distribution.totalRevenue || 0).toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="distribution-actions">
+                    <button class="btn btn-primary" onclick="investorPortal.claimEarnings('${distribution.distributionId}', '${distribution.holderAddress}')">
+                        Claim Earnings
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Render earnings history with pagination
+     * @param {Array} distributionHistory - Array of distribution history objects
+     * @param {number} page - Current page number (default: 1)
+     * @param {number} pageSize - Items per page (default: 20)
+     */
+    renderEarningsHistory(distributionHistory, page = 1, pageSize = 20) {
+        const container = document.getElementById('earningsList');
+        if (!container) return;
+
+        if (!distributionHistory || distributionHistory.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h4>No earnings history yet</h4>
+                    <p>Your earnings will appear here after distributions are claimed</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort by date (most recent first)
+        const sortedHistory = [...distributionHistory].sort((a, b) => {
+            return new Date(b.claimDate || b.distributionDate) - new Date(a.claimDate || a.distributionDate);
+        });
+
+        // Calculate pagination
+        const totalPages = Math.ceil(sortedHistory.length / pageSize);
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageItems = sortedHistory.slice(startIndex, endIndex);
+
+        // Render items
+        const itemsHTML = pageItems.map(earning => {
+            const isClaimed = earning.claimed || earning.status === 'claimed';
+            const statusClass = isClaimed ? 'status-success' : 'status-pending';
+            const statusText = isClaimed ? 'Claimed' : 'Pending';
+
+            return `
+                <div class="list-item">
+                    <div class="list-item-header">
+                        <div class="earning-info">
+                            <h4>${earning.groveName || 'Unknown Grove'}</h4>
+                            <span class="earning-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <span class="earning-amount text-success">+$${(earning.shareAmount || earning.amount || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="list-item-content">
+                        <div class="list-item-detail">
+                            <label>Date</label>
+                            <span>${new Date(earning.claimDate || earning.distributionDate).toLocaleDateString()}</span>
+                        </div>
+                        <div class="list-item-detail">
+                            <label>Harvest ID</label>
+                            <span>${earning.harvestId || 'N/A'}</span>
+                        </div>
+                        <div class="list-item-detail">
+                            <label>Your Tokens</label>
+                            <span>${earning.tokenBalance || earning.tokenAmount || 0}</span>
+                        </div>
+                        <div class="list-item-detail">
+                            <label>Per Token</label>
+                            <span>$${((earning.shareAmount || earning.amount || 0) / (earning.tokenBalance || earning.tokenAmount || 1)).toFixed(4)}</span>
+                        </div>
+                        ${earning.transactionHash ? `
+                        <div class="list-item-detail">
+                            <label>Transaction</label>
+                            <span class="transaction-hash">${this.formatAddress(earning.transactionHash)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Render pagination controls
+        const paginationHTML = totalPages > 1 ? `
+            <div class="pagination">
+                <button class="btn btn-secondary" 
+                        onclick="investorPortal.renderEarningsHistory(investorPortal.currentEarningsHistory, ${page - 1})"
+                        ${page === 1 ? 'disabled' : ''}>
+                    Previous
+                </button>
+                <span class="pagination-info">Page ${page} of ${totalPages}</span>
+                <button class="btn btn-secondary" 
+                        onclick="investorPortal.renderEarningsHistory(investorPortal.currentEarningsHistory, ${page + 1})"
+                        ${page === totalPages ? 'disabled' : ''}>
+                    Next
+                </button>
+            </div>
+        ` : '';
+
+        container.innerHTML = itemsHTML + paginationHTML;
+
+        // Store current history for pagination
+        this.currentEarningsHistory = distributionHistory;
+    }
+
+    /**
+     * Claim earnings from a distribution
+     * @param {string} distributionId - Distribution identifier
+     * @param {string} holderAddress - Holder's wallet address
+     */
+    async claimEarnings(distributionId, holderAddress) {
+        try {
+            window.walletManager.showLoading('Claiming earnings...');
+
+            const response = await window.coffeeAPI.claimEarnings(distributionId, holderAddress);
+
+            if (response.success) {
+                window.walletManager.showToast('Earnings claimed successfully!', 'success');
+                
+                // Show notification with amount
+                if (window.notificationManager && response.amount) {
+                    window.notificationManager.success(
+                        `Successfully claimed ${response.amount} USDC from harvest distribution!`,
+                        {
+                            title: 'Earnings Claimed',
+                            duration: 7000
+                        }
+                    );
+                }
+
+                // Refresh balances after transaction within 5 seconds
+                if (window.balancePoller && response.transactionHash) {
+                    await window.balancePoller.refreshAfterTransaction(response.transactionHash, ['usdc', 'pending']);
+                }
+
+                // Refresh earnings data
+                await this.loadEarnings(holderAddress);
+            } else {
+                throw new Error(response.error || 'Failed to claim earnings');
+            }
+        } catch (error) {
+            console.error('Failed to claim earnings:', error);
+            window.walletManager.showToast(error.message || 'Failed to claim earnings', 'error');
         } finally {
             window.walletManager.hideLoading();
         }
@@ -640,10 +1176,10 @@ class InvestorPortal {
 
     renderEarningsChart(earnings) {
         const canvas = document.getElementById('earningsChart');
-        if (!canvas || !earnings) return;
+        if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
-        
+
         // Destroy existing chart if it exists
         if (this.earningsChart) {
             this.earningsChart.destroy();
@@ -653,9 +1189,21 @@ class InvestorPortal {
         const monthlyEarnings = {};
         if (earnings && Array.isArray(earnings)) {
             earnings.forEach(earning => {
-                const month = new Date(earning.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-                monthlyEarnings[month] = (monthlyEarnings[month] || 0) + earning.amount;
+                const month = new Date(earning.date || earning.distributionDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                monthlyEarnings[month] = (monthlyEarnings[month] || 0) + (earning.amount || earning.shareAmount || 0);
             });
+        }
+
+        // If no data, show empty state
+        if (Object.keys(monthlyEarnings).length === 0) {
+            const container = canvas.parentElement;
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No earnings data to display</p>
+                    <small>Chart will appear after you receive distributions</small>
+                </div>
+            `;
+            return;
         }
 
         this.earningsChart = new Chart(ctx, {
@@ -663,7 +1211,7 @@ class InvestorPortal {
             data: {
                 labels: Object.keys(monthlyEarnings),
                 datasets: [{
-                    label: 'Monthly Earnings',
+                    label: 'Monthly Earnings (USDC)',
                     data: Object.values(monthlyEarnings),
                     backgroundColor: 'rgba(139, 69, 19, 0.8)',
                     borderColor: '#8B4513',
@@ -677,8 +1225,21 @@ class InvestorPortal {
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function(value) {
-                                return '$' + value;
+                            callback: function (value) {
+                                return '\$' + value.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return 'Earnings: \$' + context.parsed.y.toFixed(2);
                             }
                         }
                     }
@@ -687,50 +1248,7 @@ class InvestorPortal {
         });
     }
 
-    renderEarningsList(earnings) {
-        const container = document.getElementById('earningsList');
-        if (!container || !earnings || !Array.isArray(earnings)) return;
-
-        if (earnings.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <h4>No earnings yet</h4>
-                    <p>Earnings will appear here after harvest distributions</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = earnings.map(earning => `
-            <div class="list-item">
-                <div class="list-item-header">
-                    <h4>${earning.groveName}</h4>
-                    <span class="text-success">+$${earning.amount.toFixed(2)}</span>
-                </div>
-                <div class="list-item-content">
-                    <div class="list-item-detail">
-                        <label>Date</label>
-                        <span>${new Date(earning.date).toLocaleDateString()}</span>
-                    </div>
-                    <div class="list-item-detail">
-                        <label>Tokens</label>
-                        <span>${earning.tokenAmount}</span>
-                    </div>
-                    <div class="list-item-detail">
-                        <label>Per Token</label>
-                        <span>$${(earning.amount / earning.tokenAmount).toFixed(4)}</span>
-                    </div>
-                    <div class="list-item-detail">
-                        <label>Harvest ID</label>
-                        <span>${earning.harvestId}</span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
     formatAddress(address) {
-        if (!address) return '';
         return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
     }
 
@@ -868,6 +1386,1244 @@ class InvestorPortal {
 
     buyFromMarketplace(listingId) {
         window.marketplace.showPurchaseModal(listingId);
+    }
+
+    /**
+     * Load lending pools data
+     * @param {string} investorAddress - Investor's wallet address
+     */
+    async loadLendingPools(investorAddress) {
+        window.walletManager.showLoading('Loading lending pools...');
+
+        try {
+            // Fetch lending pools data
+            const poolsResponse = await window.coffeeAPI.getLendingPools();
+
+            if (poolsResponse && poolsResponse.success) {
+                const pools = poolsResponse.pools || [];
+                this.renderLendingPools(pools);
+                
+                // Check for low liquidity alerts
+                if (window.notificationManager) {
+                    pools.forEach(pool => {
+                        const utilizationRate = pool.utilizationRate || 0;
+                        if (utilizationRate >= 90) {
+                            window.notificationManager.warning(
+                                `${pool.assetName || 'USDC'} lending pool utilization is at ${utilizationRate.toFixed(1)}%. Limited liquidity available.`,
+                                {
+                                    title: 'Low Liquidity Alert',
+                                    autoDismiss: false,
+                                    action: () => {
+                                        // Switch to lending section
+                                        this.switchSection('lending');
+                                    },
+                                    actionLabel: 'View Pools'
+                                }
+                            );
+                        }
+                    });
+                }
+            } else {
+                // Show empty state if no pools available
+                this.renderLendingPools([]);
+            }
+
+            // Fetch user's liquidity positions
+            await this.loadLiquidityPositions(investorAddress);
+
+        } catch (error) {
+            console.error('Failed to load lending pools:', error);
+            window.walletManager.showToast('Failed to load lending pools', 'error');
+            this.renderLendingPools([]);
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    /**
+     * Render lending pools grid
+     * @param {Array} pools - Array of lending pool objects
+     */
+    renderLendingPools(pools) {
+        const container = document.getElementById('lendingPoolsGrid');
+        if (!container) return;
+
+        if (!pools || pools.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h4>No lending pools available</h4>
+                    <p>Check back later for liquidity provision opportunities</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = pools.map(pool => {
+            const utilizationRate = pool.utilizationRate || 0;
+            const utilizationClass = utilizationRate > 80 ? 'text-danger' : utilizationRate > 50 ? 'text-warning' : 'text-success';
+
+            return `
+                <div class="pool-card">
+                    <div class="pool-header">
+                        <h4>${pool.assetName || 'USDC Pool'}</h4>
+                        <div class="pool-apy">
+                            <span class="apy-value">${(pool.currentAPY || 0).toFixed(2)}%</span>
+                            <small>APY</small>
+                        </div>
+                    </div>
+                    
+                    <div class="pool-stats">
+                        <div class="stat-row">
+                            <span class="label">Total Value Locked:</span>
+                            <span class="value">$${(pool.totalLiquidity || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="label">Available Liquidity:</span>
+                            <span class="value">$${(pool.availableLiquidity || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="label">Total Borrowed:</span>
+                            <span class="value">$${(pool.totalBorrowed || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="label">Utilization Rate:</span>
+                            <span class="value ${utilizationClass}">${utilizationRate.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="pool-actions">
+                        <button class="btn btn-primary" onclick="investorPortal.showProvideLiquidityModal('${pool.assetAddress}')">
+                            Provide Liquidity
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Load user's liquidity positions
+     * @param {string} investorAddress - Investor's wallet address
+     */
+    async loadLiquidityPositions(investorAddress) {
+        try {
+            // This will be implemented when backend endpoints are ready
+            // For now, show empty state
+            this.renderLiquidityPositions([]);
+        } catch (error) {
+            console.error('Failed to load liquidity positions:', error);
+            this.renderLiquidityPositions([]);
+        }
+    }
+
+    /**
+     * Render user's liquidity positions
+     * @param {Array} positions - Array of liquidity position objects
+     */
+    renderLiquidityPositions(positions) {
+        const container = document.getElementById('liquidityPositionsList');
+        if (!container) return;
+
+        if (!positions || positions.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>You have no active liquidity positions</p>
+                    <small>Provide liquidity to a pool to start earning returns</small>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = positions.map(position => {
+            const currentValue = position.lpTokenBalance * position.lpTokenPrice;
+            const earnings = currentValue - position.initialInvestment;
+            const earningsClass = earnings >= 0 ? 'text-success' : 'text-danger';
+
+            return `
+                <div class="list-item">
+                    <div class="list-item-header">
+                        <h4>${position.poolName || 'USDC Pool'}</h4>
+                        <div class="position-value">
+                            <span class="current-value">$${currentValue.toFixed(2)}</span>
+                            <span class="${earningsClass}">
+                                ${earnings >= 0 ? '+' : ''}$${earnings.toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="list-item-content">
+                        <div class="list-item-detail">
+                            <label>LP Tokens</label>
+                            <span>${position.lpTokenBalance.toFixed(2)}</span>
+                        </div>
+                        <div class="list-item-detail">
+                            <label>Pool Share</label>
+                            <span>${position.poolShare.toFixed(2)}%</span>
+                        </div>
+                        <div class="list-item-detail">
+                            <label>Initial Investment</label>
+                            <span>$${position.initialInvestment.toFixed(2)}</span>
+                        </div>
+                        <div class="list-item-detail">
+                            <label>Current APY</label>
+                            <span>${position.currentAPY.toFixed(2)}%</span>
+                        </div>
+                        <div class="list-item-detail">
+                            <label>Provided Date</label>
+                            <span>${new Date(position.providedDate).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                    <div class="position-actions">
+                        <button class="btn btn-warning" onclick="investorPortal.showWithdrawLiquidityModal('${position.assetAddress}', ${position.lpTokenBalance})">
+                            Withdraw Liquidity
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Show provide liquidity modal
+     * @param {string} assetAddress - Asset contract address
+     */
+    showProvideLiquidityModal(assetAddress) {
+        const modal = document.getElementById('provideLiquidityModal');
+        if (!modal) return;
+
+        // Store asset address for form submission
+        modal.dataset.assetAddress = assetAddress;
+
+        // Fetch pool details and populate modal
+        this.loadPoolDetailsForModal(assetAddress);
+
+        // Show modal
+        modal.classList.add('active');
+
+        // Set up event listeners
+        this.setupProvideLiquidityModal(modal);
+    }
+
+    /**
+     * Load pool details for provide liquidity modal
+     * @param {string} assetAddress - Asset contract address
+     */
+    async loadPoolDetailsForModal(assetAddress) {
+        try {
+            const poolStats = await window.coffeeAPI.getPoolStatistics(assetAddress);
+
+            if (poolStats && poolStats.success) {
+                const pool = poolStats.pool;
+                const summaryContainer = document.getElementById('poolDetailsSummary');
+
+                if (summaryContainer) {
+                    summaryContainer.innerHTML = `
+                        <div class="pool-summary">
+                            <h5>${pool.assetName || 'USDC Pool'}</h5>
+                            <div class="summary-stats">
+                                <div class="summary-row">
+                                    <span>Current APY:</span>
+                                    <span class="text-success">${(pool.currentAPY || 0).toFixed(2)}%</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Total Liquidity:</span>
+                                    <span>$${(pool.totalLiquidity || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Your Current Share:</span>
+                                    <span>${(pool.userPoolShare || 0).toFixed(2)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load pool details:', error);
+        }
+    }
+
+    /**
+     * Set up provide liquidity modal event listeners
+     * @param {HTMLElement} modal - Modal element
+     */
+    setupProvideLiquidityModal(modal) {
+        // Close modal handlers
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        closeButtons.forEach(btn => {
+            btn.onclick = () => {
+                modal.classList.remove('active');
+            };
+        });
+
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        };
+
+        // Amount input handler for calculations
+        const amountInput = document.getElementById('liquidityAmount');
+        if (amountInput) {
+            amountInput.oninput = () => {
+                this.updateLiquidityCalculations(modal.dataset.assetAddress);
+            };
+        }
+
+        // Form submission handler
+        const form = document.getElementById('provideLiquidityForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                await this.handleProvideLiquidity(modal.dataset.assetAddress);
+                modal.classList.remove('active');
+            };
+        }
+    }
+
+    /**
+     * Update liquidity provision calculations
+     * @param {string} assetAddress - Asset contract address
+     */
+    async updateLiquidityCalculations(assetAddress) {
+        const amountInput = document.getElementById('liquidityAmount');
+        const amount = parseFloat(amountInput?.value || 0);
+
+        if (amount <= 0) {
+            document.getElementById('lpTokensToReceive').textContent = '0.00';
+            document.getElementById('yourPoolShare').textContent = '0.00%';
+            document.getElementById('estimatedAnnualReturn').textContent = '$0.00';
+            return;
+        }
+
+        try {
+            const poolStats = await window.coffeeAPI.getPoolStatistics(assetAddress);
+
+            if (poolStats && poolStats.success) {
+                const pool = poolStats.pool;
+
+                // Calculate LP tokens (simplified - actual calculation in backend)
+                const totalLiquidity = pool.totalLiquidity || 0;
+                const totalLPTokens = pool.totalLPTokens || 0;
+                const lpTokens = totalLiquidity === 0 ? amount : (amount / totalLiquidity) * totalLPTokens;
+
+                // Calculate pool share
+                const newTotalLPTokens = totalLPTokens + lpTokens;
+                const poolShare = (lpTokens / newTotalLPTokens) * 100;
+
+                // Calculate estimated annual return
+                const apy = pool.currentAPY || 0;
+                const annualReturn = amount * (apy / 100);
+
+                // Update UI
+                document.getElementById('lpTokensToReceive').textContent = lpTokens.toFixed(2);
+                document.getElementById('yourPoolShare').textContent = poolShare.toFixed(2) + '%';
+                document.getElementById('estimatedAnnualReturn').textContent = '$' + annualReturn.toFixed(2);
+            }
+        } catch (error) {
+            console.error('Failed to calculate liquidity:', error);
+        }
+    }
+
+    /**
+     * Handle provide liquidity form submission
+     * @param {string} assetAddress - Asset contract address
+     */
+    async handleProvideLiquidity(assetAddress) {
+        const amountInput = document.getElementById('liquidityAmount');
+        const amount = parseFloat(amountInput?.value || 0);
+
+        if (amount <= 0) {
+            window.walletManager.showToast('Please enter a valid amount', 'error');
+            return;
+        }
+
+        try {
+            window.walletManager.showLoading('Providing liquidity...');
+
+            const result = await window.coffeeAPI.provideLiquidity(assetAddress, amount);
+
+            if (result && result.success) {
+                window.walletManager.showToast(
+                    `Successfully provided ${amount} USDC liquidity!`,
+                    'success'
+                );
+
+                // Refresh balances after transaction within 5 seconds
+                if (window.balancePoller && result.transactionHash) {
+                    await window.balancePoller.refreshAfterTransaction(result.transactionHash, ['usdc', 'lp']);
+                }
+
+                // Refresh lending pools and positions
+                const investorAddress = window.walletManager.getAccountId();
+                await this.loadLendingPools(investorAddress);
+
+                // Reset form
+                amountInput.value = '';
+            } else {
+                throw new Error(result?.error || 'Failed to provide liquidity');
+            }
+        } catch (error) {
+            console.error('Failed to provide liquidity:', error);
+            window.walletManager.showToast(
+                `Failed to provide liquidity: ${error.message}`,
+                'error'
+            );
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    /**
+     * Show withdraw liquidity modal
+     * @param {string} assetAddress - Asset contract address
+     * @param {number} maxLPTokens - Maximum LP tokens available
+     */
+    showWithdrawLiquidityModal(assetAddress, maxLPTokens) {
+        const modal = document.getElementById('withdrawLiquidityModal');
+        if (!modal) return;
+
+        // Store asset address and max tokens for form submission
+        modal.dataset.assetAddress = assetAddress;
+        modal.dataset.maxLPTokens = maxLPTokens;
+
+        // Update help text
+        const helpText = document.getElementById('lpTokenAmountHelp');
+        if (helpText) {
+            helpText.textContent = `Available: ${maxLPTokens.toFixed(2)} LP tokens`;
+        }
+
+        // Fetch withdrawal details and populate modal
+        this.loadWithdrawalDetailsForModal(assetAddress);
+
+        // Show modal
+        modal.classList.add('active');
+
+        // Set up event listeners
+        this.setupWithdrawLiquidityModal(modal);
+    }
+
+    /**
+     * Load withdrawal details for withdraw liquidity modal
+     * @param {string} assetAddress - Asset contract address
+     */
+    async loadWithdrawalDetailsForModal(assetAddress) {
+        try {
+            const poolStats = await window.coffeeAPI.getPoolStatistics(assetAddress);
+
+            if (poolStats && poolStats.success) {
+                const pool = poolStats.pool;
+                const summaryContainer = document.getElementById('withdrawalDetailsSummary');
+
+                if (summaryContainer) {
+                    summaryContainer.innerHTML = `
+                        <div class="withdrawal-summary">
+                            <h5>${pool.assetName || 'USDC Pool'}</h5>
+                            <div class="summary-stats">
+                                <div class="summary-row">
+                                    <span>Your LP Tokens:</span>
+                                    <span>${(pool.userLPBalance || 0).toFixed(2)}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Your Pool Share:</span>
+                                    <span>${(pool.userPoolShare || 0).toFixed(2)}%</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Current APY:</span>
+                                    <span class="text-success">${(pool.currentAPY || 0).toFixed(2)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load withdrawal details:', error);
+        }
+    }
+
+    /**
+     * Set up withdraw liquidity modal event listeners
+     * @param {HTMLElement} modal - Modal element
+     */
+    setupWithdrawLiquidityModal(modal) {
+        // Close modal handlers
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        closeButtons.forEach(btn => {
+            btn.onclick = () => {
+                modal.classList.remove('active');
+            };
+        });
+
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        };
+
+        // Max button handler
+        const maxBtn = document.getElementById('withdrawMaxBtn');
+        const lpTokenInput = document.getElementById('lpTokenAmount');
+        if (maxBtn && lpTokenInput) {
+            maxBtn.onclick = () => {
+                lpTokenInput.value = modal.dataset.maxLPTokens;
+                this.updateWithdrawalCalculations(modal.dataset.assetAddress);
+            };
+        }
+
+        // Amount input handler for calculations
+        if (lpTokenInput) {
+            lpTokenInput.oninput = () => {
+                this.updateWithdrawalCalculations(modal.dataset.assetAddress);
+            };
+        }
+
+        // Form submission handler
+        const form = document.getElementById('withdrawLiquidityForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                await this.handleWithdrawLiquidity(modal.dataset.assetAddress);
+                modal.classList.remove('active');
+            };
+        }
+    }
+
+    /**
+     * Update withdrawal calculations
+     * @param {string} assetAddress - Asset contract address
+     */
+    async updateWithdrawalCalculations(assetAddress) {
+        const lpTokenInput = document.getElementById('lpTokenAmount');
+        const lpTokenAmount = parseFloat(lpTokenInput?.value || 0);
+
+        if (lpTokenAmount <= 0) {
+            document.getElementById('usdcToReceive').textContent = '$0.00';
+            document.getElementById('accruedRewards').textContent = '$0.00';
+            document.getElementById('totalWithdrawalAmount').textContent = '$0.00';
+            return;
+        }
+
+        try {
+            const poolStats = await window.coffeeAPI.getPoolStatistics(assetAddress);
+
+            if (poolStats && poolStats.success) {
+                const pool = poolStats.pool;
+
+                // Calculate USDC to receive (simplified - actual calculation in backend)
+                const totalLiquidity = pool.totalLiquidity || 0;
+                const totalLPTokens = pool.totalLPTokens || 0;
+                const usdcAmount = totalLPTokens === 0 ? 0 : (lpTokenAmount / totalLPTokens) * totalLiquidity;
+
+                // Calculate accrued rewards (placeholder - actual calculation in backend)
+                const rewards = usdcAmount * 0.02; // Assume 2% rewards for demo
+
+                // Calculate total
+                const total = usdcAmount + rewards;
+
+                // Update UI
+                document.getElementById('usdcToReceive').textContent = '$' + usdcAmount.toFixed(2);
+                document.getElementById('accruedRewards').textContent = '$' + rewards.toFixed(2);
+                document.getElementById('totalWithdrawalAmount').textContent = '$' + total.toFixed(2);
+            }
+        } catch (error) {
+            console.error('Failed to calculate withdrawal:', error);
+        }
+    }
+
+    /**
+     * Handle withdraw liquidity form submission
+     * @param {string} assetAddress - Asset contract address
+     */
+    async handleWithdrawLiquidity(assetAddress) {
+        const lpTokenInput = document.getElementById('lpTokenAmount');
+        const lpTokenAmount = parseFloat(lpTokenInput?.value || 0);
+
+        if (lpTokenAmount <= 0) {
+            window.walletManager.showToast('Please enter a valid amount', 'error');
+            return;
+        }
+
+        try {
+            window.walletManager.showLoading('Withdrawing liquidity...');
+
+            const result = await window.coffeeAPI.withdrawLiquidity(assetAddress, lpTokenAmount);
+
+            if (result && result.success) {
+                window.walletManager.showToast(
+                    `Successfully withdrew liquidity! Received ${result.usdcAmount} USDC`,
+                    'success'
+                );
+
+                // Refresh balances after transaction within 5 seconds
+                if (window.balancePoller && result.transactionHash) {
+                    await window.balancePoller.refreshAfterTransaction(result.transactionHash, ['usdc', 'lp']);
+                }
+
+                // Refresh lending pools and positions
+                const investorAddress = window.walletManager.getAccountId();
+                await this.loadLendingPools(investorAddress);
+
+                // Reset form
+                lpTokenInput.value = '';
+            } else {
+                throw new Error(result?.error || 'Failed to withdraw liquidity');
+            }
+        } catch (error) {
+            console.error('Failed to withdraw liquidity:', error);
+            window.walletManager.showToast(
+                `Failed to withdraw liquidity: ${error.message}`,
+                'error'
+            );
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    // ========================================================================
+    // Loan Management Methods
+    // ========================================================================
+
+    /**
+     * Load loan data and update UI
+     * @param {string} investorAddress - Investor's wallet address
+     */
+    async loadLoanData(investorAddress) {
+        try {
+            // Get portfolio value for collateral calculation
+            const portfolioResponse = await window.coffeeAPI.getPortfolio(investorAddress);
+
+            if (portfolioResponse && portfolioResponse.success) {
+                const portfolio = portfolioResponse.portfolio;
+                const holdingsValue = portfolio.currentValue || 0;
+
+                // Calculate max loan amount (holdings value / 1.25)
+                const maxLoanAmount = holdingsValue / 1.25;
+
+                // Update loan availability UI
+                document.getElementById('holdingsValue').textContent = `$${holdingsValue.toFixed(2)}`;
+                document.getElementById('maxLoanAmount').textContent = `$${maxLoanAmount.toFixed(2)}`;
+
+                // Enable/disable take loan button based on holdings
+                const takeLoanBtn = document.getElementById('takeLoanBtn');
+                if (takeLoanBtn) {
+                    if (holdingsValue > 0) {
+                        takeLoanBtn.disabled = false;
+                        takeLoanBtn.onclick = () => this.showTakeLoanModal();
+                    } else {
+                        takeLoanBtn.disabled = true;
+                    }
+                }
+            }
+
+            // Check for active loan
+            await this.loadActiveLoan(investorAddress);
+
+        } catch (error) {
+            console.error('Failed to load loan data:', error);
+        }
+    }
+
+    /**
+     * Load active loan details
+     * @param {string} investorAddress - Investor's wallet address
+     */
+    async loadActiveLoan(investorAddress) {
+        try {
+            // Get loan details from API
+            const loanResponse = await window.coffeeAPI.getLoanDetails(investorAddress, 'USDC');
+
+            if (loanResponse && loanResponse.success && loanResponse.loan) {
+                const loan = loanResponse.loan;
+
+                // Show active loan container
+                const activeLoanContainer = document.getElementById('activeLoanContainer');
+                if (activeLoanContainer) {
+                    activeLoanContainer.style.display = 'block';
+                }
+
+                // Render active loan details
+                this.renderActiveLoan(loan);
+
+                // Hide take loan button
+                const takeLoanBtn = document.getElementById('takeLoanBtn');
+                if (takeLoanBtn) {
+                    takeLoanBtn.disabled = true;
+                    takeLoanBtn.textContent = 'Active Loan Exists';
+                }
+            } else {
+                // No active loan, hide container
+                const activeLoanContainer = document.getElementById('activeLoanContainer');
+                if (activeLoanContainer) {
+                    activeLoanContainer.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load active loan:', error);
+        }
+    }
+
+    /**
+     * Show take loan modal
+     */
+    showTakeLoanModal() {
+        const modal = document.getElementById('takeLoanModal');
+        if (!modal) return;
+
+        // Get holdings value
+        const holdingsValue = parseFloat(document.getElementById('holdingsValue').textContent.replace('$', '').replace(',', '')) || 0;
+        const maxLoanAmount = holdingsValue / 1.25;
+
+        // Update modal values
+        document.getElementById('modalHoldingsValue').textContent = `$${holdingsValue.toFixed(2)}`;
+        document.getElementById('modalMaxLoanAmount').textContent = `$${maxLoanAmount.toFixed(2)}`;
+        document.getElementById('loanAmountHelp').textContent = `Max available: $${maxLoanAmount.toFixed(2)}`;
+
+        // Show modal
+        modal.classList.add('active');
+
+        // Set up event listeners
+        this.setupTakeLoanModal(modal, maxLoanAmount);
+    }
+
+    /**
+     * Set up take loan modal event listeners
+     * @param {HTMLElement} modal - Modal element
+     * @param {number} maxLoanAmount - Maximum loan amount available
+     */
+    setupTakeLoanModal(modal, maxLoanAmount) {
+        // Close modal handlers
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        closeButtons.forEach(btn => {
+            btn.onclick = () => {
+                modal.classList.remove('active');
+            };
+        });
+
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        };
+
+        // Max button handler
+        const loanMaxBtn = document.getElementById('loanMaxBtn');
+        const loanAmountInput = document.getElementById('loanAmount');
+
+        if (loanMaxBtn && loanAmountInput) {
+            loanMaxBtn.onclick = () => {
+                loanAmountInput.value = maxLoanAmount.toFixed(2);
+                this.updateLoanCalculations(maxLoanAmount);
+            };
+        }
+
+        // Loan amount input handler
+        if (loanAmountInput) {
+            loanAmountInput.oninput = () => {
+                const loanAmount = parseFloat(loanAmountInput.value) || 0;
+                this.updateLoanCalculations(loanAmount);
+            };
+        }
+
+        // Form submission handler
+        const form = document.getElementById('takeLoanForm');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                await this.handleTakeLoan();
+                modal.classList.remove('active');
+            };
+        }
+    }
+
+    /**
+     * Update loan calculations in the modal
+     * @param {number} loanAmount - Loan amount entered by user
+     */
+    updateLoanCalculations(loanAmount) {
+        // Assume token price of $25 for calculation (should be fetched from API)
+        const tokenPrice = 25;
+
+        // Calculate collateral required (125% of loan amount)
+        const collateralValue = loanAmount * 1.25;
+        const collateralTokens = collateralValue / tokenPrice;
+
+        // Calculate liquidation price (90% threshold)
+        const liquidationPrice = loanAmount / (collateralTokens * 0.90);
+
+        // Calculate repayment amount (110% of loan)
+        const repaymentAmount = loanAmount * 1.10;
+
+        // Calculate interest (10% of loan)
+        const interestAmount = loanAmount * 0.10;
+
+        // Update UI
+        document.getElementById('collateralRequired').textContent = `${collateralTokens.toFixed(2)} tokens`;
+        document.getElementById('liquidationPrice').textContent = `$${liquidationPrice.toFixed(2)}`;
+        document.getElementById('repaymentAmount').textContent = `$${repaymentAmount.toFixed(2)}`;
+        document.getElementById('interestAmount').textContent = `$${interestAmount.toFixed(2)}`;
+    }
+
+    /**
+     * Handle take loan form submission
+     */
+    async handleTakeLoan() {
+        const loanAmountInput = document.getElementById('loanAmount');
+        const loanAmount = parseFloat(loanAmountInput?.value || 0);
+
+        if (loanAmount <= 0) {
+            window.walletManager.showToast('Please enter a valid loan amount', 'error');
+            return;
+        }
+
+        const maxLoanAmount = parseFloat(document.getElementById('modalMaxLoanAmount').textContent.replace('$', '').replace(',', '')) || 0;
+
+        if (loanAmount > maxLoanAmount) {
+            window.walletManager.showToast('Loan amount exceeds maximum available', 'error');
+            return;
+        }
+
+        try {
+            window.walletManager.showLoading('Processing loan...');
+
+            const result = await window.coffeeAPI.takeOutLoan('USDC', loanAmount);
+
+            if (result && result.success) {
+                window.walletManager.showToast(
+                    `Loan approved! ${loanAmount} USDC transferred to your wallet`,
+                    'success'
+                );
+
+                // Refresh balances after transaction within 5 seconds
+                if (window.balancePoller && result.transactionHash) {
+                    await window.balancePoller.refreshAfterTransaction(result.transactionHash, ['usdc', 'token']);
+                }
+
+                // Refresh loan data
+                const investorAddress = window.walletManager.getAccountId();
+                await this.loadLoanData(investorAddress);
+
+                // Reset form
+                loanAmountInput.value = '';
+            } else {
+                throw new Error(result?.error || 'Failed to process loan');
+            }
+        } catch (error) {
+            console.error('Failed to take loan:', error);
+            window.walletManager.showToast(
+                `Failed to process loan: ${error.message}`,
+                'error'
+            );
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    /**
+     * Render active loan details
+     * @param {Object} loan - Loan details object
+     */
+    renderActiveLoan(loan) {
+        const container = document.getElementById('activeLoanCard');
+        if (!container) return;
+
+        // Store loan data for repayment
+        this.activeLoan = loan;
+
+        // Calculate health factor
+        const healthFactor = loan.healthFactor || 1.0;
+        const healthClass = healthFactor >= 1.5 ? 'text-success' : healthFactor >= 1.2 ? 'text-warning' : 'text-danger';
+        const healthStatus = healthFactor >= 1.5 ? 'Healthy' : healthFactor >= 1.2 ? 'Monitor' : 'At Risk';
+        const healthBarWidth = Math.min(healthFactor * 50, 100); // Scale to 100% max
+
+        // Determine if warning should be shown
+        const showWarning = healthFactor < 1.2;
+        const showCritical = healthFactor < 1.1;
+
+        // Generate warning message
+        let warningMessage = '';
+        if (showCritical) {
+            warningMessage = `
+                <div class="loan-alert loan-alert-danger">
+                    <strong>🚨 CRITICAL: Liquidation Risk!</strong>
+                    <p>Your loan health factor is critically low (${healthFactor.toFixed(2)}). Your collateral may be liquidated soon. Please repay your loan or add more collateral immediately.</p>
+                </div>
+            `;
+        } else if (showWarning) {
+            warningMessage = `
+                <div class="loan-alert loan-alert-warning">
+                    <strong>⚠️ Warning: Low Health Factor</strong>
+                    <p>Your loan health factor is below 1.2 (${healthFactor.toFixed(2)}). Consider repaying your loan or monitoring the collateral value closely to avoid liquidation.</p>
+                </div>
+            `;
+        }
+
+        container.innerHTML = `
+            <div class="loan-details">
+                <div class="loan-header">
+                    <h5>Loan Details</h5>
+                    <div class="loan-status ${healthClass}">
+                        <span class="status-indicator"></span>
+                        ${healthStatus}
+                    </div>
+                </div>
+                
+                ${warningMessage}
+                
+                <div class="loan-health-monitor">
+                    <div class="health-header">
+                        <label>Loan Health Factor</label>
+                        <span class="health-value ${healthClass}">${healthFactor.toFixed(2)}</span>
+                    </div>
+                    <div class="health-bar-container">
+                        <div class="health-bar ${healthClass}" style="width: ${healthBarWidth}%"></div>
+                    </div>
+                    <div class="health-legend">
+                        <span class="legend-item">
+                            <span class="legend-dot text-danger"></span>
+                            <small>&lt; 1.1 Critical</small>
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-dot text-warning"></span>
+                            <small>1.1 - 1.2 Warning</small>
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-dot text-success"></span>
+                            <small>&gt; 1.5 Healthy</small>
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="loan-stats-grid">
+                    <div class="loan-stat">
+                        <label>Loan Amount</label>
+                        <span class="value">$${(loan.loanAmountUSDC || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="loan-stat">
+                        <label>Collateral Locked</label>
+                        <span class="value">${(loan.collateralAmount || 0).toFixed(2)} tokens</span>
+                    </div>
+                    <div class="loan-stat">
+                        <label>Repayment Amount</label>
+                        <span class="value text-primary">$${(loan.repaymentAmount || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="loan-stat">
+                        <label>Liquidation Price</label>
+                        <span class="value text-warning">$${(loan.liquidationPrice || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="loan-stat">
+                        <label>Current Token Price</label>
+                        <span class="value">$${(loan.currentTokenPrice || 25).toFixed(2)}</span>
+                    </div>
+                    <div class="loan-stat">
+                        <label>Loan Date</label>
+                        <span class="value">${new Date(loan.loanDate).toLocaleDateString()}</span>
+                    </div>
+                </div>
+                
+                <div class="loan-actions">
+                    <button class="btn btn-primary" onclick="investorPortal.showRepayLoanModal()">
+                        Repay Loan
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Show toast notification for critical health
+        if (showCritical) {
+            window.walletManager.showToast(
+                'CRITICAL: Your loan is at risk of liquidation!',
+                'error'
+            );
+            
+            // Show persistent notification
+            if (window.notificationManager) {
+                window.notificationManager.error(
+                    'Your loan health factor is critically low. Your collateral may be liquidated soon. Please repay your loan or add more collateral immediately.',
+                    {
+                        title: '🚨 Liquidation Risk',
+                        autoDismiss: false,
+                        action: () => {
+                            this.showRepayLoanModal();
+                        },
+                        actionLabel: 'Repay Loan'
+                    }
+                );
+            }
+        } else if (showWarning) {
+            window.walletManager.showToast(
+                'Warning: Your loan health factor is low',
+                'warning'
+            );
+            
+            // Show notification with action
+            if (window.notificationManager) {
+                window.notificationManager.warning(
+                    `Your loan health factor is ${healthFactor.toFixed(2)}. Consider adding collateral to avoid liquidation.`,
+                    {
+                        title: 'Loan Health Warning',
+                        autoDismiss: false,
+                        action: () => {
+                            this.showRepayLoanModal();
+                        },
+                        actionLabel: 'Manage Loan'
+                    }
+                );
+            }
+        }
+    }
+
+    /**
+     * Show repay loan modal
+     */
+    showRepayLoanModal() {
+        const modal = document.getElementById('repayLoanModal');
+        if (!modal || !this.activeLoan) return;
+
+        const loan = this.activeLoan;
+
+        // Update modal values
+        document.getElementById('modalLoanAmount').textContent = `$${(loan.loanAmountUSDC || 0).toFixed(2)}`;
+        document.getElementById('modalInterest').textContent = `$${((loan.loanAmountUSDC || 0) * 0.10).toFixed(2)}`;
+        document.getElementById('modalTotalRepayment').textContent = `$${(loan.repaymentAmount || 0).toFixed(2)}`;
+        document.getElementById('modalCollateralUnlock').textContent = `${(loan.collateralAmount || 0).toFixed(2)} tokens`;
+
+        // Show modal
+        modal.classList.add('active');
+
+        // Set up event listeners
+        this.setupRepayLoanModal(modal);
+    }
+
+    /**
+     * Set up repay loan modal event listeners
+     * @param {HTMLElement} modal - Modal element
+     */
+    setupRepayLoanModal(modal) {
+        // Close modal handlers
+        const closeButtons = modal.querySelectorAll('.modal-close');
+        closeButtons.forEach(btn => {
+            btn.onclick = () => {
+                modal.classList.remove('active');
+            };
+        });
+
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        };
+
+        // Confirm repayment button handler
+        const confirmBtn = document.getElementById('confirmRepayBtn');
+        if (confirmBtn) {
+            confirmBtn.onclick = async () => {
+                await this.handleRepayLoan();
+                modal.classList.remove('active');
+            };
+        }
+    }
+
+    /**
+     * Handle loan repayment
+     */
+    async handleRepayLoan() {
+        if (!this.activeLoan) {
+            window.walletManager.showToast('No active loan found', 'error');
+            return;
+        }
+
+        try {
+            window.walletManager.showLoading('Processing loan repayment...');
+
+            const result = await window.coffeeAPI.repayLoan('USDC');
+
+            if (result && result.success) {
+                window.walletManager.showToast(
+                    `Loan repaid successfully! ${this.activeLoan.collateralAmount} tokens unlocked`,
+                    'success'
+                );
+
+                // Refresh balances after transaction within 5 seconds
+                if (window.balancePoller && result.transactionHash) {
+                    await window.balancePoller.refreshAfterTransaction(result.transactionHash, ['usdc', 'token']);
+                }
+
+                // Clear active loan
+                this.activeLoan = null;
+
+                // Refresh loan data
+                const investorAddress = window.walletManager.getAccountId();
+                await this.loadLoanData(investorAddress);
+            } else {
+                throw new Error(result?.error || 'Failed to repay loan');
+            }
+        } catch (error) {
+            console.error('Failed to repay loan:', error);
+            window.walletManager.showToast(
+                `Failed to repay loan: ${error.message}`,
+                'error'
+            );
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    // Transaction History Methods
+    async loadTransactionHistory(investorAddress) {
+        window.walletManager.showLoading('Loading transaction history...');
+
+        try {
+            // Initialize transaction history manager if not already done
+            if (!window.transactionHistoryManager) {
+                const { default: TransactionHistoryManager } = await import('./transaction-history.js');
+                window.transactionHistoryManager = new TransactionHistoryManager(window.coffeeAPI);
+            }
+
+            // Fetch transaction history
+            await window.transactionHistoryManager.fetchTransactionHistory(investorAddress);
+
+            // Render transaction history
+            this.renderTransactionHistory();
+
+            // Setup filter event listener
+            this.setupTransactionFilters();
+
+            window.walletManager.hideLoading();
+        } catch (error) {
+            console.error('Failed to load transaction history:', error);
+            window.walletManager.hideLoading();
+            window.walletManager.showToast('Failed to load transaction history', 'error');
+        }
+    }
+
+    renderTransactionHistory() {
+        const manager = window.transactionHistoryManager;
+        if (!manager) return;
+
+        // Get paginated transactions
+        const { transactions, totalPages, currentPage, totalTransactions } = manager.getPaginatedTransactions();
+
+        // Update statistics
+        const stats = manager.getStatistics();
+        document.getElementById('totalTransactions').textContent = stats.total;
+        document.getElementById('totalVolume').textContent = `$${(stats.totalVolume / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('completedTransactions').textContent = stats.byStatus.completed || 0;
+        document.getElementById('pendingTransactions').textContent = stats.byStatus.pending || 0;
+
+        // Render transactions list
+        const listContainer = document.getElementById('transactionsList');
+        
+        if (transactions.length === 0) {
+            listContainer.innerHTML = '<div class="empty-state"><p>No transactions found</p></div>';
+            return;
+        }
+
+        listContainer.innerHTML = transactions.map(tx => {
+            const typeInfo = manager.getTransactionTypeInfo(tx.type);
+            const statusInfo = manager.getTransactionStatusInfo(tx.status);
+            
+            return `
+                <div class="transaction-item" data-tx-id="${tx.id}">
+                    <div class="transaction-main">
+                        <div class="transaction-icon" style="background-color: ${typeInfo.color}20;">
+                            <span style="font-size: 1.5rem;">${typeInfo.icon}</span>
+                        </div>
+                        <div class="transaction-details">
+                            <div class="transaction-type" style="color: ${typeInfo.color};">
+                                ${typeInfo.label}
+                            </div>
+                            <div class="transaction-meta">
+                                <span>${manager.formatTimestamp(tx.timestamp)}</span>
+                                ${tx.transactionHash ? `
+                                    <a href="${tx.blockExplorerUrl}" target="_blank" class="transaction-hash">
+                                        View on Explorer →
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="transaction-amount">
+                        <div class="transaction-amount-value">
+                            ${manager.formatAmount(tx.amount, tx.asset)}
+                        </div>
+                        <span class="transaction-status ${tx.status}">
+                            ${statusInfo.icon} ${statusInfo.label}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Render pagination
+        this.renderTransactionPagination(totalPages, currentPage, totalTransactions);
+    }
+
+    renderTransactionPagination(totalPages, currentPage, totalTransactions) {
+        const paginationContainer = document.getElementById('transactionsPagination');
+        
+        if (totalPages <= 1) {
+            paginationContainer.innerHTML = '';
+            return;
+        }
+
+        const pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                pages.push(i);
+            } else if (pages[pages.length - 1] !== '...') {
+                pages.push('...');
+            }
+        }
+
+        paginationContainer.innerHTML = `
+            <button class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">
+                ← Previous
+            </button>
+            ${pages.map(page => {
+                if (page === '...') {
+                    return '<span class="pagination-info">...</span>';
+                }
+                return `
+                    <button class="pagination-btn ${page === currentPage ? 'active' : ''}" data-page="${page}">
+                        ${page}
+                    </button>
+                `;
+            }).join('')}
+            <button class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">
+                Next →
+            </button>
+        `;
+
+        // Add pagination click handlers
+        paginationContainer.querySelectorAll('.pagination-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const page = parseInt(e.target.dataset.page);
+                if (!isNaN(page)) {
+                    window.transactionHistoryManager.getPaginatedTransactions(page);
+                    this.renderTransactionHistory();
+                }
+            });
+        });
+    }
+
+    setupTransactionFilters() {
+        const filterSelect = document.getElementById('transactionTypeFilter');
+        const exportBtn = document.getElementById('exportTransactionsBtn');
+
+        if (filterSelect) {
+            filterSelect.addEventListener('change', (e) => {
+                window.transactionHistoryManager.applyFilter(e.target.value);
+                this.renderTransactionHistory();
+            });
+        }
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                const timestamp = new Date().toISOString().split('T')[0];
+                window.transactionHistoryManager.downloadCSV(`transactions-${timestamp}.csv`);
+                window.walletManager.showToast('Transaction history exported successfully', 'success');
+            });
+        }
     }
 }
 

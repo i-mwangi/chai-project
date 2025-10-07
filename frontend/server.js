@@ -9,6 +9,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { URL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,7 +61,12 @@ const server = http.createServer((req, res) => {
         res.end(svg);
         return;
     }
-    let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
+    
+    // Parse URL to separate path from query parameters
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = url.pathname;
+    
+    let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
 
     // Security check - prevent directory traversal
     if (!filePath.startsWith(__dirname)) {
@@ -73,7 +79,7 @@ const server = http.createServer((req, res) => {
     fs.stat(filePath, (err, stats) => {
         if (err || !stats.isFile()) {
             // If file doesn't exist, serve app.html for SPA routing (not index.html)
-            if (req.url !== '/' && !path.extname(req.url)) {
+            if (pathname !== '/' && !path.extname(pathname)) {
                 filePath = path.join(__dirname, 'app.html');
             }
         }
@@ -95,7 +101,7 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+server.on('SIGTERM', () => {
     console.log('SIGTERM received, shutting down gracefully');
     server.close(() => {
         console.log('Frontend server closed');
@@ -103,10 +109,16 @@ process.on('SIGTERM', () => {
     });
 });
 
-process.on('SIGINT', () => {
+server.on('SIGINT', () => {
     console.log('SIGINT received, shutting down gracefully');
     server.close(() => {
         console.log('Frontend server closed');
         process.exit(0);
     });
+});
+
+// Handle server errors
+server.on('error', (err) => {
+    console.error('Server error:', err);
+    process.exit(1);
 });

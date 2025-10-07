@@ -641,6 +641,257 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             } else if (pathname === '/api/marketplace/user-listings' && method === 'GET') {
                 await getUserListings(req, res)
             
+            // Pricing API Routes
+            } else if (pathname === '/api/pricing/seasonal-price' && method === 'POST') {
+                const { variety, grade, month } = req.body || {};
+                
+                if (!variety || grade === undefined || !month) {
+                    sendError(res, 400, 'variety, grade, and month are required');
+                    return;
+                }
+                
+                try {
+                    // For demo purposes, we'll create a mock response since we don't have the actual contract setup
+                    // In a real implementation, you would initialize the PriceOracleContract and call getSeasonalCoffeePrice
+                    
+                    // Mock seasonal multipliers (these would come from the contract in a real implementation)
+                    const seasonalMultipliers = {
+                        1: 0.9,  // January - Low season
+                        2: 0.85, // February - Low season
+                        3: 0.95, // March - Low season
+                        4: 1.1,  // April - Harvest season
+                        5: 1.2,  // May - Harvest season
+                        6: 1.3,  // June - Peak harvest
+                        7: 1.25, // July - Peak harvest
+                        8: 1.2,  // August - Harvest season
+                        9: 1.1,  // September - Harvest season
+                        10: 1.0, // October - Normal
+                        11: 0.95,// November - Normal
+                        12: 0.9  // December - Low season
+                    };
+                    
+                    // Base prices by variety (these would come from the contract in a real implementation)
+                    const basePrices = {
+                        'ARABICA': 4.50,
+                        'ROBUSTA': 2.80,
+                        'SPECIALTY': 6.00,
+                        'ORGANIC': 5.20
+                    };
+                    
+                    const varietyKey = typeof variety === 'string' ? variety.toUpperCase() : variety;
+                    const basePrice = basePrices[varietyKey] || 4.00;
+                    const multiplier = seasonalMultipliers[month] || 1.0;
+                    const seasonalPrice = basePrice * multiplier;
+                    
+                    sendResponse(res, 200, {
+                        success: true,
+                        data: {
+                            seasonalPrice: parseFloat(seasonalPrice.toFixed(2)),
+                            basePrice: parseFloat(basePrice.toFixed(2)),
+                            seasonalMultiplier: multiplier,
+                            variety,
+                            grade,
+                            month
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error calculating seasonal price:', error);
+                    sendError(res, 500, 'Failed to calculate seasonal price');
+                }
+            } else if (pathname === '/api/pricing/projected-revenue' && method === 'POST') {
+                const { groveTokenAddress, variety, grade, expectedYieldKg, harvestMonth } = req.body || {};
+                
+                // Validate required parameters
+                if (!variety || grade === undefined || !expectedYieldKg || !harvestMonth) {
+                    sendError(res, 400, 'variety, grade, expectedYieldKg, and harvestMonth are required');
+                    return;
+                }
+                
+                // Normalize variety to uppercase
+                const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
+                
+                try {
+                    // For demo purposes, we'll create a mock response since we don't have the actual contract setup
+                    // In a real implementation, you would initialize the PriceOracleContract and call calculateProjectedRevenue
+                    
+                    // Mock seasonal multipliers (these would come from the contract in a real implementation)
+                    const seasonalMultipliers = {
+                        1: 0.9,  // January - Low season
+                        2: 0.85, // February - Low season
+                        3: 0.95, // March - Low season
+                        4: 1.1,  // April - Harvest season
+                        5: 1.2,  // May - Harvest season
+                        6: 1.3,  // June - Peak harvest
+                        7: 1.25, // July - Peak harvest
+                        8: 1.2,  // August - Harvest season
+                        9: 1.1,  // September - Harvest season
+                        10: 1.0, // October - Normal
+                        11: 0.95,// November - Normal
+                        12: 0.9  // December - Low season
+                    };
+                    
+                    // Base prices by variety (these would come from the contract in a real implementation)
+                    const basePrices = {
+                        'ARABICA': 4.50,
+                        'ROBUSTA': 2.80,
+                        'SPECIALTY': 6.00,
+                        'ORGANIC': 5.20
+                    };
+                    
+                    const basePrice = basePrices[normalizedVariety] || 4.00;
+                    const multiplier = seasonalMultipliers[harvestMonth] || 1.0;
+                    const pricePerKg = basePrice * multiplier;
+                    const projectedRevenue = expectedYieldKg * pricePerKg;
+                    
+                    sendResponse(res, 200, {
+                        success: true,
+                        data: {
+                            projectedRevenue: parseFloat(projectedRevenue.toFixed(2)),
+                            pricePerKg: parseFloat(pricePerKg.toFixed(2)),
+                            basePrice: parseFloat(basePrice.toFixed(2)),
+                            seasonalMultiplier: multiplier,
+                            expectedYieldKg,
+                            variety: normalizedVariety,
+                            grade,
+                            harvestMonth
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error calculating projected revenue:', error);
+                    sendError(res, 500, 'Failed to calculate projected revenue');
+                }
+            } else if (pathname === '/api/pricing/validate-price' && method === 'POST') {
+                const { variety, grade, proposedPrice } = req.body || {};
+                
+                if (!variety || grade === undefined || !proposedPrice) {
+                    sendError(res, 400, 'variety, grade, and proposedPrice are required');
+                    return;
+                }
+                
+                // Normalize variety to uppercase
+                const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
+                
+                try {
+                    // Base prices by variety (these would come from the contract in a real implementation)
+                    const basePrices = {
+                        'ARABICA': 4.50,
+                        'ROBUSTA': 2.80,
+                        'SPECIALTY': 6.00,
+                        'ORGANIC': 5.20
+                    };
+                    
+                    const marketPrice = basePrices[normalizedVariety] || 4.00;
+                    const minPrice = marketPrice * 0.5;
+                    const maxPrice = marketPrice * 2.0;
+                    
+                    const isValid = proposedPrice >= minPrice && proposedPrice <= maxPrice;
+                    let message = '';
+                    
+                    if (isValid) {
+                        message = 'Price is within acceptable range';
+                    } else if (proposedPrice < minPrice) {
+                        message = `Price too low. Minimum acceptable: $${minPrice.toFixed(2)}/kg`;
+                    } else {
+                        message = `Price too high. Maximum acceptable: $${maxPrice.toFixed(2)}/kg`;
+                    }
+                    
+                    sendResponse(res, 200, {
+                        success: true,
+                        data: {
+                            isValid,
+                            message,
+                            marketPrice: parseFloat(marketPrice.toFixed(2)),
+                            minPrice: parseFloat(minPrice.toFixed(2)),
+                            maxPrice: parseFloat(maxPrice.toFixed(2)),
+                            proposedPrice: parseFloat(proposedPrice.toFixed(2))
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error validating price:', error);
+                    sendError(res, 500, 'Failed to validate price');
+                }
+            } else if (pathname === '/api/pricing/all-varieties' && method === 'GET') {
+                try {
+                    // Base prices by variety with grades 1-10 (these would come from the contract in a real implementation)
+                    const varieties = [
+                        {
+                            variety: 'ARABICA',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 2.50 + (i * 0.35)
+                            }))
+                        },
+                        {
+                            variety: 'ROBUSTA',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 1.80 + (i * 0.24)
+                            }))
+                        },
+                        {
+                            variety: 'SPECIALTY',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 3.50 + (i * 0.55)
+                            }))
+                        },
+                        {
+                            variety: 'ORGANIC',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 3.00 + (i * 0.45)
+                            }))
+                        },
+                        {
+                            variety: 'TYPICA',
+                            grades: Array.from({length: 10}, (_, i) => ({
+                                grade: i + 1,
+                                price: 3.20 + (i * 0.40)
+                            }))
+                        }
+                    ];
+                    
+                    sendResponse(res, 200, {
+                        success: true,
+                        data: {
+                            varieties,
+                            lastUpdated: new Date().toISOString()
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error fetching all variety prices:', error);
+                    sendError(res, 500, 'Failed to fetch variety prices');
+                }
+            } else if (pathname === '/api/pricing/seasonal-multipliers' && method === 'GET') {
+                try {
+                    // Mock seasonal multipliers (these would come from the contract in a real implementation)
+                    const seasonalMultipliers = {
+                        1: 0.9,  // January - Low season
+                        2: 0.85, // February - Low season
+                        3: 0.95, // March - Low season
+                        4: 1.1,  // April - Harvest season
+                        5: 1.2,  // May - Harvest season
+                        6: 1.3,  // June - Peak harvest
+                        7: 1.25, // July - Peak harvest
+                        8: 1.2,  // August - Harvest season
+                        9: 1.1,  // September - Harvest season
+                        10: 1.0, // October - Normal
+                        11: 0.95,// November - Normal
+                        12: 0.9  // December - Low season
+                    };
+                    
+                    sendResponse(res, 200, {
+                        success: true,
+                        data: {
+                            seasonalMultipliers,
+                            lastUpdated: new Date().toISOString()
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error fetching seasonal multipliers:', error);
+                    sendError(res, 500, 'Failed to fetch seasonal multipliers');
+                }
+            
             // Debug endpoint: dump in-memory DB storage or query groves
             } else if (pathname === '/__debug/db' && method === 'GET') {
                 try {

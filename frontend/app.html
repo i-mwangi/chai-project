@@ -23,6 +23,7 @@
                     <button class="nav-btn active" data-view="dashboard">Dashboard</button>
                     <button class="nav-btn" data-view="farmer">Farmer Portal</button>
                     <button class="nav-btn" data-view="investor">Investor Portal</button>
+                    <button class="nav-btn hidden" id="adminNavBtn" data-view="admin">Admin</button>
                 </div>
                 <div class="nav-user">
                     <div class="wallet-connection">
@@ -87,6 +88,8 @@
                             <button class="menu-item" data-section="harvest">Harvest Reports</button>
                             <button class="menu-item" data-section="revenue">Revenue Tracking</button>
                             <button class="menu-item" data-section="health">Tree Health</button>
+                            <button class="menu-item" data-section="pricing">Market Prices</button>
+                            <button class="menu-item" data-section="transactions">Transaction History</button>
                             <button class="menu-item" data-section="verification">Verification</button>
                         </div>
                     </div>
@@ -204,18 +207,59 @@
                                         
                                         <div class="form-row">
                                             <div class="form-group">
+                                                <label for="coffeeVariety">Coffee Variety</label>
+                                                <select id="coffeeVariety" name="coffeeVariety" required>
+                                                    <option value="">Select variety</option>
+                                                    <option value="ARABICA">Arabica</option>
+                                                    <option value="ROBUSTA">Robusta</option>
+                                                    <option value="SPECIALTY">Specialty</option>
+                                                    <option value="ORGANIC">Organic</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
                                                 <label for="yieldKg">Total Yield (kg)</label>
                                                 <input type="number" id="yieldKg" name="yieldKg" step="0.1" min="0" required>
                                             </div>
-                                            <div class="form-group">
-                                                <label for="qualityGrade">Quality Grade (1-10)</label>
-                                                <input type="number" id="qualityGrade" name="qualityGrade" min="1" max="10" required>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="qualityGrade">Quality Grade: <span id="gradeValue">5</span> - <span id="gradeDescription">Medium Quality</span></label>
+                                            <input type="range" id="qualityGrade" name="qualityGrade" min="1" max="10" value="5" required>
+                                            <div class="grade-scale">
+                                                <span>1 (Low)</span>
+                                                <span>10 (Premium)</span>
                                             </div>
                                         </div>
                                         
                                         <div class="form-group">
                                             <label for="salePrice">Sale Price per kg (USDC)</label>
                                             <input type="number" id="salePrice" name="salePrice" step="0.01" min="0" required>
+                                            <div id="suggestedPriceInfo" class="price-info" style="display: none;">
+                                                <small>Suggested price: <strong id="suggestedPrice">-</strong> USDC/kg</small>
+                                                <small id="priceValidation" class="validation-message"></small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div id="projectedRevenueSection" class="projected-revenue" style="display: none;">
+                                            <h5>Projected Revenue</h5>
+                                            <div class="revenue-breakdown">
+                                                <div class="revenue-item">
+                                                    <span>Total Revenue:</span>
+                                                    <strong id="projectedTotal">-</strong>
+                                                </div>
+                                                <div class="revenue-item">
+                                                    <span>Your Share (30%):</span>
+                                                    <strong id="projectedFarmerShare">-</strong>
+                                                </div>
+                                                <div class="revenue-item">
+                                                    <span>Investor Share (70%):</span>
+                                                    <strong id="projectedInvestorShare">-</strong>
+                                                </div>
+                                            </div>
+                                            <div id="priceBreakdown" class="price-breakdown">
+                                                <small>Base price: <span id="basePrice">-</span> USDC/kg</small>
+                                                <small>Seasonal multiplier: <span id="seasonalMultiplier">-</span>x</small>
+                                            </div>
                                         </div>
                                         
                                         <div class="form-group">
@@ -228,6 +272,37 @@
                                             <button type="submit" class="btn btn-primary">Submit Report</button>
                                         </div>
                                     </form>
+                                </div>
+                            </div>
+                            
+                            <!-- Withdrawal Confirmation Modal -->
+                            <div id="withdrawalConfirmModal" class="modal">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4>Confirm Withdrawal</h4>
+                                        <button class="modal-close">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="confirmation-details">
+                                            <p>Please confirm your withdrawal details:</p>
+                                            <div class="detail-row">
+                                                <label>Grove:</label>
+                                                <span id="confirmGroveName">-</span>
+                                            </div>
+                                            <div class="detail-row">
+                                                <label>Amount:</label>
+                                                <span id="confirmAmount">$0.00</span>
+                                            </div>
+                                            <div class="detail-row">
+                                                <label>Destination:</label>
+                                                <span id="confirmDestination">-</span>
+                                            </div>
+                                        </div>
+                                        <div class="modal-actions">
+                                            <button type="button" class="btn btn-secondary" id="cancelWithdrawal">Cancel</button>
+                                            <button type="button" class="btn btn-primary" id="confirmWithdrawal">Confirm Withdrawal</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -259,8 +334,83 @@
                                 </div>
                             </div>
                             
+                            <!-- Farmer Withdrawal Card -->
+                            <div class="withdrawal-card">
+                                <div class="section-header">
+                                    <h4>Farmer Revenue Withdrawal</h4>
+                                    <small>Withdraw your 30% share from harvest revenue</small>
+                                </div>
+                                
+                                <div class="withdrawal-stats">
+                                    <div class="stat-card">
+                                        <h5>Available Balance</h5>
+                                        <div class="stat-value" id="farmerAvailableBalance">$0.00</div>
+                                        <small class="stat-label">Ready to withdraw</small>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h5>Pending</h5>
+                                        <div class="stat-value" id="farmerPendingBalance">$0.00</div>
+                                        <small class="stat-label">Processing</small>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h5>Total Withdrawn</h5>
+                                        <div class="stat-value" id="farmerTotalWithdrawn">$0.00</div>
+                                        <small class="stat-label">All-time</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="withdrawal-form-container">
+                                    <form id="farmerWithdrawalForm" class="withdrawal-form">
+                                        <div class="form-group">
+                                            <label for="withdrawalGrove">Select Grove</label>
+                                            <select id="withdrawalGrove" name="groveId" required>
+                                                <option value="">Select a grove</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label for="withdrawalAmount">Withdrawal Amount (USDC)</label>
+                                            <div class="input-with-button">
+                                                <input 
+                                                    type="number" 
+                                                    id="withdrawalAmount" 
+                                                    name="amount" 
+                                                    step="0.01" 
+                                                    min="0.01" 
+                                                    placeholder="Enter amount"
+                                                    required
+                                                >
+                                                <button 
+                                                    type="button" 
+                                                    class="btn btn-secondary btn-small" 
+                                                    id="withdrawMaxBtn"
+                                                >
+                                                    Max
+                                                </button>
+                                            </div>
+                                            <small class="form-help" id="withdrawalHelp">Available: $0.00</small>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary" id="withdrawBtn">
+                                            Withdraw Funds
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            
                             <div class="distributions-list" id="distributionsList">
                                 <!-- Distribution history will be populated here -->
+                            </div>
+                            
+                            <!-- Withdrawal History Section -->
+                            <div class="withdrawal-history-container">
+                                <div class="section-header">
+                                    <h4>Withdrawal History</h4>
+                                    <small>Complete history of all withdrawals</small>
+                                </div>
+                                <div class="withdrawal-history-list" id="withdrawalHistoryList">
+                                    <!-- Withdrawal history will be populated here -->
+                                </div>
                             </div>
                         </div>
 
@@ -272,6 +422,62 @@
                             
                             <div class="health-overview" id="healthOverview">
                                 <!-- Health monitoring cards will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Market Prices Section -->
+                        <div id="pricingSection" class="section">
+                            <div class="section-header">
+                                <h3>Market Prices</h3>
+                                <small>Current coffee prices by variety and quality grade</small>
+                            </div>
+                            
+                            <!-- Variety Filter -->
+                            <div class="pricing-filters">
+                                <div class="form-group">
+                                    <label for="priceVarietyFilter">Coffee Variety</label>
+                                    <select id="priceVarietyFilter" class="variety-filter">
+                                        <option value="">All Varieties</option>
+                                        <option value="ARABICA">Arabica</option>
+                                        <option value="ROBUSTA">Robusta</option>
+                                        <option value="SPECIALTY">Specialty</option>
+                                        <option value="ORGANIC">Organic</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Current Prices Card -->
+                            <div class="pricing-overview">
+                                <div class="pricing-card">
+                                    <h4>Current Market Prices</h4>
+                                    <div id="currentPricesDisplay">
+                                        <!-- Current prices will be populated here -->
+                                    </div>
+                                </div>
+                                
+                                <!-- Quality Grade Pricing Table -->
+                                <div class="pricing-card">
+                                    <h4>Quality Grade Pricing</h4>
+                                    <small>Price per kilogram (USDC) by quality grade (1-10)</small>
+                                    <div id="gradePricingTable">
+                                        <!-- Grade pricing table will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Seasonal Pricing Chart -->
+                            <div class="pricing-card seasonal-pricing-card">
+                                <h4>Seasonal Price Multipliers</h4>
+                                <small>Monthly price adjustments throughout the year</small>
+                                <div class="current-month-indicator" id="currentMonthIndicator">
+                                    <!-- Current month multiplier will be displayed here -->
+                                </div>
+                                <div class="seasonal-chart-container">
+                                    <canvas id="seasonalPricingChart"></canvas>
+                                </div>
+                                <div class="price-calculation-info" id="priceCalculationInfo">
+                                    <!-- Price calculation breakdown tooltip will be shown here -->
+                                </div>
                             </div>
                         </div>
 
@@ -324,6 +530,54 @@
                                 </form>
                             </div>
                         </div>
+
+                        <!-- Farmer Transaction History Section -->
+                        <div id="farmerTransactionsSection" class="section">
+                            <div class="section-header">
+                                <h3>Transaction History</h3>
+                                <div class="section-actions">
+                                    <select id="farmerTransactionTypeFilter" class="filter-select">
+                                        <option value="all">All Transactions</option>
+                                        <option value="distribution">Revenue Distributions</option>
+                                        <option value="withdrawal">Withdrawals</option>
+                                        <option value="sale">Token Sales</option>
+                                    </select>
+                                    <button id="exportFarmerTransactionsBtn" class="btn btn-secondary">
+                                        📥 Export to CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="transaction-stats">
+                                <div class="stat-card">
+                                    <h4>Total Transactions</h4>
+                                    <div class="stat-value" id="farmerTotalTransactions">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Total Revenue</h4>
+                                    <div class="stat-value" id="farmerTotalRevenue">$0.00</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Completed</h4>
+                                    <div class="stat-value" id="farmerCompletedTransactions">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Pending</h4>
+                                    <div class="stat-value" id="farmerPendingTransactions">0</div>
+                                </div>
+                            </div>
+
+                            <div class="transactions-list" id="farmerTransactionsList">
+                                <!-- Transactions will be populated here -->
+                                <div class="empty-state">
+                                    <p>No transactions found</p>
+                                </div>
+                            </div>
+
+                            <div class="pagination" id="farmerTransactionsPagination">
+                                <!-- Pagination controls will be populated here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -337,6 +591,8 @@
                             <button class="menu-item" data-section="portfolio">My Portfolio</button>
                             <button class="menu-item" data-section="marketplace">Marketplace</button>
                             <button class="menu-item" data-section="earnings">Earnings</button>
+                            <button class="menu-item" data-section="lending">Lending</button>
+                            <button class="menu-item" data-section="transactions">Transaction History</button>
                             <button class="menu-item" data-section="verification">Verification</button>
                         </div>
                     </div>
@@ -429,17 +685,445 @@
                         <!-- Earnings Section -->
                         <div id="earningsSection" class="section">
                             <div class="section-header">
-                                <h3>Earnings History</h3>
+                                <h3>My Earnings</h3>
                             </div>
                             
-                            <div class="earnings-overview">
-                                <div class="earnings-chart">
+                            <!-- Earnings Stats Cards -->
+                            <div class="earnings-stats">
+                                <div class="stat-card">
+                                    <h4>Total Earnings</h4>
+                                    <div class="stat-value" id="totalEarningsValue">$0.00</div>
+                                    <small class="stat-label">All-time earnings from distributions</small>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Pending Distributions</h4>
+                                    <div class="stat-value" id="pendingEarningsValue">$0.00</div>
+                                    <small class="stat-label">Available to claim</small>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>This Month</h4>
+                                    <div class="stat-value" id="monthlyEarningsValue">$0.00</div>
+                                    <small class="stat-label">Earnings this month</small>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Claimed Earnings</h4>
+                                    <div class="stat-value" id="claimedEarningsValue">$0.00</div>
+                                    <small class="stat-label">Successfully claimed</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Pending Distributions Section -->
+                            <div class="earnings-section-container">
+                                <div class="section-header">
+                                    <h4>Pending Distributions</h4>
+                                    <small>Claim your earnings from recent harvests</small>
+                                </div>
+                                <div id="pendingDistributionsList" class="distributions-list">
+                                    <!-- Pending distributions will be populated here -->
+                                </div>
+                            </div>
+                            
+                            <!-- Earnings Chart -->
+                            <div class="earnings-section-container">
+                                <div class="section-header">
+                                    <h4>Earnings Timeline</h4>
+                                    <small>Monthly earnings trend</small>
+                                </div>
+                                <div class="earnings-chart-container">
                                     <canvas id="earningsChart"></canvas>
                                 </div>
-                                
+                            </div>
+                            
+                            <!-- Earnings History -->
+                            <div class="earnings-section-container">
+                                <div class="section-header">
+                                    <h4>Earnings History</h4>
+                                    <small>Complete history of all distributions</small>
+                                </div>
                                 <div class="earnings-list" id="earningsList">
                                     <!-- Earnings history will be populated here -->
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Lending Section -->
+                        <div id="lendingSection" class="section">
+                            <div class="section-header">
+                                <h3>Lending & Liquidity</h3>
+                                <small>Provide liquidity to earn returns or take loans against your holdings</small>
+                            </div>
+                            
+                            <!-- Lending Pools Overview -->
+                            <div class="lending-pools-container">
+                                <div class="section-header">
+                                    <h4>Available Lending Pools</h4>
+                                    <small>Provide USDC liquidity to earn APY</small>
+                                </div>
+                                
+                                <div class="lending-pools-grid" id="lendingPoolsGrid">
+                                    <!-- Lending pools will be populated here -->
+                                </div>
+                            </div>
+                            
+                            <!-- User's Liquidity Positions -->
+                            <div class="liquidity-positions-container">
+                                <div class="section-header">
+                                    <h4>Your Liquidity Positions</h4>
+                                    <small>Your active liquidity provisions and LP tokens</small>
+                                </div>
+                                
+                                <div class="liquidity-positions-list" id="liquidityPositionsList">
+                                    <!-- User's liquidity positions will be populated here -->
+                                </div>
+                            </div>
+                            
+                            <!-- Provide Liquidity Modal -->
+                            <div id="provideLiquidityModal" class="modal">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4>Provide Liquidity</h4>
+                                        <button class="modal-close">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="pool-details-summary" id="poolDetailsSummary">
+                                            <!-- Pool details will be populated here -->
+                                        </div>
+                                        
+                                        <form id="provideLiquidityForm">
+                                            <div class="form-group">
+                                                <label for="liquidityAmount">Amount (USDC)</label>
+                                                <input 
+                                                    type="number" 
+                                                    id="liquidityAmount" 
+                                                    name="amount" 
+                                                    step="0.01" 
+                                                    min="0.01" 
+                                                    placeholder="Enter USDC amount"
+                                                    required
+                                                >
+                                                <small class="form-help" id="liquidityAmountHelp">Available: $0.00</small>
+                                            </div>
+                                            
+                                            <div class="liquidity-calculation">
+                                                <div class="calc-row">
+                                                    <span>LP Tokens to Receive:</span>
+                                                    <span id="lpTokensToReceive">0.00</span>
+                                                </div>
+                                                <div class="calc-row">
+                                                    <span>Your Pool Share:</span>
+                                                    <span id="yourPoolShare">0.00%</span>
+                                                </div>
+                                                <div class="calc-row">
+                                                    <span>Estimated Annual Return:</span>
+                                                    <span id="estimatedAnnualReturn">$0.00</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="modal-actions">
+                                                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Provide Liquidity</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Withdraw Liquidity Modal -->
+                            <div id="withdrawLiquidityModal" class="modal">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4>Withdraw Liquidity</h4>
+                                        <button class="modal-close">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="withdrawal-details-summary" id="withdrawalDetailsSummary">
+                                            <!-- Withdrawal details will be populated here -->
+                                        </div>
+                                        
+                                        <form id="withdrawLiquidityForm">
+                                            <div class="form-group">
+                                                <label for="lpTokenAmount">LP Tokens to Withdraw</label>
+                                                <div class="input-with-button">
+                                                    <input 
+                                                        type="number" 
+                                                        id="lpTokenAmount" 
+                                                        name="lpTokenAmount" 
+                                                        step="0.01" 
+                                                        min="0.01" 
+                                                        placeholder="Enter LP token amount"
+                                                        required
+                                                    >
+                                                    <button 
+                                                        type="button" 
+                                                        class="btn btn-secondary btn-small" 
+                                                        id="withdrawMaxBtn"
+                                                    >
+                                                        Max
+                                                    </button>
+                                                </div>
+                                                <small class="form-help" id="lpTokenAmountHelp">Available: 0.00 LP tokens</small>
+                                            </div>
+                                            
+                                            <div class="withdrawal-calculation">
+                                                <div class="calc-row">
+                                                    <span>USDC to Receive:</span>
+                                                    <span id="usdcToReceive">$0.00</span>
+                                                </div>
+                                                <div class="calc-row">
+                                                    <span>Accrued Rewards:</span>
+                                                    <span id="accruedRewards">$0.00</span>
+                                                </div>
+                                                <div class="calc-row">
+                                                    <span>Total Amount:</span>
+                                                    <span id="totalWithdrawalAmount" class="text-success">$0.00</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="modal-actions">
+                                                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Withdraw Liquidity</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
+                              <!-- Loans Section -->
+                              <div class="loans-container">
+                                  <div class="section-header">
+                                      <h4>Loans</h4>
+                                      <small>Borrow against your coffee tree token holdings</small>
+                                  </div>
+
+                                  <!-- Loan Availability Card -->
+                                  <div class="loan-availability-card">
+                                      <div class="card-header">
+                                          <h5>Available Loan Amount</h5>
+                                      </div>
+                                      <div class="card-body">
+                                          <div class="loan-stats">
+                                              <div class="stat-item">
+                                                  <label>Your Holdings Value</label>
+                                                  <span class="stat-value" id="holdingsValue">$0.00</span>
+                                              </div>
+                                              <div class="stat-item">
+                                                  <label>Max Loan Amount</label>
+                                                  <span class="stat-value text-primary" id="maxLoanAmount">$0.00</span>
+                                                  <small class="stat-help">Based on 125% collateralization</small>
+                                              </div>
+                                              <div class="stat-item">
+                                                  <label>Collateralization Ratio</label>
+                                                  <span class="stat-value" id="collateralizationRatio">125%</span>
+                                              </div>
+                                          </div>
+                                          
+                                          <div class="loan-terms-info">
+                                              <h6>Loan Terms</h6>
+                                              <ul class="terms-list">
+                                                  <li><strong>Collateral Required:</strong> 125% of loan value</li>
+                                                  <li><strong>Liquidation Threshold:</strong> 90% of collateral value</li>
+                                                  <li><strong>Repayment Amount:</strong> 110% of loan amount</li>
+                                                  <li><strong>Interest Rate:</strong> 10% of loan amount</li>
+                                              </ul>
+                                          </div>
+                                          
+                                          <button class="btn btn-primary" id="takeLoanBtn" disabled>
+                                              Take Out Loan
+                                          </button>
+                                      </div>
+                                  </div>
+
+                                  <!-- Active Loan Display -->
+                                  <div class="active-loan-container" id="activeLoanContainer" style="display: none;">
+                                      <div class="section-header">
+                                          <h5>Your Active Loan</h5>
+                                      </div>
+                                      <div class="active-loan-card" id="activeLoanCard">
+                                          <!-- Active loan details will be populated here -->
+                                      </div>
+                                  </div>
+
+                              <!-- Take Loan Modal -->
+                              <div id="takeLoanModal" class="modal">
+                                  <div class="modal-content">
+                                      <div class="modal-header">
+                                          <h4>Take Out Loan</h4>
+                                          <button class="modal-close">&times;</button>
+                                      </div>
+                                      <div class="modal-body">
+                                          <div class="loan-terms-summary">
+                                              <h5>Loan Terms</h5>
+                                              <div class="terms-grid">
+                                                  <div class="term-item">
+                                                      <label>Your Holdings Value</label>
+                                                      <span id="modalHoldingsValue">$0.00</span>
+                                                  </div>
+                                                  <div class="term-item">
+                                                      <label>Max Loan Amount</label>
+                                                      <span id="modalMaxLoanAmount">$0.00</span>
+                                                  </div>
+                                              </div>
+                                          </div>
+
+                              <!-- Repay Loan Modal -->
+                              <div id="repayLoanModal" class="modal">
+                                  <div class="modal-content">
+                                      <div class="modal-header">
+                                          <h4>Repay Loan</h4>
+                                          <button class="modal-close">&times;</button>
+                                      </div>
+                                      <div class="modal-body">
+                                          <div class="repayment-summary">
+                                              <h5>Loan Repayment Details</h5>
+                                              <div class="summary-grid">
+                                                  <div class="summary-item">
+                                                      <label>Original Loan Amount</label>
+                                                      <span id="modalLoanAmount">$0.00</span>
+                                                  </div>
+                                                  <div class="summary-item">
+                                                      <label>Interest (10%)</label>
+                                                      <span id="modalInterest">$0.00</span>
+                                                  </div>
+                                                  <div class="summary-item">
+                                                      <label>Total Repayment</label>
+                                                      <span id="modalTotalRepayment" class="text-primary">$0.00</span>
+                                                  </div>
+                                                  <div class="summary-item">
+                                                      <label>Collateral to Unlock</label>
+                                                      <span id="modalCollateralUnlock">0 tokens</span>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                          
+                                          <div class="repayment-info">
+                                              <p><strong> Repaying this loan will:</strong></p>
+                                              <ul>
+                                                  <li>Transfer the repayment amount from your wallet</li>
+                                                  <li>Unlock your collateral tokens</li>
+                                                  <li>Close your active loan</li>
+                                                  <li>Restore your ability to take new loans</li>
+                                              </ul>
+                                          </div>
+                                          
+                                          <div class="modal-actions">
+                                              <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                                              <button type="button" class="btn btn-primary" id="confirmRepayBtn">
+                                                  Confirm Repayment
+                                              </button>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                                          
+                                          <form id="takeLoanForm">
+                                              <div class="form-group">
+                                                  <label for="loanAmount">Loan Amount (USDC)</label>
+                                                  <div class="input-with-button">
+                                                      <input 
+                                                          type="number" 
+                                                          id="loanAmount" 
+                                                          name="loanAmount" 
+                                                          step="0.01" 
+                                                          min="0.01" 
+                                                          placeholder="Enter loan amount"
+                                                          required
+                                                      >
+                                                      <button 
+                                                          type="button" 
+                                                          class="btn btn-secondary btn-small" 
+                                                          id="loanMaxBtn"
+                                                      >
+                                                          Max
+                                                      </button>
+                                                  </div>
+                                                  <small class="form-help" id="loanAmountHelp">Max available: $0.00</small>
+                                              </div>
+                                              
+                                              <div class="loan-calculation">
+                                                  <h6>Loan Details</h6>
+                                                  <div class="calc-row">
+                                                      <span>Collateral Required:</span>
+                                                      <span id="collateralRequired">0 tokens</span>
+                                                  </div>
+                                                  <div class="calc-row">
+                                                      <span>Liquidation Price:</span>
+                                                      <span id="liquidationPrice" class="text-warning">$0.00</span>
+                                                  </div>
+                                                  <div class="calc-row">
+                                                      <span>Repayment Amount:</span>
+                                                      <span id="repaymentAmount" class="text-primary">$0.00</span>
+                                                  </div>
+                                                  <div class="calc-row">
+                                                      <span>Interest (10%):</span>
+                                                      <span id="interestAmount">$0.00</span>
+                                                  </div>
+                                              </div>
+                                              
+                                              <div class="loan-warning">
+                                                  <p><strong> Important:</strong> Your tokens will be locked as collateral. If the value drops below the liquidation threshold, your collateral may be liquidated.</p>
+                                              </div>
+                                              
+                                              <div class="modal-actions">
+                                                  <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                                                  <button type="submit" class="btn btn-primary">Confirm Loan</button>
+                                              </div>
+                                          </form>
+                                      </div>
+                                  </div>
+                              </div>
+                              </div>
+                            </div>
+                        </div>
+
+                        <!-- Transaction History Section -->
+                        <div id="transactionsSection" class="section">
+                            <div class="section-header">
+                                <h3>Transaction History</h3>
+                                <div class="section-actions">
+                                    <select id="transactionTypeFilter" class="filter-select">
+                                        <option value="all">All Transactions</option>
+                                        <option value="purchase">Token Purchases</option>
+                                        <option value="sale">Token Sales</option>
+                                        <option value="distribution">Revenue Distributions</option>
+                                        <option value="loan">Loans</option>
+                                        <option value="loan_repayment">Loan Repayments</option>
+                                        <option value="withdrawal">Withdrawals</option>
+                                        <option value="liquidity_provided">Liquidity Provided</option>
+                                        <option value="liquidity_withdrawn">Liquidity Withdrawn</option>
+                                    </select>
+                                    <button id="exportTransactionsBtn" class="btn btn-secondary">
+                                        📥 Export to CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="transaction-stats">
+                                <div class="stat-card">
+                                    <h4>Total Transactions</h4>
+                                    <div class="stat-value" id="totalTransactions">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Total Volume</h4>
+                                    <div class="stat-value" id="totalVolume">$0.00</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Completed</h4>
+                                    <div class="stat-value" id="completedTransactions">0</div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Pending</h4>
+                                    <div class="stat-value" id="pendingTransactions">0</div>
+                                </div>
+                            </div>
+
+                            <div class="transactions-list" id="transactionsList">
+                                <!-- Transactions will be populated here -->
+                                <div class="empty-state">
+                                    <p>No transactions found</p>
+                                </div>
+                            </div>
+
+                            <div class="pagination" id="transactionsPagination">
+                                <!-- Pagination controls will be populated here -->
                             </div>
                         </div>
 
@@ -496,6 +1180,228 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Admin Panel View -->
+            <div id="adminView" class="view">
+                <div class="admin-dashboard">
+                    <div class="dashboard-sidebar">
+                        <div class="sidebar-menu">
+                            <button class="menu-item active" data-section="token-operations">Token Operations</button>
+                            <button class="menu-item" data-section="kyc-management">KYC Management</button>
+                            <button class="menu-item" data-section="token-holders">Token Holders</button>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-content">
+                        <!-- Token Operations Section -->
+                        <div id="tokenOperationsSection" class="section active">
+                            <div class="section-header">
+                                <h3>Token Operations</h3>
+                                <small>Manage token supply for coffee groves</small>
+                            </div>
+                            
+                            <!-- Grove Selection -->
+                            <div class="admin-grove-selector">
+                                <div class="form-group">
+                                    <label for="adminGroveSelect">Select Grove</label>
+                                    <select id="adminGroveSelect" class="grove-select">
+                                        <option value="">Select a grove...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Token Supply Display -->
+                            <div id="tokenSupplyDisplay" class="token-supply-card" style="display: none;">
+                                <h4>Token Supply Information</h4>
+                                <div class="supply-stats">
+                                    <div class="stat-card">
+                                        <h5>Total Supply</h5>
+                                        <div class="stat-value" id="totalSupply">-</div>
+                                        <small class="stat-label">Total tokens minted</small>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h5>Circulating Supply</h5>
+                                        <div class="stat-value" id="circulatingSupply">-</div>
+                                        <small class="stat-label">Tokens in circulation</small>
+                                    </div>
+                                    <div class="stat-card">
+                                        <h5>Holder Count</h5>
+                                        <div class="stat-value" id="holderCount">-</div>
+                                        <small class="stat-label">Number of token holders</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Token Operations Forms -->
+                            <div id="tokenOperationsForms" class="token-operations-container" style="display: none;">
+                                <div class="operations-grid">
+                                    <!-- Mint Tokens Form -->
+                                    <div class="operation-card">
+                                        <h4>Mint Tokens</h4>
+                                        <p>Increase token supply for the selected grove</p>
+                                        <form id="mintTokensForm" class="token-operation-form">
+                                            <div class="form-group">
+                                                <label for="mintAmount">Amount to Mint</label>
+                                                <input 
+                                                    type="number" 
+                                                    id="mintAmount" 
+                                                    name="amount" 
+                                                    min="1" 
+                                                    step="1" 
+                                                    placeholder="Enter token amount"
+                                                    required
+                                                >
+                                                <small class="form-help">Number of tokens to create</small>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">
+                                                Mint Tokens
+                                            </button>
+                                        </form>
+                                    </div>
+                                    
+                                    <!-- Burn Tokens Form -->
+                                    <div class="operation-card">
+                                        <h4>Burn Tokens</h4>
+                                        <p>Decrease token supply for the selected grove</p>
+                                        <form id="burnTokensForm" class="token-operation-form">
+                                            <div class="form-group">
+                                                <label for="burnAmount">Amount to Burn</label>
+                                                <input 
+                                                    type="number" 
+                                                    id="burnAmount" 
+                                                    name="amount" 
+                                                    min="1" 
+                                                    step="1" 
+                                                    placeholder="Enter token amount"
+                                                    required
+                                                >
+                                                <small class="form-help">Number of tokens to destroy</small>
+                                            </div>
+                                            <button type="submit" class="btn btn-danger">
+                                                Burn Tokens
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Token Operation History -->
+                            <div id="tokenOperationHistory" class="operation-history-container" style="display: none;">
+                                <div class="section-header">
+                                    <h4>Operation History</h4>
+                                    <small>Recent token operations for this grove</small>
+                                </div>
+                                <div class="operation-history-list" id="operationHistoryList">
+                                    <!-- Operation history will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KYC Management Section -->
+                        <div id="kycManagementSection" class="section">
+                            <div class="section-header">
+                                <h3>KYC Management</h3>
+                                <small>Manage KYC approval for token holders</small>
+                            </div>
+                            
+                            <!-- Grove Selection for KYC -->
+                            <div class="admin-grove-selector">
+                                <div class="form-group">
+                                    <label for="kycGroveSelect">Select Grove</label>
+                                    <select id="kycGroveSelect" class="grove-select">
+                                        <option value="">Select a grove...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- KYC Management Interface -->
+                            <div id="kycManagementInterface" class="kyc-management-container" style="display: none;">
+                                <!-- Add Account for KYC -->
+                                <div class="kyc-add-account">
+                                    <h4>Grant KYC Approval</h4>
+                                    <form id="grantKYCForm" class="kyc-form">
+                                        <div class="form-group">
+                                            <label for="kycAccountAddress">Account Address</label>
+                                            <input 
+                                                type="text" 
+                                                id="kycAccountAddress" 
+                                                name="accountAddress" 
+                                                placeholder="0.0.xxxxx"
+                                                required
+                                            >
+                                            <small class="form-help">Hedera account ID to grant KYC approval</small>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">
+                                            Grant KYC
+                                        </button>
+                                    </form>
+                                </div>
+                                
+                                <!-- KYC Status List -->
+                                <div class="kyc-accounts-list">
+                                    <div class="section-header">
+                                        <h4>Account KYC Status</h4>
+                                        <small>List of accounts and their KYC approval status</small>
+                                    </div>
+                                    <div id="kycAccountsList">
+                                        <!-- KYC accounts will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Token Holders Section -->
+                        <div id="tokenHoldersSection" class="section">
+                            <div class="section-header">
+                                <h3>Token Holders</h3>
+                                <small>View all token holders for a grove</small>
+                            </div>
+                            
+                            <!-- Grove Selection for Holders -->
+                            <div class="admin-grove-selector">
+                                <div class="form-group">
+                                    <label for="holdersGroveSelect">Select Grove</label>
+                                    <select id="holdersGroveSelect" class="grove-select">
+                                        <option value="">Select a grove...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Token Holders Display -->
+                            <div id="tokenHoldersDisplay" class="token-holders-container" style="display: none;">
+                                <!-- Export Button -->
+                                <div class="holders-actions">
+                                    <button id="exportHoldersBtn" class="btn btn-secondary">
+                                        Export to CSV
+                                    </button>
+                                </div>
+                                
+                                <!-- Holders List -->
+                                <div class="holders-list-container">
+                                    <table class="holders-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Account Address</th>
+                                                <th>Token Balance</th>
+                                                <th>Share %</th>
+                                                <th>KYC Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="holdersTableBody">
+                                            <!-- Holders will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- Pagination -->
+                                <div class="pagination-container" id="holdersPagination">
+                                    <!-- Pagination controls will be added here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- Loading Overlay -->
@@ -508,9 +1414,16 @@
         <div id="toastContainer" class="toast-container"></div>
     </div>
 
+    <script src="js/errors.js"></script>
+    <script src="js/error-handler.js"></script>
+    <script src="js/notification-manager.js"></script>
     <script src="js/api.js"></script>
     <script src="js/wallet.js"></script>
+    <script src="js/balance-poller.js"></script>
     <script src="js/marketplace.js"></script>
+    <script src="js/price-oracle.js"></script>
+    <script src="js/token-admin.js"></script>
+    <script src="js/admin-panel.js"></script>
     <script src="js/farmer-dashboard.js"></script>
     <script src="js/investor-portal.js"></script>
     <script src="js/main.js"></script>

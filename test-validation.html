@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validation Utilities Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+        }
+        .test-case.pass {
+            border-left-color: #27ae60;
+            background: #e8f8f5;
+        }
+        .test-case.fail {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+        .test-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .test-result {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .summary {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 30px;
+            text-align: center;
+            font-size: 18px;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Validation Utilities Test Suite</h1>
+    
+    <div>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+    <div id="summary"></div>
+
+    <script src="frontend/js/validation.js"></script>
+    <script>
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('summary').innerHTML = '';
+            totalTests = 0;
+            passedTests = 0;
+            failedTests = 0;
+        }
+
+        function addTestResult(sectionTitle, testLabel, result, expected) {
+            totalTests++;
+            const passed = JSON.stringify(result) === JSON.stringify(expected);
+            if (passed) passedTests++;
+            else failedTests++;
+
+            let section = document.querySelector(`[data-section="${sectionTitle}"]`);
+            if (!section) {
+                section = document.createElement('div');
+                section.className = 'test-section';
+                section.setAttribute('data-section', sectionTitle);
+                section.innerHTML = `<h2>${sectionTitle}</h2>`;
+                document.getElementById('results').appendChild(section);
+            }
+
+            const testCase = document.createElement('div');
+            testCase.className = `test-case ${passed ? 'pass' : 'fail'}`;
+            testCase.innerHTML = `
+                <div class="test-label">${passed ? '✅' : '❌'} ${testLabel}</div>
+                <div class="test-result">Result: ${JSON.stringify(result, null, 2)}</div>
+                ${!passed ? `<div class="test-result">Expected: ${JSON.stringify(expected, null, 2)}</div>` : ''}
+            `;
+            section.appendChild(testCase);
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const percentage = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+            summary.className = 'summary';
+            summary.innerHTML = `
+                <strong>Test Summary:</strong> 
+                ${passedTests} / ${totalTests} tests passed (${percentage}%)
+                ${failedTests > 0 ? `<br><span style="color: #ffeb3b;">⚠️ ${failedTests} tests failed</span>` : ''}
+            `;
+        }
+
+        function runAllTests() {
+            clearResults();
+
+            // Test 1: Amount Validation
+            addTestResult('Amount Validation', 'Valid positive amount', 
+                Validator.validateAmount(100, 'Test Amount'),
+                { valid: true, error: null });
+
+            addTestResult('Amount Validation', 'Negative amount should fail',
+                Validator.validateAmount(-50, 'Test Amount'),
+                { valid: false, error: 'Test Amount must be positive', code: 'NEGATIVE_VALUE' });
+
+            addTestResult('Amount Validation', 'Zero without allowZero should fail',
+                Validator.validateAmount(0, 'Test Amount'),
+                { valid: false, error: 'Test Amount must be greater than zero', code: 'ZERO_NOT_ALLOWED' });
+
+            addTestResult('Amount Validation', 'Zero with allowZero should pass',
+                Validator.validateAmount(0, 'Test Amount', { allowZero: true }),
+                { valid: true, error: null });
+
+            addTestResult('Amount Validation', 'Amount exceeding max should fail',
+                Validator.validateAmount(150, 'Test Amount', { max: 100 }),
+                { valid: false, error: 'Test Amount must not exceed 100', code: 'ABOVE_MAXIMUM' });
+
+            addTestResult('Amount Validation', 'Amount below min should fail',
+                Validator.validateAmount(5, 'Test Amount', { min: 10 }),
+                { valid: false, error: 'Test Amount must be at least 10', code: 'BELOW_MINIMUM' });
+
+            // Test 2: Hedera Account ID Validation
+            addTestResult('Hedera Account ID', 'Valid account ID format',
+                Validator.validateHederaAccountId('0.0.12345'),
+                { valid: true, error: null });
+
+            addTestResult('Hedera Account ID', 'Invalid format (no dots)',
+                Validator.validateHederaAccountId('12345').valid,
+                false);
+
+            addTestResult('Hedera Account ID', 'Empty string should fail',
+                Validator.validateHederaAccountId('').valid,
+                false);
+
+            addTestResult('Hedera Account ID', 'Valid mainnet account',
+                Validator.validateHederaAccountId('0.0.98765'),
+                { valid: true, error: null });
+
+            // Test 3: Token Amount Validation
+            addTestResult('Token Amount', 'Valid token amount within balance',
+                Validator.validateTokenAmount(50, 100, 'Tokens'),
+                { valid: true, error: null });
+
+            addTestResult('Token Amount', 'Amount exceeding balance should fail',
+                Validator.validateTokenAmount(150, 100, 'Tokens').valid,
+                false);
+
+            addTestResult('Token Amount', 'Negative token amount should fail',
+                Validator.validateTokenAmount(-10, 100, 'Tokens').valid,
+                false);
+
+            // Test 4: Quality Grade Validation
+            addTestResult('Quality Grade', 'Valid grade (5)',
+                Validator.validateQualityGrade(5),
+                { valid: true, error: null });
+
+            addTestResult('Quality Grade', 'Grade below minimum (0)',
+                Validator.validateQualityGrade(0).valid,
+                false);
+
+            addTestResult('Quality Grade', 'Grade above maximum (11)',
+                Validator.validateQualityGrade(11).valid,
+                false);
+
+            addTestResult('Quality Grade', 'Valid maximum grade (10)',
+                Validator.validateQualityGrade(10),
+                { valid: true, error: null });
+
+            // Test 5: Price Range Validation
+            addTestResult('Price Range', 'Price equal to market price',
+                Validator.validatePriceRange(100, 100),
+                { valid: true, error: null });
+
+            addTestResult('Price Range', 'Price too low (40% of market)',
+                Validator.validatePriceRange(40, 100).valid,
+                false);
+
+            addTestResult('Price Range', 'Price too high (250% of market)',
+                Validator.validatePriceRange(250, 100).valid,
+                false);
+
+            addTestResult('Price Range', 'Price at 50% threshold',
+                Validator.validatePriceRange(50, 100),
+                { valid: true, error: null });
+
+            addTestResult('Price Range', 'Price at 200% threshold',
+                Validator.validatePriceRange(200, 100),
+                { valid: true, error: null });
+
+            // Test 6: Health Score Validation
+            addTestResult('Health Score', 'Valid score (85)',
+                Validator.validateHealthScore(85),
+                { valid: true, error: null });
+
+            addTestResult('Health Score', 'Score above maximum (101)',
+                Validator.validateHealthScore(101).valid,
+                false);
+
+            addTestResult('Health Score', 'Valid minimum score (0)',
+                Validator.validateHealthScore(0),
+                { valid: true, error: null });
+
+            addTestResult('Health Score', 'Valid maximum score (100)',
+                Validator.validateHealthScore(100),
+                { valid: true, error: null });
+
+            // Test 7: String Validation
+            addTestResult('String Validation', 'Valid string',
+                Validator.validateString('Hello', 'Name'),
+                { valid: true, error: null });
+
+            addTestResult('String Validation', 'Empty string should fail',
+                Validator.validateString('', 'Name').valid,
+                false);
+
+            addTestResult('String Validation', 'String too long',
+                Validator.validateString('This is too long', 'Name', { minLength: 5, maxLength: 10 }).valid,
+                false);
+
+            addTestResult('String Validation', 'String within length limits',
+                Validator.validateString('Valid', 'Name', { minLength: 3, maxLength: 10 }),
+                { valid: true, error: null });
+
+            // Test 8: Collateralization Validation
+            addTestResult('Collateralization', 'Valid collateral (125%)',
+                Validator.validateCollateralization(125, 100, 1.25).valid,
+                true);
+
+            addTestResult('Collateralization', 'Insufficient collateral',
+                Validator.validateCollateralization(100, 100, 1.25).valid,
+                false);
+
+            addTestResult('Collateralization', 'Exact required ratio',
+                Validator.validateCollateralization(125, 100, 1.25).valid,
+                true);
+
+            // Test 9: Batch Size Validation
+            addTestResult('Batch Size', 'Valid batch size (25)',
+                Validator.validateBatchSize(25, 50),
+                { valid: true, error: null });
+
+            addTestResult('Batch Size', 'Batch size exceeding max',
+                Validator.validateBatchSize(60, 50).valid,
+                false);
+
+            addTestResult('Batch Size', 'Zero batch size should fail',
+                Validator.validateBatchSize(0, 50).valid,
+                false);
+
+            // Test 10: Multiple Field Validation
+            const multiValid = Validator.validateMultiple({
+                amount: Validator.validateAmount(100, 'Amount'),
+                accountId: Validator.validateHederaAccountId('0.0.12345', 'Account'),
+                grade: Validator.validateQualityGrade(5, 'Grade')
+            });
+            addTestResult('Multiple Fields', 'All fields valid',
+                multiValid.valid,
+                true);
+
+            const multiInvalid = Validator.validateMultiple({
+                amount: Validator.validateAmount(-50, 'Amount'),
+                accountId: Validator.validateHederaAccountId('invalid', 'Account'),
+                grade: Validator.validateQualityGrade(15, 'Grade')
+            });
+            addTestResult('Multiple Fields', 'Multiple fields invalid',
+                multiInvalid.valid,
+                false);
+
+            // Test 11: Percentage Validation
+            addTestResult('Percentage', 'Valid percentage (50)',
+                Validator.validatePercentage(50),
+                { valid: true, error: null });
+
+            addTestResult('Percentage', 'Percentage above 100',
+                Validator.validatePercentage(150).valid,
+                false);
+
+            addTestResult('Percentage', 'Valid 0%',
+                Validator.validatePercentage(0),
+                { valid: true, error: null });
+
+            addTestResult('Percentage', 'Valid 100%',
+                Validator.validatePercentage(100),
+                { valid: true, error: null });
+
+            updateSummary();
+        }
+
+        // Run tests on page load
+        window.addEventListener('load', runAllTests);
+    </script>
+</body>
+</html>

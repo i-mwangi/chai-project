@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading States Test - Coffee Tree Platform</title>
+    <link rel="stylesheet" href="frontend/styles/main.css">
+    <style>
+        body {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #8B4513;
+            margin-bottom: 1rem;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .test-result {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Loading States and Progress Indicators Test</h1>
+    <p>This page tests the loading state management system for async operations.</p>
+
+    <!-- Test Section 1: Basic Loading Spinners -->
+    <div class="test-section">
+        <h2>1. Basic Loading Spinners</h2>
+        <p>Test loading spinners for different async operations.</p>
+        <div class="test-buttons">
+            <button class="btn btn-primary" onclick="testDistributionLoading()">
+                Test Distribution Loading
+            </button>
+            <button class="btn btn-primary" onclick="testLoanLoading()">
+                Test Loan Loading
+            </button>
+            <button class="btn btn-primary" onclick="testLiquidityLoading()">
+                Test Liquidity Loading
+            </button>
+            <button class="btn btn-primary" onclick="testTokenLoading()">
+                Test Token Operation Loading
+            </button>
+        </div>
+        <div id="spinner-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <!-- Test Section 2: Progress Bars -->
+    <div class="test-section">
+        <h2>2. Progress Bars for Batch Operations</h2>
+        <p>Test progress bars for batch distribution processing.</p>
+        <div class="test-buttons">
+            <button class="btn btn-primary" onclick="testBatchProgress(10)">
+                Test Small Batch (10 holders)
+            </button>
+            <button class="btn btn-primary" onclick="testBatchProgress(50)">
+                Test Medium Batch (50 holders)
+            </button>
+            <button class="btn btn-primary" onclick="testBatchProgress(150)">
+                Test Large Batch (150 holders)
+            </button>
+        </div>
+        <div id="progress-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <!-- Test Section 3: Multiple Operations -->
+    <div class="test-section">
+        <h2>3. Multiple Concurrent Operations</h2>
+        <p>Test multiple loading states at the same time.</p>
+        <div class="test-buttons">
+            <button class="btn btn-primary" onclick="testMultipleOperations()">
+                Test Multiple Operations
+            </button>
+            <button class="btn btn-danger" onclick="clearAllLoading()">
+                Clear All Loading States
+            </button>
+        </div>
+        <div id="multiple-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <!-- Test Section 4: Button Loading States -->
+    <div class="test-section">
+        <h2>4. Button Loading States</h2>
+        <p>Test loading states on buttons.</p>
+        <div class="test-buttons">
+            <button class="btn btn-primary" id="test-btn-1" onclick="testButtonLoading(this)">
+                Click to Test Button Loading
+            </button>
+            <button class="btn btn-success" id="test-btn-2" onclick="testButtonLoading(this)">
+                Another Test Button
+            </button>
+        </div>
+    </div>
+
+    <script src="frontend/js/loading-states.js"></script>
+    <script>
+        // Initialize loading state manager
+        loadingStateManager.initialize();
+
+        // Test 1: Distribution Loading
+        async function testDistributionLoading() {
+            const result = document.getElementById('spinner-result');
+            result.style.display = 'block';
+            result.textContent = 'Starting distribution loading test...';
+
+            const loadingId = loadingStateManager.showLoading(
+                'test-distribution',
+                'Processing revenue distribution...'
+            );
+
+            // Simulate async operation
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            loadingStateManager.hideLoading(loadingId);
+            result.textContent = 'Distribution loading test completed!';
+        }
+
+        // Test 2: Loan Loading
+        async function testLoanLoading() {
+            const result = document.getElementById('spinner-result');
+            result.style.display = 'block';
+            result.textContent = 'Starting loan loading test...';
+
+            const loadingId = loadingStateManager.showLoading(
+                'test-loan',
+                'Processing loan application...'
+            );
+
+            // Simulate async operation
+            await new Promise(resolve => setTimeout(resolve, 2500));
+
+            loadingStateManager.hideLoading(loadingId);
+            result.textContent = 'Loan loading test completed!';
+        }
+
+        // Test 3: Liquidity Loading
+        async function testLiquidityLoading() {
+            const result = document.getElementById('spinner-result');
+            result.style.display = 'block';
+            result.textContent = 'Starting liquidity loading test...';
+
+            const loadingId = loadingStateManager.showLoading(
+                'test-liquidity',
+                'Providing liquidity to pool...'
+            );
+
+            // Simulate async operation
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            loadingStateManager.hideLoading(loadingId);
+            result.textContent = 'Liquidity loading test completed!';
+        }
+
+        // Test 4: Token Operation Loading
+        async function testTokenLoading() {
+            const result = document.getElementById('spinner-result');
+            result.style.display = 'block';
+            result.textContent = 'Starting token operation loading test...';
+
+            const loadingId = loadingStateManager.showLoading(
+                'test-token',
+                'Minting tokens...'
+            );
+
+            // Simulate async operation
+            await new Promise(resolve => setTimeout(resolve, 2500));
+
+            loadingStateManager.hideLoading(loadingId);
+            result.textContent = 'Token operation loading test completed!';
+        }
+
+        // Test 5: Batch Progress
+        async function testBatchProgress(totalHolders) {
+            const result = document.getElementById('progress-result');
+            result.style.display = 'block';
+            result.textContent = `Starting batch progress test with ${totalHolders} holders...`;
+
+            const progressId = loadingStateManager.showProgress('test-batch', {
+                message: 'Processing distribution batch...',
+                total: totalHolders,
+                current: 0
+            });
+
+            // Simulate batch processing
+            for (let i = 1; i <= totalHolders; i++) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
+                const batchNum = Math.ceil(i / 50);
+                const totalBatches = Math.ceil(totalHolders / 50);
+                
+                loadingStateManager.updateProgress(
+                    progressId,
+                    i,
+                    `Processing batch ${batchNum} of ${totalBatches}...`
+                );
+            }
+
+            // Keep progress bar visible for a moment
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            loadingStateManager.hideProgress(progressId);
+            result.textContent = `Batch progress test completed! Processed ${totalHolders} holders.`;
+        }
+
+        // Test 6: Multiple Operations
+        async function testMultipleOperations() {
+            const result = document.getElementById('multiple-result');
+            result.style.display = 'block';
+            result.textContent = 'Starting multiple operations test...';
+
+            // Start multiple operations
+            const operations = [
+                { id: 'op1', message: 'Operation 1: Processing...', duration: 3000 },
+                { id: 'op2', message: 'Operation 2: Loading...', duration: 2000 },
+                { id: 'op3', message: 'Operation 3: Executing...', duration: 4000 }
+            ];
+
+            const promises = operations.map(async (op) => {
+                const loadingId = loadingStateManager.showLoading(op.id, op.message);
+                await new Promise(resolve => setTimeout(resolve, op.duration));
+                loadingStateManager.hideLoading(loadingId);
+            });
+
+            await Promise.all(promises);
+            result.textContent = 'Multiple operations test completed!';
+        }
+
+        // Clear all loading states
+        function clearAllLoading() {
+            loadingStateManager.clearAll();
+            const result = document.getElementById('multiple-result');
+            result.style.display = 'block';
+            result.textContent = 'All loading states cleared!';
+        }
+
+        // Test 7: Button Loading
+        async function testButtonLoading(button) {
+            button.classList.add('btn-loading');
+            button.disabled = true;
+
+            // Simulate async operation
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            button.classList.remove('btn-loading');
+            button.disabled = false;
+        }
+
+        // Log active operations
+        setInterval(() => {
+            const count = loadingStateManager.getActiveOperationCount();
+            if (count > 0) {
+                console.log(`Active operations: ${count}`);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

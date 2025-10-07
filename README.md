@@ -4,6 +4,23 @@
 
 The Chai Platform is a blockchain-based solution that empowers smallholder coffee farmers in Kenya, Ethiopia, and Uganda by tokenizing coffee trees. Using Hedera Hashgraph technology, the platform provides farmers with immediate capital, promotes sustainable practices, and ensures fair compensation through transparent smart contracts.
 
+### New Features (Version 2.0)
+
+The platform now includes comprehensive DeFi features:
+
+- **Revenue Distribution System**: Automated distribution of harvest revenue to token holders with 70/30 investor/farmer split
+- **Lending & Liquidity Pools**: Earn APY by providing liquidity or borrow against your coffee tree tokens
+- **Advanced Pricing Oracle**: Variety-specific and seasonal pricing for accurate harvest valuations
+- **Token Management**: Admin tools for minting, burning, and KYC management
+- **Real-time Balance Updates**: Live portfolio tracking with 30-second cache refresh
+- **Transaction History**: Complete audit trail of all platform activities
+
+For detailed information about these features, see:
+- [API Documentation](./API_DOCUMENTATION.md) - Complete API reference
+- [User Guide](./USER_GUIDE.md) - Step-by-step feature guides
+- [Hedera Testnet Setup](./HEDERA_TESTNET_SETUP_GUIDE.md) - Test on Hedera testnet
+- [Quick Start Guide](./HEDERA_QUICK_START.md) - Get started in 5 minutes
+
 ## Getting Started
 
 ### Prerequisites
@@ -28,17 +45,39 @@ The Chai Platform is a blockchain-based solution that empowers smallholder coffe
 
 ### Running the Project
 
+#### Option 1: Quick Demo (Mock Data)
+
 The easiest way to start the project is by using the provided batch script:
 
-#### Windows (Recommended)
 ```bash
 start-demo.bat
 ```
 
 This will:
-1. Start the Mock API Server on port 3001
+1. Start the Mock API Server on port 3002
 2. Start the Frontend Server on port 3000
 3. Automatically open your browser to the landing page
+
+#### Option 2: Hedera Testnet (Real Blockchain)
+
+To test with real Hedera testnet:
+
+1. **Setup (first time only):**
+   ```bash
+   test-on-hedera.bat
+   ```
+   - Get testnet credentials: https://portal.hedera.com/
+   - Get testnet HBAR: https://portal.hedera.com/faucet
+   - Edit `.env` with your credentials
+
+2. **Start with Hedera:**
+   ```bash
+   start-hedera-testnet.bat
+   ```
+
+3. **Connect HashPack wallet** (set to testnet mode)
+
+See [HEDERA_QUICK_START.md](./HEDERA_QUICK_START.md) for detailed instructions.
 
 #### Manual Start
 
@@ -46,7 +85,11 @@ If you prefer to start the services manually:
 
 1. Start the API server:
    ```bash
+   # Mock API (no Hedera needed)
    node frontend/api-server.js
+   
+   # OR Real Hedera API (requires setup)
+   npx tsx api/server.ts
    ```
 
 2. In a new terminal, start the frontend server:
@@ -61,7 +104,20 @@ If you prefer to start the services manually:
 1. **Landing Page**: Visit `http://localhost:3000` to see the main landing page
 2. **Main Application**: Click "Sign Up" or "Get Started" buttons to navigate to `http://localhost:3000/app.html`
 3. **Farmer Portal**: Connect wallet as farmer in the main app
+   - Report harvests with advanced pricing
+   - Withdraw revenue shares
+   - Monitor tree health
 4. **Investor Portal**: Connect wallet as investor in the main app
+   - Browse and purchase grove tokens
+   - Claim earnings from distributions
+   - Provide liquidity to lending pools
+   - Take loans against token holdings
+5. **Admin Panel**: Connect with admin wallet to access token management
+   - Mint/burn tokens
+   - Grant/revoke KYC
+   - Monitor distributions and loans
+
+For detailed usage instructions, see the [User Guide](./USER_GUIDE.md).
 
 ### Project Structure
 

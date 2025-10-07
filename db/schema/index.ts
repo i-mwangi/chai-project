@@ -23,6 +23,31 @@ export const transactions = sqliteTable("transactions", {
     timestamp: real("timestamp").notNull()
 })
 
+// Comprehensive Transaction History Table
+export const transactionHistory = sqliteTable("transaction_history", {
+    id: text("id").unique().primaryKey().notNull(),
+    type: text("type").notNull(), // purchase, sale, distribution, loan, withdrawal, etc.
+    amount: integer("amount").notNull(), // Amount in smallest unit (cents for USDC)
+    asset: text("asset").notNull(), // USDC, KES, grove token symbol
+    fromAddress: text("from_address").notNull(),
+    toAddress: text("to_address").notNull(),
+    status: text("status").notNull(), // pending, completed, failed, cancelled
+    timestamp: integer("timestamp").notNull(),
+    transactionHash: text("transaction_hash"),
+    blockExplorerUrl: text("block_explorer_url"),
+    metadata: text("metadata"), // JSON string for additional data
+    createdAt: integer("created_at").default(Date.now()),
+    updatedAt: integer("updated_at").default(Date.now())
+}, (table) => {
+    return {
+        fromAddressIdx: index("transaction_history_from_idx").on(table.fromAddress),
+        toAddressIdx: index("transaction_history_to_idx").on(table.toAddress),
+        typeIdx: index("transaction_history_type_idx").on(table.type),
+        statusIdx: index("transaction_history_status_idx").on(table.status),
+        timestampIdx: index("transaction_history_timestamp_idx").on(table.timestamp)
+    }
+})
+
 export const prices = sqliteTable("prices",{
     id: text("id").unique().primaryKey().notNull(),
     token: text("token").references(()=> assets.token).notNull(),

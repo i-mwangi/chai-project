@@ -4,14 +4,14 @@
  */
 
 class CoffeeTreeAPI {
-    constructor(baseURL = 'http://localhost:3002') {
+    constructor(baseURL = 'http://localhost:3002') {  // Changed from 3001 to 3002 to match server
         this.baseURL = baseURL;
     }
 
     // Utility method for making HTTP requests
     async request(endpoint, options = {}) {
         // Helper to add a timeout to fetch requests
-        const fetchWithTimeout = (url, cfg, timeout = 30000) => { // Increased from 15000 to 30000 ms
+        const fetchWithTimeout = (url, cfg, timeout = 60000) => { // Increased from 30000 to 60000 ms (1 minute)
             return new Promise((resolve, reject) => {
                 const timer = setTimeout(() => {
                     reject(new Error('Request timed out'))
@@ -62,7 +62,7 @@ class CoffeeTreeAPI {
         }
 
         try {
-            const response = await fetchWithTimeout(url, config, 30000); // Increased from 20000 to 30000 ms
+            const response = await fetchWithTimeout(url, config, 60000); // Increased from 30000 to 60000 ms (1 minute)
             const data = await response.json();
 
             if (!response.ok) {
@@ -357,6 +357,44 @@ class CoffeeTreeAPI {
         return this.request(`/api/earnings/holder?holderAddress=${holderAddress}`);
     }
 
+    // Revenue Distribution API
+    async createDistribution(harvestId, totalRevenue) {
+        return this.request('/api/revenue/create-distribution', {
+            method: 'POST',
+            body: { harvestId, totalRevenue }
+        });
+    }
+
+    async getDistributionHistory(holderAddress) {
+        return this.request(`/api/revenue/distribution-history?holderAddress=${holderAddress}`);
+    }
+
+    async getPendingDistributions(holderAddress) {
+        return this.request(`/api/revenue/pending-distributions?holderAddress=${holderAddress}`);
+    }
+
+    async claimEarnings(distributionId, holderAddress) {
+        return this.request('/api/revenue/claim-earnings', {
+            method: 'POST',
+            body: { distributionId, holderAddress }
+        });
+    }
+
+    async getFarmerBalance(farmerAddress) {
+        return this.request(`/api/revenue/farmer-balance?farmerAddress=${farmerAddress}`);
+    }
+
+    async withdrawFarmerShare(groveId, amount, farmerAddress) {
+        return this.request('/api/revenue/withdraw-farmer-share', {
+            method: 'POST',
+            body: { groveId, amount, farmerAddress }
+        });
+    }
+
+    async getFarmerWithdrawalHistory(farmerAddress) {
+        return this.request(`/api/revenue/withdrawal-history?farmerAddress=${farmerAddress}`);
+    }
+
     // User settings (per-account key/value store)
     async saveUserSettings(accountId, settings) {
         return this.request(`/api/user/settings/${accountId}`, {
@@ -367,6 +405,183 @@ class CoffeeTreeAPI {
 
     async getUserSettings(accountId) {
         return this.request(`/api/user/settings/${accountId}`);
+    }
+
+    // Lending Pool API - Liquidity Provision
+    async getLendingPools() {
+        return this.request('/api/lending/pools');
+    }
+
+    async provideLiquidity(assetAddress, amount) {
+        return this.request('/api/lending/provide-liquidity', {
+            method: 'POST',
+            body: { assetAddress, amount }
+        });
+    }
+
+    async withdrawLiquidity(assetAddress, lpTokenAmount) {
+        return this.request('/api/lending/withdraw-liquidity', {
+            method: 'POST',
+            body: { assetAddress, lpTokenAmount }
+        });
+    }
+
+    async getPoolStatistics(assetAddress) {
+        return this.request(`/api/lending/pool-stats?assetAddress=${assetAddress}`);
+    }
+
+    // Lending Pool API - Loan Management
+    async calculateLoanTerms(assetAddress, loanAmount) {
+        return this.request('/api/lending/calculate-loan-terms', {
+            method: 'POST',
+            body: { assetAddress, loanAmount }
+        });
+    }
+
+    async takeOutLoan(assetAddress, loanAmount) {
+        return this.request('/api/lending/take-loan', {
+            method: 'POST',
+            body: { assetAddress, loanAmount }
+        });
+    }
+
+    async repayLoan(assetAddress) {
+        return this.request('/api/lending/repay-loan', {
+            method: 'POST',
+            body: { assetAddress }
+        });
+    }
+
+    async getLoanDetails(borrowerAddress, assetAddress) {
+        return this.request(`/api/lending/loan-details?borrowerAddress=${borrowerAddress}&assetAddress=${assetAddress}`);
+    }
+
+    // Price Oracle API - Price Fetching
+    async getCoffeePrices(variety, grade) {
+        const params = new URLSearchParams();
+        if (variety) params.append('variety', variety);
+        if (grade !== undefined) params.append('grade', grade);
+        return this.request(`/api/pricing/coffee-prices?${params.toString()}`);
+    }
+
+    async getSeasonalPrice(variety, grade, month) {
+        return this.request('/api/pricing/seasonal-price', {
+            method: 'POST',
+            body: { variety, grade, month }
+        });
+    }
+
+    async getAllVarietyPrices() {
+        return this.request('/api/pricing/all-varieties');
+    }
+
+    async getSeasonalMultipliers() {
+        return this.request('/api/pricing/seasonal-multipliers');
+    }
+
+    // Price Oracle API - Price Calculations
+    async calculateProjectedRevenue(groveTokenAddress, variety, grade, yieldKg, harvestMonth) {
+        return this.request('/api/pricing/projected-revenue', {
+            method: 'POST',
+            body: { groveTokenAddress, variety, grade, expectedYieldKg: yieldKg, harvestMonth }
+        });
+    }
+
+    async validateSalePrice(variety, grade, proposedPrice) {
+        return this.request('/api/pricing/validate-price', {
+            method: 'POST',
+            body: { variety, grade, proposedPrice }
+        });
+    }
+
+    // Token Management API - Token Operations
+    async mintTokens(groveId, amount) {
+        return this.request('/api/admin/mint-tokens', {
+            method: 'POST',
+            body: { groveId, amount }
+        });
+    }
+
+    async burnTokens(groveId, amount) {
+        return this.request('/api/admin/burn-tokens', {
+            method: 'POST',
+            body: { groveId, amount }
+        });
+    }
+
+    async getTokenSupply(groveId) {
+        return this.request(`/api/admin/token-supply?groveId=${groveId}`);
+    }
+
+    // Token Management API - KYC Management
+    async grantKYC(groveId, accountAddress) {
+        return this.request('/api/admin/grant-kyc', {
+            method: 'POST',
+            body: { groveId, accountAddress }
+        });
+    }
+
+    async revokeKYC(groveId, accountAddress) {
+        return this.request('/api/admin/revoke-kyc', {
+            method: 'POST',
+            body: { groveId, accountAddress }
+        });
+    }
+
+    async checkKYCStatus(groveId, accountAddress) {
+        return this.request(`/api/admin/kyc-status?groveId=${groveId}&accountAddress=${accountAddress}`);
+    }
+
+    // Token Management API - Token Holder Management
+    async getTokenHolders(groveId) {
+        return this.request(`/api/admin/token-holders?groveId=${groveId}`);
+    }
+
+    async getHolderBalance(groveId, holderAddress) {
+        return this.request(`/api/admin/holder-balance?groveId=${groveId}&holderAddress=${holderAddress}`);
+    }
+
+    // Balance Polling API - Additional methods for real-time updates
+    async getTokenBalance(groveId, accountId) {
+        return this.request(`/api/balance/token?groveId=${groveId}&accountId=${accountId}`);
+    }
+
+    async getUSDCBalance(accountId) {
+        return this.request(`/api/balance/usdc?accountId=${accountId}`);
+    }
+
+    async getLPTokenBalances(accountId) {
+        return this.request(`/api/balance/lp-tokens?accountId=${accountId}`);
+    }
+
+    // Transaction History API
+    async getTransactionHistory(userAddress, options = {}) {
+        const params = new URLSearchParams({
+            userAddress,
+            ...options
+        });
+        return this.request(`/api/transactions/history?${params.toString()}`);
+    }
+
+    async saveTransaction(transactionData) {
+        return this.request('/api/transactions/save', {
+            method: 'POST',
+            body: transactionData
+        });
+    }
+
+    async updateTransaction(transactionId, updates) {
+        return this.request('/api/transactions/update', {
+            method: 'PUT',
+            body: {
+                transactionId,
+                updates
+            }
+        });
+    }
+
+    async getTransactionById(transactionId) {
+        return this.request(`/api/transactions/${transactionId}`);
     }
 }
 

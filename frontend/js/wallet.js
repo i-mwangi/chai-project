@@ -68,6 +68,14 @@ class WalletManager {
             
             this.showToast(`Connected as ${userType}`, 'success');
 
+            // Start balance polling
+            if (window.balancePoller) {
+                window.balancePoller.startPolling();
+            }
+
+            // Initialize admin panel if user is admin
+            await this.initializeAdminPanel();
+
             // Verification is disabled in this build (frontend no-op)
             // we intentionally skip calling the verification flows so no modal appears
 
@@ -78,10 +86,39 @@ class WalletManager {
         }
     }
 
+    async initializeAdminPanel() {
+        try {
+            // Initialize TokenAdminManager if not already initialized
+            if (!window.tokenAdminManager) {
+                window.tokenAdminManager = new TokenAdminManager(window.coffeeAPI, this);
+            }
+            
+            // Validate admin role
+            const isAdmin = await window.tokenAdminManager.validateAdminRole(this.accountId);
+            
+            // Initialize admin panel UI
+            if (window.adminPanel) {
+                await window.adminPanel.initialize(window.tokenAdminManager);
+            }
+            
+            if (isAdmin) {
+                console.log('Admin panel initialized for user:', this.accountId);
+            }
+        } catch (error) {
+            console.error('Error initializing admin panel:', error);
+            // Don't throw - admin panel is optional
+        }
+    }
+
     disconnectWallet() {
         this.accountId = null;
         this.userType = null;
         this.isConnected = false;
+
+        // Stop balance polling
+        if (window.balancePoller) {
+            window.balancePoller.stopPolling();
+        }
 
         // Clear localStorage
         localStorage.removeItem('connectedAccount');

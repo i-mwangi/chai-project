@@ -31,7 +31,7 @@ echo ✅ Servers restarted!
 echo ✅ Ready to test buttons!
 echo.
 echo Test Instructions:
-echo 1. Click "🎯 Demo Helper" button
+echo 1. Click " Demo Helper" button
 echo 2. Choose "Connect as Farmer"
 echo 3. Go to "Farmer Portal"
 echo 4. Try "View Details" and "Report Harvest" buttons

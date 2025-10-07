@@ -6,6 +6,7 @@
 
 class FarmerDashboard {
     constructor() {
+        console.log('FarmerDashboard constructor called');
         this.currentSection = 'groves';
         this.groves = [];
         this.harvests = [];
@@ -79,9 +80,14 @@ class FarmerDashboard {
 
     setupEventListeners() {
         // Section navigation
-        document.querySelectorAll('.farmer-dashboard .menu-item').forEach(item => {
+        const menuItems = document.querySelectorAll('.farmer-dashboard .menu-item');
+        console.log('Found menu items:', menuItems.length);
+        
+        menuItems.forEach((item, index) => {
+            console.log(`Attaching event listener to menu item ${index}:`, item);
             item.addEventListener('click', (e) => {
                 const section = e.target.dataset.section;
+                console.log('Switching to section:', section);
                 this.switchSection(section);
             });
         });
@@ -89,6 +95,7 @@ class FarmerDashboard {
         // Grove management
         const addGroveBtn = document.getElementById('addGroveBtn');
         if (addGroveBtn) {
+            console.log('Attaching event listener to addGroveBtn');
             addGroveBtn.addEventListener('click', () => this.showGroveModal());
         }
 
@@ -108,6 +115,54 @@ class FarmerDashboard {
         const harvestForm = document.getElementById('harvestForm');
         if (harvestForm) {
             harvestForm.addEventListener('submit', (e) => this.handleHarvestSubmit(e));
+            
+            // Add event listeners for form elements that affect projected revenue
+            const yieldKgInput = document.getElementById('yieldKg');
+            const qualityGradeInput = document.getElementById('qualityGrade');
+            const coffeeVarietySelect = document.getElementById('coffeeVariety');
+            const harvestDateInput = document.getElementById('harvestDate');
+            const harvestGroveSelect = document.getElementById('harvestGrove');
+            
+            const updateRevenueHandler = () => this.updateProjectedRevenue();
+            
+            if (yieldKgInput) {
+                yieldKgInput.addEventListener('input', updateRevenueHandler);
+            }
+            
+            if (qualityGradeInput) {
+                qualityGradeInput.addEventListener('input', updateRevenueHandler);
+                // Also update the grade description display
+                qualityGradeInput.addEventListener('input', (e) => {
+                    const gradeValue = parseInt(e.target.value);
+                    const gradeDescription = this.getGradeDescription(gradeValue);
+                    document.getElementById('gradeValue').textContent = gradeValue;
+                    document.getElementById('gradeDescription').textContent = gradeDescription;
+                });
+            }
+            
+            if (coffeeVarietySelect) {
+                coffeeVarietySelect.addEventListener('change', updateRevenueHandler);
+            }
+            
+            if (harvestDateInput) {
+                harvestDateInput.addEventListener('change', updateRevenueHandler);
+            }
+            
+            if (harvestGroveSelect) {
+                harvestGroveSelect.addEventListener('change', updateRevenueHandler);
+            }
+        }
+
+        // Revenue withdrawal form
+        const withdrawalForm = document.getElementById('farmerWithdrawalForm');
+        if (withdrawalForm) {
+            withdrawalForm.addEventListener('submit', (e) => this.handleWithdrawalSubmit(e));
+        }
+
+        // Withdrawal max button
+        const withdrawMaxBtn = document.getElementById('withdrawMaxBtn');
+        if (withdrawMaxBtn) {
+            withdrawMaxBtn.addEventListener('click', () => this.handleWithdrawMax());
         }
 
         // Modal close buttons
@@ -184,6 +239,8 @@ class FarmerDashboard {
     }
 
     switchSection(section) {
+        console.log('Switching to section:', section);
+        
         // Update active menu item
         document.querySelectorAll('.farmer-dashboard .menu-item').forEach(item => {
             item.classList.remove('active');
@@ -198,6 +255,8 @@ class FarmerDashboard {
         });
 
         const targetSection = document.getElementById(`${section}Section`);
+        console.log('Target section element:', targetSection);
+        
         if (targetSection) {
             targetSection.classList.add('active');
         }
@@ -381,6 +440,8 @@ class FarmerDashboard {
     }
 
     showGroveModal() {
+        console.log('showGroveModal called');
+        
         if (!window.walletManager.requireFarmer()) return;
 
         // Allow opening the grove modal when demo bypass is active
@@ -723,37 +784,91 @@ class FarmerDashboard {
         }
     }
 
+    /**
+     * Load revenue data for the farmer
+     * @param {string} farmerAddress - Farmer's wallet address
+     */
     async loadRevenue(farmerAddress) {
         window.walletManager.showLoading('Loading revenue data...');
 
         try {
-            const [statsResponse, earningsResponse] = await Promise.all([
-                window.coffeeAPI.getHarvestStats(farmerAddress),
-                window.coffeeAPI.getHolderEarnings(farmerAddress)
-            ]);
+            // Load groves first if not already loaded
+            if (this.groves.length === 0) {
+                await this.loadGroves(farmerAddress);
+            }
+            
+            // Fetch revenue statistics
+            const statsResponse = await window.coffeeAPI.getHarvestStats(farmerAddress);
+            
+            // Fetch earnings history
+            const earningsResponse = await window.coffeeAPI.getHolderEarnings(farmerAddress);
+            
+            // Fetch withdrawal history
+            const withdrawalsResponse = await window.coffeeAPI.getWithdrawalHistory(farmerAddress);
 
+            // Render revenue statistics
             if (statsResponse.success) {
                 this.renderRevenueStats(statsResponse.stats);
             }
 
+            // Render revenue chart
             if (earningsResponse.success) {
                 this.renderRevenueChart(earningsResponse.earnings.earningsHistory || []);
+            }
+            
+            // Render distributions
+            if (earningsResponse.distributions) {
                 this.renderDistributions(earningsResponse.distributions);
             }
+            
+            // Render withdrawal history
+            if (withdrawalsResponse.success) {
+                this.renderWithdrawalHistory(withdrawalsResponse.withdrawals);
+            }
+            
+            // Populate the withdrawal grove dropdown
+            this.populateWithdrawalGroveSelect();
+            
+            // Update withdrawal form balances
+            this.updateWithdrawalBalances(statsResponse.stats);
+        } catch (error) {
+            console.error('Failed to load revenue data:', error);
+            window.walletManager.showToast('Failed to load revenue data', 'error');
         } finally {
             window.walletManager.hideLoading();
         }
     }
 
+    /**
+     * Render revenue statistics
+     * @param {Object} stats - Revenue statistics data
+     */
     renderRevenueStats(stats) {
-        document.getElementById('totalEarnings').textContent = `$${stats?.totalEarnings || '0.00'}`;
-        document.getElementById('monthlyEarnings').textContent = `$${stats?.monthlyEarnings || '0.00'}`;
-        document.getElementById('pendingDistributions').textContent = `$${stats?.pendingDistributions || '0.00'}`;
+        if (!stats) return;
+        
+        document.getElementById('totalEarnings').textContent = `$${(stats.totalEarnings || 0).toFixed(2)}`;
+        document.getElementById('monthlyEarnings').textContent = `$${(stats.monthlyEarnings || 0).toFixed(2)}`;
+        document.getElementById('pendingDistributions').textContent = `$${(stats.pendingDistributions || 0).toFixed(2)}`;
+        
+        // Update withdrawal card stats
+        document.getElementById('farmerAvailableBalance').textContent = `$${(stats.availableBalance || 0).toFixed(2)}`;
+        document.getElementById('farmerPendingBalance').textContent = `$${(stats.pendingBalance || 0).toFixed(2)}`;
+        document.getElementById('farmerTotalWithdrawn').textContent = `$${(stats.totalWithdrawn || 0).toFixed(2)}`;
+        
+        // Update withdrawal help text
+        const helpText = document.getElementById('withdrawalHelp');
+        if (helpText) {
+            helpText.textContent = `Available: $${(stats.availableBalance || 0).toFixed(2)}`;
+        }
     }
 
-    renderRevenueChart(earnings) {
+    /**
+     * Render revenue chart
+     * @param {Array} earningsHistory - Earnings history data
+     */
+    renderRevenueChart(earningsHistory) {
         const canvas = document.getElementById('revenueChart');
-        if (!canvas || !earnings) return;
+        if (!canvas || !earningsHistory) return;
 
         const ctx = canvas.getContext('2d');
 
@@ -762,16 +877,21 @@ class FarmerDashboard {
             this.revenueChart.destroy();
         }
 
+        // Prepare chart data
+        const labels = earningsHistory.map(e => new Date(e.date).toLocaleDateString());
+        const data = earningsHistory.map(e => e.amount);
+
         this.revenueChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: earnings.map(e => new Date(e.date).toLocaleDateString()),
+                labels: labels,
                 datasets: [{
                     label: 'Revenue',
-                    data: earnings.map(e => e.amount),
+                    data: data,
                     borderColor: '#8B4513',
                     backgroundColor: 'rgba(139, 69, 19, 0.1)',
-                    tension: 0.4
+                    tension: 0.4,
+                    fill: true
                 }]
             },
             options: {
@@ -791,32 +911,206 @@ class FarmerDashboard {
         });
     }
 
+    /**
+     * Render distributions list
+     * @param {Array} distributions - Distributions data
+     */
     renderDistributions(distributions) {
         const container = document.getElementById('distributionsList');
-        if (!container || !distributions) return;
+        if (!container) return;
+
+        if (!distributions || distributions.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No distributions found</p>
+                    <small>Distributions will appear here when harvests are processed</small>
+                </div>
+            `;
+            return;
+        }
 
         container.innerHTML = distributions.map(dist => `
             <div class="list-item">
                 <div class="list-item-header">
-                    <h4>Distribution #${dist.id}</h4>
-                    <span class="text-success">$${dist.amount}</span>
+                    <h4>Distribution #${dist.id || dist.distributionId}</h4>
+                    <span class="text-success">$${(dist.amount || dist.shareAmount || 0).toFixed(2)}</span>
                 </div>
                 <div class="list-item-content">
                     <div class="list-item-detail">
                         <label>Date</label>
-                        <span>${new Date(dist.date).toLocaleDateString()}</span>
+                        <span>${new Date(dist.date || dist.distributionDate).toLocaleDateString()}</span>
                     </div>
                     <div class="list-item-detail">
                         <label>Grove</label>
-                        <span>${dist.groveName}</span>
+                        <span>${dist.groveName || 'Unknown Grove'}</span>
                     </div>
                     <div class="list-item-detail">
                         <label>Harvest</label>
-                        <span>${dist.harvestId}</span>
+                        <span>${dist.harvestId || 'N/A'}</span>
                     </div>
                 </div>
             </div>
         `).join('');
+    }
+
+    /**
+     * Render withdrawal history
+     * @param {Array} withdrawals - Withdrawals data
+     */
+    renderWithdrawalHistory(withdrawals) {
+        const container = document.getElementById('withdrawalHistoryList');
+        if (!container) return;
+
+        if (!withdrawals || withdrawals.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No withdrawal history</p>
+                    <small>Your withdrawal history will appear here</small>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = withdrawals.map(withdrawal => `
+            <div class="list-item">
+                <div class="list-item-header">
+                    <h4>Withdrawal</h4>
+                    <span class="text-success">$${(withdrawal.amount || 0).toFixed(2)}</span>
+                </div>
+                <div class="list-item-content">
+                    <div class="list-item-detail">
+                        <label>Date</label>
+                        <span>${new Date(withdrawal.timestamp || withdrawal.date).toLocaleDateString()}</span>
+                    </div>
+                    <div class="list-item-detail">
+                        <label>Status</label>
+                        <span class="status-${withdrawal.status || 'completed'}">${(withdrawal.status || 'completed').toUpperCase()}</span>
+                    </div>
+                    <div class="list-item-detail">
+                        <label>Transaction</label>
+                        <span>${withdrawal.transactionHash ? withdrawal.transactionHash.substring(0, 10) + '...' : 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Update withdrawal form balances
+     * @param {Object} stats - Revenue statistics
+     */
+    updateWithdrawalBalances(stats) {
+        if (!stats) return;
+        
+        const availableBalance = stats.availableBalance || 0;
+        const helpText = document.getElementById('withdrawalHelp');
+        if (helpText) {
+            helpText.textContent = `Available: $${availableBalance.toFixed(2)}`;
+        }
+    }
+
+    /**
+     * Display projected revenue data in the UI
+     * @param {Object} revenueData - Revenue data from the API
+     */
+    displayProjectedRevenue(revenueData) {
+        // Show the projected revenue section
+        const projectedSection = document.getElementById('projectedRevenueSection');
+        if (projectedSection) {
+            projectedSection.style.display = 'block';
+        }
+        
+        // Update revenue values
+        if (revenueData.data) {
+            const data = revenueData.data;
+            document.getElementById('projectedTotal').textContent = `$${data.projectedRevenue.toFixed(2)}`;
+            document.getElementById('projectedFarmerShare').textContent = `$${(data.projectedRevenue * 0.3).toFixed(2)}`;
+            document.getElementById('projectedInvestorShare').textContent = `$${(data.projectedRevenue * 0.7).toFixed(2)}`;
+            
+            // Update price breakdown
+            document.getElementById('basePrice').textContent = `$${data.basePrice.toFixed(2)}`;
+            document.getElementById('seasonalMultiplier').textContent = data.seasonalMultiplier.toFixed(2);
+        }
+    }
+
+    /**
+     * Update projected revenue display based on form inputs
+     */
+    async updateProjectedRevenue() {
+        // Get form values
+        const groveSelect = document.getElementById('harvestGrove');
+        const yieldKgInput = document.getElementById('yieldKg');
+        const qualityGradeInput = document.getElementById('qualityGrade');
+        const coffeeVarietySelect = document.getElementById('coffeeVariety');
+        const harvestDateInput = document.getElementById('harvestDate');
+        
+        // Check if all required elements exist
+        if (!groveSelect || !yieldKgInput || !qualityGradeInput || !coffeeVarietySelect || !harvestDateInput) {
+            return;
+        }
+        
+        // Get values
+        const groveId = groveSelect.value;
+        const yieldKg = parseFloat(yieldKgInput.value);
+        const qualityGrade = parseInt(qualityGradeInput.value);
+        // Fix: Convert coffee variety to uppercase to match backend expectations
+        const coffeeVariety = coffeeVarietySelect.value.toUpperCase();
+        const harvestDate = harvestDateInput.value;
+        
+        // Validate required inputs
+        if (!groveId || !yieldKg || isNaN(yieldKg) || !qualityGrade || isNaN(qualityGrade) || !coffeeVariety || !harvestDate) {
+            // Hide projected revenue section if inputs are invalid
+            const projectedSection = document.getElementById('projectedRevenueSection');
+            if (projectedSection) {
+                projectedSection.style.display = 'none';
+            }
+            return;
+        }
+        
+        try {
+            // Get the grove to get the groveTokenAddress
+            const grove = this.getGroveById(groveId);
+            if (!grove) {
+                console.error('Grove not found for ID:', groveId);
+                return;
+            }
+            
+            // Get harvest month (1-12)
+            const harvestMonth = new Date(harvestDate).getMonth() + 1;
+            
+            // Call price oracle to calculate projected revenue
+            const revenueData = await window.priceOracle.calculateProjectedRevenue(
+                grove.id, // groveTokenAddress
+                coffeeVariety,
+                qualityGrade,
+                yieldKg,
+                harvestMonth
+            );
+            
+            // Update the UI with projected revenue data
+            // Check if displayProjectedRevenue method exists, if not use a fallback
+            if (typeof this.displayProjectedRevenue === 'function') {
+                this.displayProjectedRevenue(revenueData);
+            } else {
+                // Fallback implementation
+                const projectedSection = document.getElementById('projectedRevenueSection');
+                if (projectedSection && revenueData.data) {
+                    projectedSection.style.display = 'block';
+                    document.getElementById('projectedTotal').textContent = `$${revenueData.data.projectedRevenue.toFixed(2)}`;
+                    document.getElementById('projectedFarmerShare').textContent = `$${(revenueData.data.projectedRevenue * 0.3).toFixed(2)}`;
+                    document.getElementById('projectedInvestorShare').textContent = `$${(revenueData.data.projectedRevenue * 0.7).toFixed(2)}`;
+                    document.getElementById('basePrice').textContent = `$${revenueData.data.basePrice.toFixed(2)}`;
+                    document.getElementById('seasonalMultiplier').textContent = revenueData.data.seasonalMultiplier.toFixed(2);
+                }
+            }
+        } catch (error) {
+            console.error('Error calculating projected revenue:', error);
+            // Hide projected revenue section on error
+            const projectedSection = document.getElementById('projectedRevenueSection');
+            if (projectedSection) {
+                projectedSection.style.display = 'none';
+            }
+        }
     }
 
     async loadTreeHealth(farmerAddress) {
@@ -1191,6 +1485,88 @@ class FarmerDashboard {
                 banner.remove();
             }
         }, 10000);
+    }
+
+    /**
+     * Handle withdrawal form submission
+     * @param {Event} e - Form submission event
+     */
+    async handleWithdrawalSubmit(e) {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        const groveId = formData.get('groveId');
+        const amount = parseFloat(formData.get('amount'));
+
+        // Validate inputs
+        if (!groveId) {
+            window.walletManager.showToast('Please select a grove', 'error');
+            return;
+        }
+
+        if (!amount || amount <= 0) {
+            window.walletManager.showToast('Please enter a valid withdrawal amount', 'error');
+            return;
+        }
+
+        try {
+            window.walletManager.showLoading('Processing withdrawal...');
+
+            // Get farmer address
+            const farmerAddress = window.walletManager.getAccountId();
+
+            // Submit withdrawal request
+            const response = await window.coffeeAPI.withdrawRevenue(farmerAddress, groveId, amount);
+
+            if (response.success) {
+                window.walletManager.showToast('Withdrawal processed successfully!', 'success');
+                
+                // Reset form
+                e.target.reset();
+                
+                // Refresh revenue data
+                await this.loadRevenue(farmerAddress);
+            } else {
+                throw new Error(response.error || 'Failed to process withdrawal');
+            }
+        } catch (error) {
+            console.error('Withdrawal failed:', error);
+            window.walletManager.showToast(`Failed to process withdrawal: ${error.message}`, 'error');
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    /**
+     * Handle "Max" button click for withdrawal
+     */
+    handleWithdrawMax() {
+        const availableBalanceEl = document.getElementById('farmerAvailableBalance');
+        const amountInput = document.getElementById('withdrawalAmount');
+        const helpText = document.getElementById('withdrawalHelp');
+
+        if (availableBalanceEl && amountInput && helpText) {
+            // Extract numeric value from balance text (e.g., "$125.50" -> 125.50)
+            const balanceText = availableBalanceEl.textContent;
+            const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ''));
+            
+            if (!isNaN(balance) && balance > 0) {
+                amountInput.value = balance.toFixed(2);
+                helpText.textContent = `Available: $${balance.toFixed(2)}`;
+            }
+        }
+    }
+
+    /**
+     * Get grade description based on grade value
+     * @param {number} grade - Grade value (1-10)
+     * @returns {string} Grade description
+     */
+    getGradeDescription(grade) {
+        if (grade <= 3) return 'Low Quality';
+        if (grade <= 6) return 'Medium Quality';
+        if (grade <= 8) return 'High Quality';
+        return 'Premium Quality';
     }
 }
 

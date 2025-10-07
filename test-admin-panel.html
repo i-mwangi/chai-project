@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin Panel UI Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Admin Panel HTML Structure</h2>
+        <button onclick="testAdminPanelStructure()">Run Test</button>
+        <div id="test1-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Admin Navigation Button</h2>
+        <button onclick="testAdminNavButton()">Run Test</button>
+        <div id="test2-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Admin Panel Sections</h2>
+        <button onclick="testAdminSections()">Run Test</button>
+        <div id="test3-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Token Operations Forms</h2>
+        <button onclick="testTokenOperationsForms()">Run Test</button>
+        <div id="test4-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 5: KYC Management Interface</h2>
+        <button onclick="testKYCInterface()">Run Test</button>
+        <div id="test5-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 6: Token Holders Table</h2>
+        <button onclick="testTokenHoldersTable()">Run Test</button>
+        <div id="test6-result"></div>
+    </div>
+
+    <script>
+        function showResult(testId, success, message) {
+            const resultDiv = document.getElementById(testId);
+            resultDiv.innerHTML = `<div class="test-result ${success ? 'success' : 'error'}">${message}</div>`;
+        }
+
+        function testAdminPanelStructure() {
+            const adminView = document.getElementById('adminView');
+            const adminDashboard = document.querySelector('.admin-dashboard');
+            
+            if (adminView && adminDashboard) {
+                showResult('test1-result', true, '✓ Admin panel structure exists in HTML');
+            } else {
+                showResult('test1-result', false, '✗ Admin panel structure not found');
+            }
+        }
+
+        function testAdminNavButton() {
+            const adminNavBtn = document.getElementById('adminNavBtn');
+            
+            if (adminNavBtn) {
+                const isHidden = adminNavBtn.classList.contains('hidden');
+                showResult('test2-result', true, `✓ Admin nav button exists (hidden: ${isHidden})`);
+            } else {
+                showResult('test2-result', false, '✗ Admin nav button not found');
+            }
+        }
+
+        function testAdminSections() {
+            const sections = [
+                'tokenOperationsSection',
+                'kycManagementSection',
+                'tokenHoldersSection'
+            ];
+            
+            const missing = sections.filter(id => !document.getElementById(id));
+            
+            if (missing.length === 0) {
+                showResult('test3-result', true, '✓ All admin sections exist');
+            } else {
+                showResult('test3-result', false, `✗ Missing sections: ${missing.join(', ')}`);
+            }
+        }
+
+        function testTokenOperationsForms() {
+            const mintForm = document.getElementById('mintTokensForm');
+            const burnForm = document.getElementById('burnTokensForm');
+            const supplyDisplay = document.getElementById('tokenSupplyDisplay');
+            
+            const exists = mintForm && burnForm && supplyDisplay;
+            
+            if (exists) {
+                showResult('test4-result', true, '✓ Token operations forms exist');
+            } else {
+                showResult('test4-result', false, '✗ Token operations forms incomplete');
+            }
+        }
+
+        function testKYCInterface() {
+            const grantForm = document.getElementById('grantKYCForm');
+            const accountsList = document.getElementById('kycAccountsList');
+            
+            if (grantForm && accountsList) {
+                showResult('test5-result', true, '✓ KYC management interface exists');
+            } else {
+                showResult('test5-result', false, '✗ KYC management interface incomplete');
+            }
+        }
+
+        function testTokenHoldersTable() {
+            const holdersTable = document.querySelector('.holders-table');
+            const exportBtn = document.getElementById('exportHoldersBtn');
+            const pagination = document.getElementById('holdersPagination');
+            
+            if (holdersTable && exportBtn && pagination) {
+                showResult('test6-result', true, '✓ Token holders table and controls exist');
+            } else {
+                showResult('test6-result', false, '✗ Token holders interface incomplete');
+            }
+        }
+
+        // Load the app.html in an iframe to test
+        window.addEventListener('DOMContentLoaded', () => {
+            const iframe = document.createElement('iframe');
+            iframe.src = 'frontend/app.html';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            iframe.onload = () => {
+                // Copy elements from iframe to test
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                // Copy admin view
+                const adminView = iframeDoc.getElementById('adminView');
+                if (adminView) {
+                    document.body.appendChild(adminView.cloneNode(true));
+                }
+                
+                // Copy admin nav button
+                const adminNavBtn = iframeDoc.getElementById('adminNavBtn');
+                if (adminNavBtn) {
+                    document.body.appendChild(adminNavBtn.cloneNode(true));
+                }
+                
+                console.log('Admin panel elements loaded for testing');
+            };
+        });
+    </script>
+</body>
+</html>

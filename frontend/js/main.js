@@ -74,6 +74,14 @@ class ViewManager {
                         }
                     }
                     break;
+                case 'admin':
+                    // Admin panel is handled by admin-panel.js
+                    // Just ensure user is admin
+                    if (window.tokenAdminManager && !window.tokenAdminManager.isAdminUser()) {
+                        this.showError('Admin access required');
+                        this.switchView('dashboard');
+                    }
+                    break;
             }
         } catch (error) {
             console.error(`Failed to load ${view} data:`, error);
@@ -192,6 +200,12 @@ class CoffeeTreeApp {
         try {
             // Initialize view manager
             window.viewManager = new ViewManager();
+
+            // Initialize balance poller
+            if (typeof BalancePoller !== 'undefined') {
+                window.balancePoller = new BalancePoller(window.coffeeAPI, window.walletManager);
+                console.log('Balance poller initialized');
+            }
 
             // Test API connection
             await this.testAPIConnection();
