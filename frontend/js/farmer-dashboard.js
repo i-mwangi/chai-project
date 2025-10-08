@@ -295,6 +295,9 @@ class FarmerDashboard {
                     case 'health':
                         await this.loadTreeHealth(farmerAddress);
                         break;
+                    case 'transactions':
+                        await this.loadTransactionHistory(farmerAddress);
+                        break;
                 }
                 return;
             } catch (error) {
@@ -324,6 +327,9 @@ class FarmerDashboard {
                     break;
                 case 'health':
                     await this.loadTreeHealth(farmerAddress);
+                    break;
+                case 'transactions':
+                    await this.loadTransactionHistory(farmerAddress);
                     break;
             }
         } catch (error) {
@@ -804,7 +810,7 @@ class FarmerDashboard {
             const earningsResponse = await window.coffeeAPI.getHolderEarnings(farmerAddress);
             
             // Fetch withdrawal history
-            const withdrawalsResponse = await window.coffeeAPI.getWithdrawalHistory(farmerAddress);
+            const withdrawalsResponse = await window.coffeeAPI.getFarmerWithdrawalHistory(farmerAddress);
 
             // Render revenue statistics
             if (statsResponse.success) {
@@ -846,19 +852,27 @@ class FarmerDashboard {
     renderRevenueStats(stats) {
         if (!stats) return;
         
-        document.getElementById('totalEarnings').textContent = `$${(stats.totalEarnings || 0).toFixed(2)}`;
-        document.getElementById('monthlyEarnings').textContent = `$${(stats.monthlyEarnings || 0).toFixed(2)}`;
-        document.getElementById('pendingDistributions').textContent = `$${(stats.pendingDistributions || 0).toFixed(2)}`;
+        // Ensure values are numbers before calling toFixed
+        const totalEarnings = typeof stats.totalEarnings === 'number' ? stats.totalEarnings : parseFloat(stats.totalEarnings) || 0;
+        const monthlyEarnings = typeof stats.monthlyEarnings === 'number' ? stats.monthlyEarnings : parseFloat(stats.monthlyEarnings) || 0;
+        const pendingDistributions = typeof stats.pendingDistributions === 'number' ? stats.pendingDistributions : parseFloat(stats.pendingDistributions) || 0;
+        const availableBalance = typeof stats.availableBalance === 'number' ? stats.availableBalance : parseFloat(stats.availableBalance) || 0;
+        const pendingBalance = typeof stats.pendingBalance === 'number' ? stats.pendingBalance : parseFloat(stats.pendingBalance) || 0;
+        const totalWithdrawn = typeof stats.totalWithdrawn === 'number' ? stats.totalWithdrawn : parseFloat(stats.totalWithdrawn) || 0;
+        
+        document.getElementById('totalEarnings').textContent = `$${totalEarnings.toFixed(2)}`;
+        document.getElementById('monthlyEarnings').textContent = `$${monthlyEarnings.toFixed(2)}`;
+        document.getElementById('pendingDistributions').textContent = `$${pendingDistributions.toFixed(2)}`;
         
         // Update withdrawal card stats
-        document.getElementById('farmerAvailableBalance').textContent = `$${(stats.availableBalance || 0).toFixed(2)}`;
-        document.getElementById('farmerPendingBalance').textContent = `$${(stats.pendingBalance || 0).toFixed(2)}`;
-        document.getElementById('farmerTotalWithdrawn').textContent = `$${(stats.totalWithdrawn || 0).toFixed(2)}`;
+        document.getElementById('farmerAvailableBalance').textContent = `$${availableBalance.toFixed(2)}`;
+        document.getElementById('farmerPendingBalance').textContent = `$${pendingBalance.toFixed(2)}`;
+        document.getElementById('farmerTotalWithdrawn').textContent = `$${totalWithdrawn.toFixed(2)}`;
         
         // Update withdrawal help text
         const helpText = document.getElementById('withdrawalHelp');
         if (helpText) {
-            helpText.textContent = `Available: $${(stats.availableBalance || 0).toFixed(2)}`;
+            helpText.textContent = `Available: $${availableBalance.toFixed(2)}`;
         }
     }
 
@@ -1007,6 +1021,25 @@ class FarmerDashboard {
         if (helpText) {
             helpText.textContent = `Available: $${availableBalance.toFixed(2)}`;
         }
+    }
+
+    /**
+     * Populate the withdrawal grove select dropdown
+     */
+    populateWithdrawalGroveSelect() {
+        const select = document.getElementById('withdrawalGrove');
+        if (!select) return;
+
+        // Clear existing options except the first one
+        select.innerHTML = '<option value="">Select a grove</option>';
+
+        // Add grove options
+        this.groves.forEach(grove => {
+            const option = document.createElement('option');
+            option.value = grove.id;
+            option.textContent = `${grove.groveName} (${grove.treeCount} trees)`;
+            select.appendChild(option);
+        });
     }
 
     /**
@@ -1515,8 +1548,20 @@ class FarmerDashboard {
             // Get farmer address
             const farmerAddress = window.walletManager.getAccountId();
 
+            // Check if amount exceeds farmer's available balance (30% share)
+            const balanceResponse = await window.coffeeAPI.getFarmerBalance(farmerAddress);
+            if (balanceResponse.success) {
+                const availableBalance = parseFloat(balanceResponse.data.availableBalance || 0);
+                
+                if (amount > availableBalance) {
+                    window.walletManager.hideLoading();
+                    window.walletManager.showToast(`Amount exceeds available balance. Maximum withdrawable: $${availableBalance.toFixed(2)}`, 'error');
+                    return;
+                }
+            }
+
             // Submit withdrawal request
-            const response = await window.coffeeAPI.withdrawRevenue(farmerAddress, groveId, amount);
+            const response = await window.coffeeAPI.withdrawFarmerShare(groveId, amount, farmerAddress);
 
             if (response.success) {
                 window.walletManager.showToast('Withdrawal processed successfully!', 'success');
@@ -1540,20 +1585,37 @@ class FarmerDashboard {
     /**
      * Handle "Max" button click for withdrawal
      */
-    handleWithdrawMax() {
-        const availableBalanceEl = document.getElementById('farmerAvailableBalance');
-        const amountInput = document.getElementById('withdrawalAmount');
-        const helpText = document.getElementById('withdrawalHelp');
-
-        if (availableBalanceEl && amountInput && helpText) {
-            // Extract numeric value from balance text (e.g., "$125.50" -> 125.50)
-            const balanceText = availableBalanceEl.textContent;
-            const balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ''));
+    async handleWithdrawMax() {
+        try {
+            // Get farmer address
+            const farmerAddress = window.walletManager.getAccountId();
             
-            if (!isNaN(balance) && balance > 0) {
-                amountInput.value = balance.toFixed(2);
-                helpText.textContent = `Available: $${balance.toFixed(2)}`;
+            // Get farmer's actual balance
+            const balanceResponse = await window.coffeeAPI.getFarmerBalance(farmerAddress);
+            
+            const availableBalanceEl = document.getElementById('farmerAvailableBalance');
+            const amountInput = document.getElementById('withdrawalAmount');
+            const helpText = document.getElementById('withdrawalHelp');
+
+            if (availableBalanceEl && amountInput && helpText) {
+                let balance = 0;
+                
+                if (balanceResponse.success) {
+                    balance = parseFloat(balanceResponse.data.availableBalance || 0);
+                } else {
+                    // Fallback to displayed balance if API call fails
+                    const balanceText = availableBalanceEl.textContent;
+                    balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ''));
+                }
+                
+                if (!isNaN(balance) && balance > 0) {
+                    amountInput.value = balance.toFixed(2);
+                    helpText.textContent = `Available: $${balance.toFixed(2)}`;
+                }
             }
+        } catch (error) {
+            console.error('Failed to get max withdrawal amount:', error);
+            window.walletManager.showToast('Failed to calculate max withdrawal amount', 'error');
         }
     }
 
@@ -1567,6 +1629,101 @@ class FarmerDashboard {
         if (grade <= 6) return 'Medium Quality';
         if (grade <= 8) return 'High Quality';
         return 'Premium Quality';
+    }
+
+    /**
+     * Load transaction history for the farmer
+     * @param {string} farmerAddress - Farmer's wallet address
+     */
+    async loadTransactionHistory(farmerAddress) {
+        window.walletManager.showLoading('Loading transaction history...');
+
+        try {
+            const response = await window.coffeeAPI.getTransactionHistory(farmerAddress);
+
+            if (response.success) {
+                this.renderTransactionHistory(response.transactions);
+            }
+        } catch (error) {
+            console.error('Failed to load transaction history:', error);
+            window.walletManager.showToast('Failed to load transaction history', 'error');
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    /**
+     * Render transaction history
+     * @param {Array} transactions - Transaction history data
+     */
+    renderTransactionHistory(transactions) {
+        const container = document.getElementById('farmerTransactionsList');
+        if (!container) return;
+
+        if (!transactions || transactions.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No transactions found</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort transactions by timestamp (newest first)
+        const sortedTransactions = [...transactions].sort((a, b) => 
+            new Date(b.timestamp) - new Date(a.timestamp)
+        );
+
+        container.innerHTML = sortedTransactions.map(transaction => `
+            <div class="list-item transaction-item">
+                <div class="list-item-header">
+                    <h4>${transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}</h4>
+                    <span class="text-success">$${parseFloat(transaction.amount).toFixed(2)}</span>
+                </div>
+                <div class="list-item-content">
+                    <div class="list-item-detail">
+                        <label>Date</label>
+                        <span>${new Date(transaction.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    <div class="list-item-detail">
+                        <label>Status</label>
+                        <span class="status-completed">${transaction.status.toUpperCase()}</span>
+                    </div>
+                    <div class="list-item-detail">
+                        <label>Transaction Hash</label>
+                        <span>${transaction.transactionHash ? transaction.transactionHash.substring(0, 10) + '...' : 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        // Update transaction stats
+        this.updateTransactionStats(sortedTransactions);
+    }
+
+    /**
+     * Update transaction statistics
+     * @param {Array} transactions - Transaction history data
+     */
+    updateTransactionStats(transactions) {
+        const totalTransactions = transactions.length;
+        const totalRevenue = transactions
+            .filter(txn => txn.type === 'distribution')
+            .reduce((sum, txn) => sum + parseFloat(txn.amount || 0), 0);
+        
+        const completedTransactions = transactions
+            .filter(txn => txn.status === 'completed')
+            .length;
+        
+        const pendingTransactions = transactions
+            .filter(txn => txn.status === 'pending')
+            .length;
+
+        // Update DOM elements
+        document.getElementById('farmerTotalTransactions').textContent = totalTransactions;
+        document.getElementById('farmerTotalRevenue').textContent = `$${totalRevenue.toFixed(2)}`;
+        document.getElementById('farmerCompletedTransactions').textContent = completedTransactions;
+        document.getElementById('farmerPendingTransactions').textContent = pendingTransactions;
     }
 }
 

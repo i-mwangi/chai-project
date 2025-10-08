@@ -18,6 +18,8 @@ import { InvestorVerificationAPI } from './investor-verification'
 import { HarvestReportingAPI } from './harvest-reporting'
 import { TreeMonitoringAPI } from './tree-monitoring'
 import { TreeHealthReportingService } from './tree-health-reporting'
+import { LendingAPI } from './lending-api'
+import { RevenueDistributionAPI } from './revenue-distribution-api'
 import { 
     initializeMarketServices,
     getCurrentPrices,
@@ -103,6 +105,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
     const harvestReportingAPI = new HarvestReportingAPI()
     const treeMonitoringAPI = new TreeMonitoringAPI()
     const treeHealthReportingService = new TreeHealthReportingService()
+    const lendingAPI = new LendingAPI()
+    const revenueDistributionAPI = new RevenueDistributionAPI()
     // Note: user settings persisted to DB via `user_settings` table in schema
     
     // Initialize market services with coffee price oracle contract ID
@@ -388,6 +392,59 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 const groveId = pathname.split('/').pop() || ''
                 await treeHealthReportingService.generateRiskAssessment(req, res, groveId)
             
+            // Lending Pool Routes
+            } else if (pathname === '/api/lending/pools' && method === 'GET') {
+                await lendingAPI.getLendingPools(req, res)
+            } else if (pathname === '/api/lending/provide-liquidity' && method === 'POST') {
+                await lendingAPI.provideLiquidity(req, res)
+            } else if (pathname === '/api/lending/withdraw-liquidity' && method === 'POST') {
+                await lendingAPI.withdrawLiquidity(req, res)
+            } else if (pathname.startsWith('/api/lending/pool-stats') && method === 'GET') {
+                await lendingAPI.getPoolStatistics(req, res)
+            } else if (pathname === '/api/lending/calculate-loan-terms' && method === 'POST') {
+                await lendingAPI.calculateLoanTerms(req, res)
+            } else if (pathname === '/api/lending/take-loan' && method === 'POST') {
+                await lendingAPI.takeOutLoan(req, res)
+            } else if (pathname === '/api/lending/repay-loan' && method === 'POST') {
+                await lendingAPI.repayLoan(req, res)
+            } else if (pathname.startsWith('/api/lending/loan-details') && method === 'GET') {
+                // Handle both path parameters and query parameters
+                let borrowerAddress = ''
+                let assetAddress = ''
+                
+                // Check for path parameters first
+                const pathParts = pathname.split('/')
+                if (pathParts.length >= 6) {
+                    borrowerAddress = pathParts[4] || ''
+                    assetAddress = pathParts[5] || ''
+                }
+                
+                // If not in path, check query parameters
+                if (!borrowerAddress && req.query && (req.query as any).borrowerAddress) {
+                    borrowerAddress = (req.query as any).borrowerAddress as string
+                }
+                if (!assetAddress && req.query && (req.query as any).assetAddress) {
+                    assetAddress = (req.query as any).assetAddress as string
+                }
+                
+                await lendingAPI.getLoanDetails(req, res, borrowerAddress, assetAddress)
+            
+            // Revenue Distribution Routes
+            } else if (pathname === '/api/revenue/create-distribution' && method === 'POST') {
+                await revenueDistributionAPI.createDistribution(req, res)
+            } else if (pathname === '/api/revenue/distribution-history' && method === 'GET') {
+                await revenueDistributionAPI.getDistributionHistory(req, res)
+            } else if (pathname === '/api/revenue/pending-distributions' && method === 'GET') {
+                await revenueDistributionAPI.getPendingDistributions(req, res)
+            } else if (pathname === '/api/revenue/claim-earnings' && method === 'POST') {
+                await revenueDistributionAPI.claimEarnings(req, res)
+            } else if (pathname === '/api/revenue/farmer-balance' && method === 'GET') {
+                await revenueDistributionAPI.getFarmerBalance(req, res)
+            } else if (pathname === '/api/revenue/withdraw-farmer-share' && method === 'POST') {
+                await revenueDistributionAPI.withdrawFarmerShare(req, res)
+            } else if (pathname === '/api/revenue/withdrawal-history' && method === 'GET') {
+                await revenueDistributionAPI.getFarmerWithdrawalHistory(req, res)
+            
             // Analytics Routes - Grove Performance
             } else if (pathname.startsWith('/api/analytics/grove/') && pathname.endsWith('/performance') && method === 'GET') {
                 const groveId = parseInt(pathname.split('/')[4])
@@ -606,6 +663,25 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                             'GET  /api/tree-monitoring/reports/yield-impact/:groveId',
                             'GET  /api/tree-monitoring/reports/maintenance-effectiveness/:groveId',
                             'GET  /api/tree-monitoring/reports/risk-assessment/:groveId'
+                        ],
+                        lending: [
+                            'GET  /api/lending/pools',
+                            'POST /api/lending/provide-liquidity',
+                            'POST /api/lending/withdraw-liquidity',
+                            'GET  /api/lending/pool-stats/:assetAddress',
+                            'POST /api/lending/calculate-loan-terms',
+                            'POST /api/lending/take-loan',
+                            'POST /api/lending/repay-loan',
+                            'GET  /api/lending/loan-details/:borrowerAddress/:assetAddress'
+                        ],
+                        revenueDistribution: [
+                            'POST /api/revenue/create-distribution',
+                            'GET  /api/revenue/distribution-history/:holderAddress',
+                            'GET  /api/revenue/pending-distributions/:holderAddress',
+                            'POST /api/revenue/claim-earnings',
+                            'GET  /api/revenue/farmer-balance/:farmerAddress',
+                            'POST /api/revenue/withdraw-farmer-share',
+                            'GET  /api/revenue/withdrawal-history/:farmerAddress'
                         ],
                         analytics: [
                             'GET  /api/analytics/grove/:groveId/performance',

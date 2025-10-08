@@ -580,6 +580,15 @@ class CoffeeTreeAPI {
         });
     }
 
+    // Transaction History API
+    async getTransactionHistory(userAddress, options = {}) {
+        const params = new URLSearchParams({
+            userAddress,
+            ...options
+        });
+        return this.request(`/api/transactions/history?${params.toString()}`);
+    }
+
     async getTransactionById(transactionId) {
         return this.request(`/api/transactions/${transactionId}`);
     }

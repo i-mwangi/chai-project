@@ -70,6 +70,9 @@ mockData.revenueDistributions = [];
 // Mock user settings storage (in-memory for demo)
 const mockUserSettings = {};
 
+// Add a mock transaction history store
+const mockTransactions = [];
+
 // Utility functions
 function sendResponse(res, statusCode, data) {
     res.writeHead(statusCode, {
@@ -355,9 +358,9 @@ const server = http.createServer(async (req, res) => {
             sendResponse(res, 200, {
                 success: true,
                 stats: {
-                    totalEarnings: totalEarnings.toFixed(2),
-                    monthlyEarnings: monthlyEarnings.toFixed(2),
-                    pendingDistributions: '0.00'
+                    totalEarnings: totalEarnings,
+                    monthlyEarnings: monthlyEarnings,
+                    pendingDistributions: 0.00
                 }
             });
         }
@@ -673,6 +676,209 @@ const server = http.createServer(async (req, res) => {
             });
         }
         
+        // Pricing API endpoints
+        else if (pathname === '/api/pricing/all-varieties' && method === 'GET') {
+            try {
+                // Base prices by variety with grades 1-10 (these would come from the contract in a real implementation)
+                const varieties = [
+                    {
+                        variety: 'ARABICA',
+                        grades: Array.from({length: 10}, (_, i) => ({
+                            grade: i + 1,
+                            price: 2.50 + (i * 0.35)
+                        }))
+                    },
+                    {
+                        variety: 'ROBUSTA',
+                        grades: Array.from({length: 10}, (_, i) => ({
+                            grade: i + 1,
+                            price: 1.80 + (i * 0.24)
+                        }))
+                    },
+                    {
+                        variety: 'SPECIALTY',
+                        grades: Array.from({length: 10}, (_, i) => ({
+                            grade: i + 1,
+                            price: 3.50 + (i * 0.55)
+                        }))
+                    },
+                    {
+                        variety: 'ORGANIC',
+                        grades: Array.from({length: 10}, (_, i) => ({
+                            grade: i + 1,
+                            price: 3.00 + (i * 0.45)
+                        }))
+                    },
+                    {
+                        variety: 'TYPICA',
+                        grades: Array.from({length: 10}, (_, i) => ({
+                            grade: i + 1,
+                            price: 3.20 + (i * 0.40)
+                        }))
+                    }
+                ];
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    data: {
+                        varieties,
+                        lastUpdated: new Date().toISOString()
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching all variety prices:', error);
+                sendError(res, 500, 'Failed to fetch variety prices');
+            }
+        }
+        
+        else if (pathname === '/api/pricing/seasonal-multipliers' && method === 'GET') {
+            try {
+                // Mock seasonal multipliers (these would come from the contract in a real implementation)
+                const seasonalMultipliers = {
+                    1: 0.9,  // January - Low season
+                    2: 0.85, // February - Low season
+                    3: 0.95, // March - Low season
+                    4: 1.1,  // April - Harvest season
+                    5: 1.2,  // May - Harvest season
+                    6: 1.3,  // June - Peak harvest
+                    7: 1.25, // July - Peak harvest
+                    8: 1.2,  // August - Harvest season
+                    9: 1.1,  // September - Harvest season
+                    10: 1.0, // October - Normal
+                    11: 0.95,// November - Normal
+                    12: 0.9  // December - Low season
+                };
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    data: {
+                        seasonalMultipliers,
+                        lastUpdated: new Date().toISOString()
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching seasonal multipliers:', error);
+                sendError(res, 500, 'Failed to fetch seasonal multipliers');
+            }
+        }
+        
+        else if (pathname === '/api/pricing/projected-revenue' && method === 'POST') {
+            const { groveTokenAddress, variety, grade, expectedYieldKg, harvestMonth } = body || {};
+            
+            console.log('Projected revenue request body:', body);
+            
+            // Validate required parameters
+            if (!variety || grade === undefined || !expectedYieldKg || !harvestMonth) {
+                sendError(res, 400, 'variety, grade, expectedYieldKg, and harvestMonth are required');
+                return;
+            }
+            
+            // Normalize variety to uppercase
+            const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
+            
+            try {
+                // Mock seasonal multipliers (these would come from the contract in a real implementation)
+                const seasonalMultipliers = {
+                    1: 0.9,  // January - Low season
+                    2: 0.85, // February - Low season
+                    3: 0.95, // March - Low season
+                    4: 1.1,  // April - Harvest season
+                    5: 1.2,  // May - Harvest season
+                    6: 1.3,  // June - Peak harvest
+                    7: 1.25, // July - Peak harvest
+                    8: 1.2,  // August - Harvest season
+                    9: 1.1,  // September - Harvest season
+                    10: 1.0, // October - Normal
+                    11: 0.95,// November - Normal
+                    12: 0.9  // December - Low season
+                };
+                
+                // Base prices by variety (these would come from the contract in a real implementation)
+                const basePrices = {
+                    'ARABICA': 4.50,
+                    'ROBUSTA': 2.80,
+                    'SPECIALTY': 6.00,
+                    'ORGANIC': 5.20,
+                    'TYPICA': 4.20
+                };
+                
+                const basePrice = basePrices[normalizedVariety] || 4.00;
+                const multiplier = seasonalMultipliers[harvestMonth] || 1.0;
+                const pricePerKg = basePrice * multiplier;
+                const projectedRevenue = expectedYieldKg * pricePerKg;
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    data: {
+                        projectedRevenue: parseFloat(projectedRevenue.toFixed(2)),
+                        pricePerKg: parseFloat(pricePerKg.toFixed(2)),
+                        basePrice: parseFloat(basePrice.toFixed(2)),
+                        seasonalMultiplier: multiplier,
+                        expectedYieldKg,
+                        variety: normalizedVariety,
+                        grade,
+                        harvestMonth
+                    }
+                });
+            } catch (error) {
+                console.error('Error calculating projected revenue:', error);
+                sendError(res, 500, 'Failed to calculate projected revenue');
+            }
+        }
+        
+        else if (pathname === '/api/pricing/validate-price' && method === 'POST') {
+            const { variety, grade, proposedPrice } = body || {};
+            
+            if (!variety || grade === undefined || !proposedPrice) {
+                sendError(res, 400, 'variety, grade, and proposedPrice are required');
+                return;
+            }
+            
+            // Normalize variety to uppercase
+            const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
+            
+            try {
+                // Base prices by variety (these would come from the contract in a real implementation)
+                const basePrices = {
+                    'ARABICA': 4.50,
+                    'ROBUSTA': 2.80,
+                    'SPECIALTY': 6.00,
+                    'ORGANIC': 5.20,
+                    'TYPICA': 4.20
+                };
+                
+                const marketPrice = basePrices[normalizedVariety] || 4.00;
+                const minPrice = marketPrice * 0.5;
+                const maxPrice = marketPrice * 2.0;
+                
+                const isValid = proposedPrice >= minPrice && proposedPrice <= maxPrice;
+                let message = '';
+                
+                if (isValid) {
+                    message = 'Price is within acceptable range';
+                } else if (proposedPrice < minPrice) {
+                    message = `Price too low. Minimum acceptable: $${minPrice.toFixed(2)}/kg`;
+                } else {
+                    message = `Price too high. Maximum acceptable: $${maxPrice.toFixed(2)}/kg`;
+                }
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    data: {
+                        isValid,
+                        message,
+                        marketPrice: parseFloat(marketPrice.toFixed(2)),
+                        minPrice: parseFloat(minPrice.toFixed(2)),
+                        maxPrice: parseFloat(maxPrice.toFixed(2)),
+                        proposedPrice: parseFloat(proposedPrice.toFixed(2))
+                    }
+                });
+            } catch (error) {
+                console.error('Error validating price:', error);
+                sendError(res, 500, 'Failed to validate price');
+            }
+        }
+        
         // Revenue Distribution endpoints
         else if (pathname === '/api/revenue/farmer-balance' && method === 'GET') {
             const farmerAddress = parsedUrl.query.farmerAddress;
@@ -716,13 +922,32 @@ const server = http.createServer(async (req, res) => {
         else if (pathname === '/api/revenue/withdraw-farmer-share' && method === 'POST') {
             const { groveId, amount, farmerAddress } = body || {};
             
+            console.log('Withdrawal request received:', { groveId, amount, farmerAddress });
+            
+            // Create a transaction record
+            const transaction = {
+                id: `txn_${Date.now()}`,
+                type: 'withdrawal',
+                amount: amount,
+                farmerAddress: farmerAddress,
+                groveId: groveId,
+                timestamp: new Date().toISOString(),
+                status: 'completed',
+                transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`
+            };
+            
+            // Save transaction to history
+            mockTransactions.push(transaction);
+            console.log('Transaction saved:', transaction);
+            console.log('Current mockTransactions length:', mockTransactions.length);
+            
             sendResponse(res, 200, {
                 success: true,
                 data: {
                     withdrawalId: `withdraw_${Date.now()}`,
                     farmerAddress,
                     amount,
-                    transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+                    transactionHash: transaction.transactionHash,
                     withdrawnAt: new Date().toISOString(),
                     remainingBalance: 0
                 }
@@ -748,196 +973,299 @@ const server = http.createServer(async (req, res) => {
             });
         }
         
-        else if (pathname === '/api/pricing/all-varieties' && method === 'GET') {
-            // Mock coffee pricing data
+        else if (pathname === '/api/revenue/pending-distributions' && method === 'GET') {
+            const holderAddress = parsedUrl.query.holderAddress;
+            
+            // Mock pending distributions
+            const mockPendingDistributions = [
+                {
+                    distributionId: 'dist_pending_001',
+                    harvestId: 3,
+                    groveName: 'Highland Estate',
+                    tokenBalance: 75,
+                    totalRevenue: 10000,
+                    shareAmount: 187.75,
+                    distributionDate: new Date().toISOString(),
+                    status: 'pending'
+                }
+            ];
+            
+            sendResponse(res, 200, {
+                success: true,
+                distributions: mockPendingDistributions
+            });
+        }
+        
+        else if (pathname === '/api/revenue/claim-earnings' && method === 'POST') {
+            const { distributionId, holderAddress } = body || {};
+            
+            // Mock claiming earnings
             sendResponse(res, 200, {
                 success: true,
                 data: {
-                    varieties: [
-                        {
-                            variety: 'ARABICA',
-                            grades: Array.from({length: 10}, (_, i) => ({
-                                grade: i + 1,
-                                price: 2.50 + (i * 0.35)
-                            }))
-                        },
-                        {
-                            variety: 'ROBUSTA',
-                            grades: Array.from({length: 10}, (_, i) => ({
-                                grade: i + 1,
-                                price: 1.80 + (i * 0.24)
-                            }))
-                        },
-                        {
-                            variety: 'SPECIALTY',
-                            grades: Array.from({length: 10}, (_, i) => ({
-                                grade: i + 1,
-                                price: 3.50 + (i * 0.55)
-                            }))
-                        },
-                        {
-                            variety: 'ORGANIC',
-                            grades: Array.from({length: 10}, (_, i) => ({
-                                grade: i + 1,
-                                price: 3.00 + (i * 0.45)
-                            }))
-                        },
-                        {
-                            variety: 'TYPICA',
-                            grades: Array.from({length: 10}, (_, i) => ({
-                                grade: i + 1,
-                                price: 3.20 + (i * 0.40)
-                            }))
-                        }
-                    ],
-                    lastUpdated: new Date().toISOString()
+                    distributionId,
+                    holderAddress,
+                    amount: 187.75,
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+                    claimedAt: new Date().toISOString()
                 }
             });
         }
         
-        // Add the missing pricing endpoints
-        else if (pathname === '/api/pricing/projected-revenue' && method === 'POST') {
-            const { groveTokenAddress, variety, grade, expectedYieldKg, harvestMonth } = body || {};
+        else if (pathname === '/api/revenue/create-distribution' && method === 'POST') {
+            const { harvestId, totalRevenue } = body || {};
             
-            // Validate required parameters
-            if (!variety || grade === undefined || !expectedYieldKg || !harvestMonth) {
-                sendError(res, 400, 'variety, grade, expectedYieldKg, and harvestMonth are required');
-                return;
-            }
-            
-            // Normalize variety to uppercase
-            const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
-            
-            try {
-                // Mock seasonal multipliers
-                const seasonalMultipliers = {
-                    1: 0.9,  // January - Low season
-                    2: 0.85, // February - Low season
-                    3: 0.95, // March - Low season
-                    4: 1.1,  // April - Harvest season
-                    5: 1.2,  // May - Harvest season
-                    6: 1.3,  // June - Peak harvest
-                    7: 1.25, // July - Peak harvest
-                    8: 1.2,  // August - Harvest season
-                    9: 1.1,  // September - Harvest season
-                    10: 1.0, // October - Normal
-                    11: 0.95,// November - Normal
-                    12: 0.9  // December - Low season
-                };
-                
-                // Base prices by variety
-                const basePrices = {
-                    'ARABICA': 4.50,
-                    'ROBUSTA': 2.80,
-                    'SPECIALTY': 6.00,
-                    'ORGANIC': 5.20,
-                    'TYPICA': 4.20
-                };
-                
-                const basePrice = basePrices[normalizedVariety] || 4.00;
-                const multiplier = seasonalMultipliers[harvestMonth] || 1.0;
-                const pricePerKg = basePrice * multiplier;
-                const projectedRevenue = expectedYieldKg * pricePerKg;
-                
-                sendResponse(res, 200, {
-                    success: true,
-                    data: {
-                        projectedRevenue: parseFloat(projectedRevenue.toFixed(2)),
-                        pricePerKg: parseFloat(pricePerKg.toFixed(2)),
-                        basePrice: parseFloat(basePrice.toFixed(2)),
-                        seasonalMultiplier: multiplier,
-                        expectedYieldKg,
-                        variety: normalizedVariety,
-                        grade,
-                        harvestMonth
-                    }
-                });
-            } catch (error) {
-                console.error('Error calculating projected revenue:', error);
-                sendError(res, 500, 'Failed to calculate projected revenue');
-            }
-        }
-        else if (pathname === '/api/pricing/validate-price' && method === 'POST') {
-            const { variety, grade, proposedPrice } = body || {};
-            
-            if (!variety || grade === undefined || !proposedPrice) {
-                sendError(res, 400, 'variety, grade, and proposedPrice are required');
-                return;
-            }
-            
-            // Normalize variety to uppercase
-            const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
-            
-            try {
-                // Base prices by variety
-                const basePrices = {
-                    'ARABICA': 4.50,
-                    'ROBUSTA': 2.80,
-                    'SPECIALTY': 6.00,
-                    'ORGANIC': 5.20,
-                    'TYPICA': 4.20
-                };
-                
-                const marketPrice = basePrices[normalizedVariety] || 4.00;
-                const minPrice = marketPrice * 0.5;
-                const maxPrice = marketPrice * 2.0;
-                
-                const isValid = proposedPrice >= minPrice && proposedPrice <= maxPrice;
-                let message = '';
-                
-                if (isValid) {
-                    message = 'Price is within acceptable range';
-                } else if (proposedPrice < minPrice) {
-                    message = `Price too low. Minimum acceptable: $${minPrice.toFixed(2)}/kg`;
-                } else {
-                    message = `Price too high. Maximum acceptable: $${maxPrice.toFixed(2)}/kg`;
+            // Mock creating distribution
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    distributionId: `dist_${Date.now()}`,
+                    harvestId,
+                    totalRevenue,
+                    distributedAt: new Date().toISOString(),
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64)
                 }
-                
-                sendResponse(res, 200, {
-                    success: true,
-                    data: {
-                        isValid,
-                        message,
-                        marketPrice: parseFloat(marketPrice.toFixed(2)),
-                        minPrice: parseFloat(minPrice.toFixed(2)),
-                        maxPrice: parseFloat(maxPrice.toFixed(2)),
-                        proposedPrice: parseFloat(proposedPrice.toFixed(2))
-                    }
-                });
-            } catch (error) {
-                console.error('Error validating price:', error);
-                sendError(res, 500, 'Failed to validate price');
-            }
+            });
         }
-        else if (pathname === '/api/pricing/seasonal-multipliers' && method === 'GET') {
-            try {
-                // Mock seasonal multipliers
-                const seasonalMultipliers = {
-                    1: 0.9,  // January - Low season
-                    2: 0.85, // February - Low season
-                    3: 0.95, // March - Low season
-                    4: 1.1,  // April - Harvest season
-                    5: 1.2,  // May - Harvest season
-                    6: 1.3,  // June - Peak harvest
-                    7: 1.25, // July - Peak harvest
-                    8: 1.2,  // August - Harvest season
-                    9: 1.1,  // September - Harvest season
-                    10: 1.0, // October - Normal
-                    11: 0.95,// November - Normal
-                    12: 0.9  // December - Low season
-                };
-                
-                sendResponse(res, 200, {
-                    success: true,
-                    data: {
-                        seasonalMultipliers,
-                        lastUpdated: new Date().toISOString()
-                    }
-                });
-            } catch (error) {
-                console.error('Error fetching seasonal multipliers:', error);
-                sendError(res, 500, 'Failed to fetch seasonal multipliers');
+        
+        // Lending Pool endpoints
+        else if (pathname === '/api/lending/pools' && method === 'GET') {
+            // Mock lending pools
+            const mockPools = [
+                {
+                    assetAddress: 'USDC',
+                    assetName: 'USDC Stablecoin',
+                    lpTokenAddress: 'LP-USDC-001',
+                    totalLiquidity: 150000,
+                    availableLiquidity: 95000,
+                    totalBorrowed: 55000,
+                    utilizationRate: 0.367,
+                    currentAPY: 8.5,
+                    totalLPTokens: 150000
+                },
+                {
+                    assetAddress: 'KES',
+                    assetName: 'Kenyan Shilling',
+                    lpTokenAddress: 'LP-KES-001',
+                    totalLiquidity: 75000,
+                    availableLiquidity: 45000,
+                    totalBorrowed: 30000,
+                    utilizationRate: 0.4,
+                    currentAPY: 12.0,
+                    totalLPTokens: 75000
+                }
+            ];
+            
+            sendResponse(res, 200, {
+                success: true,
+                pools: mockPools
+            });
+        }
+        
+        else if (pathname === '/api/lending/provide-liquidity' && method === 'POST') {
+            const { assetAddress, amount, providerAddress } = body || {};
+            
+            if (!assetAddress || !amount || !providerAddress) {
+                sendError(res, 400, 'Missing required parameters: assetAddress, amount, providerAddress');
+                return;
             }
+            
+            if (amount <= 0) {
+                sendError(res, 400, 'Amount must be positive');
+                return;
+            }
+            
+            // Mock providing liquidity
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    assetAddress,
+                    amount,
+                    lpTokensMinted: amount, // 1:1 for demo
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+                    providedAt: new Date().toISOString()
+                }
+            });
+        }
+        
+        else if (pathname === '/api/lending/withdraw-liquidity' && method === 'POST') {
+            const { assetAddress, lpTokenAmount, providerAddress } = body || {};
+            
+            if (!assetAddress || !lpTokenAmount || !providerAddress) {
+                sendError(res, 400, 'Missing required parameters: assetAddress, lpTokenAmount, providerAddress');
+                return;
+            }
+            
+            if (lpTokenAmount <= 0) {
+                sendError(res, 400, 'LP token amount must be positive');
+                return;
+            }
+            
+            // Mock withdrawing liquidity
+            const usdcReturned = lpTokenAmount * 1.05; // 5% rewards for demo
+            const rewardsEarned = lpTokenAmount * 0.05;
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    assetAddress,
+                    lpTokensBurned: lpTokenAmount,
+                    usdcReturned,
+                    rewardsEarned,
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+                    withdrawnAt: new Date().toISOString()
+                }
+            });
+        }
+        
+        else if (pathname === '/api/lending/pool-stats' && method === 'GET') {
+            const assetAddress = parsedUrl.query.assetAddress;
+            
+            if (!assetAddress) {
+                sendError(res, 400, 'Missing required parameter: assetAddress');
+                return;
+            }
+            
+            // Mock pool statistics
+            const mockPoolStats = {
+                assetAddress,
+                totalLiquidity: 150000,
+                availableLiquidity: 95000,
+                totalBorrowed: 55000,
+                utilizationRate: 0.367,
+                currentAPY: 8.5,
+                totalProviders: 25,
+                totalBorrowers: 8,
+                averageLoanSize: 1875.00
+            };
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: mockPoolStats
+            });
+        }
+        
+        else if (pathname === '/api/lending/calculate-loan-terms' && method === 'POST') {
+            const { assetAddress, loanAmount } = body || {};
+            
+            if (!assetAddress || !loanAmount) {
+                sendError(res, 400, 'Missing required parameters: assetAddress, loanAmount');
+                return;
+            }
+            
+            if (loanAmount <= 0) {
+                sendError(res, 400, 'Loan amount must be positive');
+                return;
+            }
+            
+            // Mock loan terms calculation
+            const collateralRequired = loanAmount * 1.25; // 125% collateralization
+            const liquidationPrice = 0.90; // 90% of current price
+            const repaymentAmount = loanAmount * 1.10; // 10% interest
+            const interestRate = 0.10; // 10%
+            const maxLoanDuration = 180; // 180 days
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    loanAmount,
+                    collateralRequired,
+                    collateralizationRatio: 1.25,
+                    liquidationPrice,
+                    repaymentAmount,
+                    interestRate,
+                    maxLoanDuration
+                }
+            });
+        }
+        
+        else if (pathname === '/api/lending/take-loan' && method === 'POST') {
+            const { assetAddress, loanAmount, borrowerAddress } = body || {};
+            
+            if (!assetAddress || !loanAmount || !borrowerAddress) {
+                sendError(res, 400, 'Missing required parameters: assetAddress, loanAmount, borrowerAddress');
+                return;
+            }
+            
+            if (loanAmount <= 0) {
+                sendError(res, 400, 'Loan amount must be positive');
+                return;
+            }
+            
+            // Mock taking out a loan
+            const collateralRequired = loanAmount * 1.25;
+            const repaymentAmount = loanAmount * 1.10;
+            const liquidationPrice = 0.90;
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 180); // 180 days loan term
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    loanId: `loan_${Date.now()}`,
+                    assetAddress,
+                    loanAmount,
+                    collateralAmount: collateralRequired,
+                    repaymentAmount,
+                    liquidationPrice,
+                    status: 'active',
+                    takenAt: new Date().toISOString(),
+                    dueDate: dueDate.toISOString(),
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64)
+                }
+            });
+        }
+        
+        else if (pathname === '/api/lending/repay-loan' && method === 'POST') {
+            const { assetAddress, borrowerAddress } = body || {};
+            
+            if (!assetAddress || !borrowerAddress) {
+                sendError(res, 400, 'Missing required parameters: assetAddress, borrowerAddress');
+                return;
+            }
+            
+            // Mock repaying a loan
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    loanId: 'loan_123',
+                    repaymentAmount: 1100.00,
+                    collateralReturned: 1250.00,
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
+                    repaidAt: new Date().toISOString()
+                }
+            });
+        }
+        
+        else if (pathname === '/api/lending/loan-details' && method === 'GET') {
+            const borrowerAddress = parsedUrl.query.borrowerAddress;
+            const assetAddress = parsedUrl.query.assetAddress;
+            
+            if (!borrowerAddress || !assetAddress) {
+                sendError(res, 400, 'Missing required parameters: borrowerAddress, assetAddress');
+                return;
+            }
+            
+            // Mock loan details
+            const mockLoan = {
+                loanId: 'loan_123',
+                borrowerAddress,
+                assetAddress,
+                loanAmount: 1000.00,
+                collateralAmount: 1250.00,
+                repaymentAmount: 1100.00,
+                liquidationPrice: 0.90,
+                currentPrice: 1.05,
+                healthFactor: 1.31,
+                status: 'active',
+                takenAt: new Date(Date.now() - 86400000 * 10).toISOString(), // 10 days ago
+                dueDate: new Date(Date.now() + 86400000 * 170).toISOString() // Due in 170 days
+            };
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: mockLoan
+            });
         }
         
         // Balance endpoints
@@ -1006,6 +1334,27 @@ const server = http.createServer(async (req, res) => {
             });
         }
         
+        // Transaction history endpoint
+        else if (pathname === '/api/transactions/history' && method === 'GET') {
+            const userAddress = parsedUrl.query.userAddress;
+            
+            console.log('Transaction history request for user:', userAddress);
+            console.log('Current mockTransactions:', mockTransactions);
+            
+            // Filter transactions by user address
+            let transactions = mockTransactions;
+            if (userAddress) {
+                transactions = mockTransactions.filter(txn => txn.farmerAddress === userAddress);
+                console.log('Filtered transactions for user:', transactions);
+            }
+            
+            sendResponse(res, 200, {
+                success: true,
+                transactions: transactions,
+                total: transactions.length
+            });
+        }
+        
         // Default 404
         else {
             sendError(res, 404, 'Endpoint not found');
@@ -1043,6 +1392,18 @@ server.listen(PORT, () => {
     console.log('  POST /api/pricing/validate-price');
     console.log('  GET  /api/pricing/all-varieties');
     console.log('  GET  /api/pricing/seasonal-multipliers');
+    console.log('  GET  /api/lending/pools');
+    console.log('  POST /api/lending/provide-liquidity');
+    console.log('  POST /api/lending/withdraw-liquidity');
+    console.log('  GET  /api/lending/pool-stats?assetAddress=...');
+    console.log('  POST /api/lending/calculate-loan-terms');
+    console.log('  POST /api/lending/take-loan');
+    console.log('  POST /api/lending/repay-loan');
+    console.log('  GET  /api/lending/loan-details?borrowerAddress=...&assetAddress=...');
+    console.log('  GET  /api/revenue/pending-distributions?holderAddress=...');
+    console.log('  POST /api/revenue/claim-earnings');
+    console.log('  GET  /api/revenue/farmer-balance?farmerAddress=...');
+    console.log('  POST /api/revenue/withdraw-farmer-share');
 });
 
 // Graceful shutdown

@@ -244,8 +244,16 @@ class PriceOracleManager {
         // Check cache first
         const cached = this.getCachedPrice(normalizedVariety, grade);
         if (cached) {
-            console.log(`Using cached price for ${normalizedVariety} grade ${grade}`);
-            return cached;
+            // If cached data is stale, don't use it and fetch fresh data
+            if (cached.isStale) {
+                console.log(`Cached price for ${normalizedVariety} grade ${grade} is stale, fetching fresh data`);
+                // Remove stale cache entry
+                const cacheKey = this.getCacheKey(normalizedVariety, grade);
+                this.priceCache.delete(cacheKey);
+            } else {
+                console.log(`Using cached price for ${normalizedVariety} grade ${grade}`);
+                return cached;
+            }
         }
         
         try {
@@ -266,8 +274,10 @@ class PriceOracleManager {
                 console.warn(`Price data for ${normalizedVariety} grade ${grade} is stale (last updated: ${priceData.lastUpdated})`);
             }
             
-            // Cache the result
-            this.setCachedPrice(normalizedVariety, grade, enrichedData);
+            // Cache the result only if not stale
+            if (!isStale) {
+                this.setCachedPrice(normalizedVariety, grade, enrichedData);
+            }
             
             return enrichedData;
         } catch (error) {
@@ -413,6 +423,11 @@ class PriceOracleManager {
         }
         
         try {
+            // Clear cache for this variety/grade combination before fetching fresh data
+            // This ensures we get the most up-to-date price information
+            const cacheKey = this.getCacheKey(normalizedVariety, grade);
+            this.priceCache.delete(cacheKey);
+            
             // Call API to calculate projected revenue
             // The backend will handle fetching prices and applying all adjustments
             const revenueData = await this.apiClient.calculateProjectedRevenue(
@@ -428,6 +443,16 @@ class PriceOracleManager {
             
             if (isStale) {
                 console.warn(`Projected revenue calculation uses stale price data for ${normalizedVariety} grade ${grade}`);
+                // Clear cache for stale data to force refresh on next request
+                this.priceCache.delete(cacheKey);
+            }
+            
+            // Cache the fresh data for future use (only if not stale)
+            if (!isStale) {
+                this.setCachedPrice(normalizedVariety, grade, {
+                    ...revenueData,
+                    isStale: false
+                });
             }
             
             return {
