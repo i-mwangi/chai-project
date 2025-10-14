@@ -37,7 +37,9 @@
     "api:mock": "node frontend/api-server.js",
     "frontend": "node frontend/server.js",
     "dev": "pnpm run api:mock & pnpm run frontend",
-    "dev:full": "pnpm run build && pnpm run api & pnpm run frontend & pnpm run providers"
+    "dev:full": "pnpm run build && pnpm run api & pnpm run frontend & pnpm run providers",
+    "test:turso": "tsx test-turso-connection.ts",
+    "migrate:turso": "tsx migrate-to-turso.ts"
   },
   "keywords": [],
   "author": "",

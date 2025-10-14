@@ -7,6 +7,7 @@ import { createRequire } from 'module'
 // depending on `better-sqlite3` or other native modules.
 
 const FORCE_IN_MEMORY = (process.env.DISABLE_INVESTOR_KYC || 'false').toLowerCase() === 'true'
+const USE_TURSO = !!(process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL?.startsWith('libsql://'))
 
 let dbVar: any = null
 
@@ -279,17 +280,48 @@ if (FORCE_IN_MEMORY) {
     // ignore persistence errors for demo mode
   }
 
+} else if (USE_TURSO) {
+  // Use Turso (LibSQL) for production/cloud deployment
+  try {
+    const require = createRequire(import.meta.url)
+    const { drizzle } = require('drizzle-orm/libsql')
+    const { createClient } = require('@libsql/client')
+    const schema = require('./schema')
+
+    const tursoUrl = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL
+    const tursoToken = process.env.TURSO_AUTH_TOKEN
+
+    if (!tursoUrl) {
+      throw new Error('TURSO_DATABASE_URL or DATABASE_URL is required for Turso mode')
+    }
+
+    console.log('🚀 Connecting to Turso database...')
+    
+    const client = createClient({
+      url: tursoUrl,
+      authToken: tursoToken
+    })
+
+    dbVar = drizzle(client, { schema })
+    console.log('✅ Connected to Turso database successfully')
+  } catch (e) {
+    console.error('❌ Failed to connect to Turso:', e)
+    console.warn('Falling back to in-memory DB for demo/testing.')
+    dbVar = createInMemoryMockDb()
+  }
+
 } else {
-  // Use dynamic require to avoid top-level import errors when native
-  // modules are unavailable in some environments.
+  // Use local SQLite with better-sqlite3 for development
   try {
     const require = createRequire(import.meta.url)
     const drizzleMod = require('drizzle-orm/better-sqlite3')
     const BetterSqlite3 = require('better-sqlite3')
     const schema = require('./schema')
 
+    console.log('📁 Using local SQLite database...')
     const sqliteInstance = new BetterSqlite3('./local-store/sqlite/sqlite.db')
     dbVar = drizzleMod.drizzle(sqliteInstance, { schema })
+    console.log('✅ Connected to local SQLite database')
   } catch (e) {
     console.warn('Failed to load native SQLite bindings; falling back to in-memory DB for demo/testing.', e)
     dbVar = createInMemoryMockDb()
