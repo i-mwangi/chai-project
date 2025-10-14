@@ -21,3 +21,5 @@ check-*
 fix-*
 *.log
 .DS_Store
+loadIntoEnv.ts
+lib/test-store.ts
