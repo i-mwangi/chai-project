@@ -13,38 +13,38 @@
       "use": "@vercel/static"
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "api/server.ts"
+      "source": "/api/(.*)",
+      "destination": "/api/server.ts"
     },
     {
-      "src": "/public/(.*)",
-      "dest": "frontend/public/$1"
+      "source": "/public/(.*)",
+      "destination": "/frontend/public/$1"
     },
     {
-      "src": "/js/(.*)",
-      "dest": "frontend/js/$1"
+      "source": "/js/(.*)",
+      "destination": "/frontend/js/$1"
     },
     {
-      "src": "/styles/(.*)",
-      "dest": "frontend/styles/$1"
+      "source": "/styles/(.*)",
+      "destination": "/frontend/styles/$1"
     },
     {
-      "src": "/app.html",
-      "dest": "frontend/app.html"
+      "source": "/app.html",
+      "destination": "/frontend/app.html"
     },
     {
-      "src": "/grove-tracker.html",
-      "dest": "frontend/grove-tracker.html"
+      "source": "/grove-tracker.html",
+      "destination": "/frontend/grove-tracker.html"
     },
     {
-      "src": "/tree-health-dashboard.html",
-      "dest": "frontend/tree-health-dashboard.html"
+      "source": "/tree-health-dashboard.html",
+      "destination": "/frontend/tree-health-dashboard.html"
     },
     {
-      "src": "/",
-      "dest": "frontend/index.html"
+      "source": "/",
+      "destination": "/frontend/index.html"
     }
   ],
   "headers": [
