@@ -1,0 +1,7 @@
+{
+  "groveName": "Test Grove",
+  "farmerAddress": "0.0.123456",
+  "yieldKg": 100,
+  "qualityGrade": 5,
+  "salePricePerKg": 10
+}

@@ -1,6 +1,8 @@
 import { db } from '../db'
 import { harvestRecords, coffeeGroves, tokenHoldings, revenueDistributions } from '../db/schema'
 import { eq, and, sql } from 'drizzle-orm'
+import { RevenueReserveContract } from './revenue-reserve-contract'
+import { getClient } from '../utils'
 
 /**
  * Revenue Distribution Service
@@ -410,6 +412,92 @@ export class RevenueDistributionService {
         } catch (error) {
             console.error('Error getting distribution summary:', error)
             throw error
+        }
+    }
+
+    /**
+     * Distribute revenue on-chain via Hedera smart contract
+     */
+    async distributeRevenueOnChain(harvestId: number): Promise<{
+        success: boolean
+        transactionId?: string
+        error?: string
+    }> {
+        try {
+            // Get harvest and grove info
+            const harvestWithGrove = await db.select({
+                harvest: harvestRecords,
+                grove: coffeeGroves
+            })
+                .from(harvestRecords)
+                .innerJoin(coffeeGroves, eq(harvestRecords.groveId, coffeeGroves.id))
+                .where(eq(harvestRecords.id, harvestId))
+                .limit(1)
+
+            if (harvestWithGrove.length === 0) {
+                return { success: false, error: 'Harvest not found' }
+            }
+
+            const { harvest, grove } = harvestWithGrove[0]
+
+            if (!grove.tokenAddress) {
+                return { success: false, error: 'Grove not tokenized - no token address' }
+            }
+
+            // Check if revenue reserve contract is configured
+            const reserveContractAddress = process.env.REVENUE_RESERVE_CONTRACT_ID
+            if (!reserveContractAddress) {
+                console.warn('⚠️  REVENUE_RESERVE_CONTRACT_ID not configured - skipping on-chain distribution')
+                return { success: false, error: 'Revenue reserve contract not configured' }
+            }
+
+            console.log(`\n💰 Distributing revenue on-chain for harvest ${harvestId}...`)
+            console.log(`   Grove: ${grove.groveName}`)
+            console.log(`   Token: ${grove.tokenAddress}`)
+            console.log(`   Total Revenue: ${harvest.totalRevenue}`)
+            console.log(`   Investor Share: ${harvest.investorShare}`)
+
+            // Initialize revenue reserve contract
+            const client = getClient()
+            const reserveContract = new RevenueReserveContract(reserveContractAddress, client)
+
+            // Call distributeRevenue on the smart contract
+            const result = await reserveContract.distributeRevenue(
+                grove.tokenAddress,
+                harvest.investorShare
+            )
+
+            if (result.success) {
+                console.log(`✅ Revenue distributed on-chain`)
+                console.log(`   Transaction ID: ${result.transactionId}`)
+                console.log(`   Distribution ID: ${result.distributionId}`)
+
+                // Mark harvest as distributed in database
+                await db.update(harvestRecords)
+                    .set({
+                        revenueDistributed: true,
+                        transactionHash: result.transactionId
+                    })
+                    .where(eq(harvestRecords.id, harvestId))
+
+                return {
+                    success: true,
+                    transactionId: result.transactionId
+                }
+            } else {
+                console.error(`❌ On-chain distribution failed: ${result.error}`)
+                return {
+                    success: false,
+                    error: result.error
+                }
+            }
+
+        } catch (error: any) {
+            console.error('Error distributing revenue on-chain:', error)
+            return {
+                success: false,
+                error: error.message || 'Unknown error'
+            }
         }
     }
 }

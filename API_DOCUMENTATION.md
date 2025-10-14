@@ -16,10 +16,12 @@ http://localhost:3001
 2. [Lending & Liquidity Endpoints](#lending--liquidity-endpoints)
 3. [Price Oracle Endpoints](#price-oracle-endpoints)
 4. [Token Management Endpoints](#token-management-endpoints)
-5. [Farmer Verification Endpoints](#farmer-verification-endpoints)
-6. [Harvest Reporting Endpoints](#harvest-reporting-endpoints)
-7. [Market Data Endpoints](#market-data-endpoints)
-8. [Error Codes Reference](#error-codes-reference)
+5. [User Settings Endpoints](#user-settings-endpoints)
+6. [Database Migrations](#database-migrations)
+7. [Farmer Verification Endpoints](#farmer-verification-endpoints)
+8. [Harvest Reporting Endpoints](#harvest-reporting-endpoints)
+9. [Market Data Endpoints](#market-data-endpoints)
+10. [Error Codes Reference](#error-codes-reference)
 
 ---
 
@@ -989,6 +991,349 @@ Get list of token holders for a grove.
 
 ---
 
+## User Settings Endpoints
+
+### Get User Settings
+
+**GET** `/api/user/settings/:accountId`
+
+Get user settings for a specific account.
+
+**Parameters:**
+- `accountId`: Hedera account ID (e.g., "0.0.12345")
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "settings": {
+    "account": "0.0.12345",
+    "skipFarmerVerification": false,
+    "skipInvestorVerification": false,
+    "demoBypass": false,
+    "updatedAt": 1705320000000
+  }
+}
+```
+
+**Response (200) - New Account (Default Settings):**
+```json
+{
+  "success": true,
+  "settings": {
+    "account": "0.0.12345",
+    "skipFarmerVerification": false,
+    "skipInvestorVerification": false,
+    "demoBypass": false,
+    "updatedAt": 1705320000000
+  }
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "success": false,
+  "error": "Invalid account ID format. Expected format: 0.0.12345"
+}
+```
+
+**Error Response (500):**
+```json
+{
+  "success": false,
+  "error": "Failed to fetch user settings",
+  "details": "Database connection error"
+}
+```
+
+**Notes:**
+- Returns default settings (all flags set to `false`) for accounts that don't have settings yet
+- Settings are cached for 5 minutes to improve performance
+- Account ID must be in Hedera format: `^\d+\.\d+\.\d+$`
+
+---
+
+### Update User Settings
+
+**PUT** `/api/user/settings/:accountId`
+
+Update user settings for a specific account. Uses upsert logic (creates if doesn't exist, updates if exists).
+
+**Parameters:**
+- `accountId`: Hedera account ID (e.g., "0.0.12345")
+
+**Request Body:**
+```json
+{
+  "skipFarmerVerification": true,
+  "skipInvestorVerification": false,
+  "demoBypass": true
+}
+```
+
+**Partial Update Request:**
+```json
+{
+  "skipFarmerVerification": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "settings": {
+    "account": "0.0.12345",
+    "skipFarmerVerification": true,
+    "skipInvestorVerification": false,
+    "demoBypass": true,
+    "updatedAt": 1705320120000
+  }
+}
+```
+
+**Error Response (400) - Invalid Account ID:**
+```json
+{
+  "success": false,
+  "error": "Invalid account ID format. Expected format: 0.0.12345"
+}
+```
+
+**Error Response (400) - Invalid Boolean Value:**
+```json
+{
+  "success": false,
+  "error": "Invalid boolean value for skipFarmerVerification"
+}
+```
+
+**Error Response (500):**
+```json
+{
+  "success": false,
+  "error": "Failed to update user settings",
+  "details": "Database write error"
+}
+```
+
+**Notes:**
+- Supports partial updates (only specified fields are updated)
+- Automatically creates settings record if account doesn't exist
+- Updates `updatedAt` timestamp on every change
+- Invalidates cache after successful update
+- Retries up to 3 times with exponential backoff on transient errors
+
+---
+
+### Database Health Check
+
+**GET** `/api/health`
+
+Check database connectivity and table existence.
+
+**Response (200) - Healthy:**
+```json
+{
+  "status": "healthy",
+  "database": {
+    "connected": true,
+    "type": "sqlite",
+    "tables": {
+      "user_settings": true,
+      "coffee_groves": true,
+      "harvest_reports": true,
+      "investor_verification": true
+    }
+  },
+  "timestamp": 1705320000000
+}
+```
+
+**Response (200) - Degraded:**
+```json
+{
+  "status": "degraded",
+  "database": {
+    "connected": true,
+    "type": "in-memory",
+    "tables": {
+      "user_settings": true,
+      "coffee_groves": true,
+      "harvest_reports": false,
+      "investor_verification": false
+    },
+    "warnings": [
+      "Running in in-memory mode",
+      "Some tables are missing"
+    ]
+  },
+  "timestamp": 1705320000000
+}
+```
+
+**Response (503) - Unhealthy:**
+```json
+{
+  "status": "unhealthy",
+  "database": {
+    "connected": false,
+    "error": "Database connection failed"
+  },
+  "timestamp": 1705320000000
+}
+```
+
+**Notes:**
+- Non-blocking: doesn't prevent server startup
+- Checks both SQLite and in-memory database modes
+- Returns detailed diagnostics for troubleshooting
+- Can be used for monitoring and alerting
+
+---
+
+## Database Migrations
+
+### Overview
+
+The Coffee Platform uses an automatic migration system that runs on server startup. Migrations are executed in order and tracked to prevent re-running.
+
+### Migration Files Location
+
+```
+db/migrations/
+├── 0000_cooing_black_knight.sql
+├── 0001_user_settings_table.sql
+├── 0002_crazy_nemesis.sql
+├── ...
+└── rollback/
+    ├── 0000_cooing_black_knight.rollback.sql
+    ├── 0001_user_settings_table.rollback.sql
+    └── ...
+```
+
+### Automatic Migration Execution
+
+Migrations run automatically when the server starts:
+
+```bash
+# Start server (migrations run automatically)
+npm start
+
+# Or with pnpm
+pnpm start
+```
+
+**Console Output:**
+```
+[Migration] Checking for pending migrations...
+[Migration] Running migration: 0001_user_settings_table.sql
+[Migration] ✓ Migration completed: 0001_user_settings_table.sql
+[Migration] All migrations completed successfully
+[Server] Server started on port 3001
+```
+
+### Manual Migration Commands
+
+For advanced use cases, migrations can be run manually:
+
+```bash
+# Run all pending migrations
+npm run migrate
+
+# Check migration status
+npm run migrate:status
+
+# Rollback last migration
+npm run migrate:rollback
+
+# Rollback to specific migration
+npm run migrate:rollback -- --to=0005
+```
+
+### Migration CLI
+
+The platform includes a migration CLI tool:
+
+```bash
+# Show applied migrations
+node db/migration-cli.ts status
+
+# Rollback last migration
+node db/migration-cli.ts rollback
+
+# Rollback to specific version
+node db/migration-cli.ts rollback --to=0005
+```
+
+### Migration Behavior
+
+**SQLite Mode:**
+- Migrations execute SQL files in order
+- Transaction-based: rollback on failure
+- Migration history tracked in `migration_history` table
+- Server startup blocked if critical migrations fail
+
+**In-Memory Mode:**
+- Migrations are skipped (tables created on-demand)
+- Settings persisted to JSON file
+- Suitable for demo/development mode
+
+### Creating New Migrations
+
+1. Create migration file in `db/migrations/`:
+```sql
+-- 0011_add_new_feature.sql
+CREATE TABLE new_feature (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+);
+```
+
+2. Create rollback file in `db/migrations/rollback/`:
+```sql
+-- 0011_add_new_feature.rollback.sql
+DROP TABLE IF EXISTS new_feature;
+```
+
+3. Restart server or run `npm run migrate`
+
+### Migration Troubleshooting
+
+**Issue: Migration fails on startup**
+```
+[Migration] ✗ Migration failed: 0005_example.sql
+[Migration] Error: SQLITE_ERROR: table already exists
+```
+
+**Solution:**
+1. Check migration history: `npm run migrate:status`
+2. Manually fix database or rollback: `npm run migrate:rollback`
+3. Restart server
+
+**Issue: Table not found despite migrations**
+```
+Error: no such table: user_settings
+```
+
+**Solution:**
+1. Check health endpoint: `GET /api/health`
+2. Verify migrations ran: Check server logs
+3. Run migrations manually: `npm run migrate`
+4. Check database file exists: `./local-store/sqlite/sqlite.db`
+
+### Migration Best Practices
+
+1. **Always create rollback files** for each migration
+2. **Test migrations** on a copy of production database
+3. **Use transactions** for multi-statement migrations
+4. **Keep migrations small** and focused on one change
+5. **Never modify** existing migration files after deployment
+6. **Document breaking changes** in migration comments
+
+---
+
 ## Error Codes Reference
 
 ### General Error Codes
@@ -1049,6 +1394,18 @@ Get list of token holders for a grove.
 | `MINT_FAILED` | Token minting failed | 500 |
 | `BURN_FAILED` | Token burning failed | 500 |
 | `KYC_GRANT_FAILED` | KYC grant operation failed | 500 |
+
+### User Settings Error Codes
+
+| Code | Description | HTTP Status |
+|------|-------------|-------------|
+| `INVALID_ACCOUNT_ID` | Account ID format invalid | 400 |
+| `INVALID_BOOLEAN_VALUE` | Boolean field has invalid value | 400 |
+| `SETTINGS_FETCH_FAILED` | Failed to retrieve settings | 500 |
+| `SETTINGS_UPDATE_FAILED` | Failed to update settings | 500 |
+| `DATABASE_CONNECTION_ERROR` | Database connection failed | 503 |
+| `TABLE_NOT_FOUND` | Required table missing | 503 |
+| `CACHE_ERROR` | Cache operation failed | 500 |
 
 ---
 

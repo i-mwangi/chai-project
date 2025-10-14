@@ -14,12 +14,14 @@ import {
 } from '@hashgraph/sdk'
 
 // Contract ABI for Lender
-const LENDER_ABI = require('../abi/Lender.json').abi
+// const LENDER_ABI = require('../abi/Lender.json').abi
 
 interface LiquidityResult {
     success: boolean
     amount?: number
     lpTokenAmount?: number
+    usdcReturned?: number
+    rewardsEarned?: number
     transactionId?: string
     error?: string
 }
@@ -139,10 +141,17 @@ export class LenderContract {
                 }
             }
 
+            // In a real implementation, parse the contract event to get actual amounts
+            // For now, calculate estimated returns (principal + 5% APY)
+            const usdcReturned = lpTokenAmount * 1.05
+            const rewardsEarned = lpTokenAmount * 0.05
+
             return {
                 success: true,
                 amount: lpTokenAmount,
                 lpTokenAmount,
+                usdcReturned,
+                rewardsEarned,
                 transactionId: txResponse.transactionId.toString()
             }
 

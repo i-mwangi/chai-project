@@ -6,9 +6,51 @@
  */
 
 import http from 'http';
+import https from 'https';
 import { parse } from 'url';
 
 const PORT = parseInt(process.env.API_PORT || '3002');
+
+// Helper function to make HTTP requests to backend
+function proxyToBackend(url, options = {}) {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(url);
+        const requestOptions = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port,
+            path: parsedUrl.pathname + parsedUrl.search,
+            method: options.method || 'GET',
+            headers: options.headers || {}
+        };
+
+        const req = http.request(requestOptions, (res) => {
+            let data = '';
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            res.on('end', () => {
+                try {
+                    resolve({
+                        status: res.statusCode,
+                        data: JSON.parse(data)
+                    });
+                } catch (error) {
+                    reject(new Error('Failed to parse response'));
+                }
+            });
+        });
+
+        req.on('error', (error) => {
+            reject(error);
+        });
+
+        if (options.body) {
+            req.write(options.body);
+        }
+
+        req.end();
+    });
+}
 
 // Mock data
 const mockData = {
@@ -67,11 +109,17 @@ const mockData = {
 // Revenue distributions store for mock server
 mockData.revenueDistributions = [];
 
+// Farmer withdrawals store
+mockData.farmerWithdrawals = [];
+
 // Mock user settings storage (in-memory for demo)
 const mockUserSettings = {};
 
 // Add a mock transaction history store
 const mockTransactions = [];
+
+// Add a store for investor holdings
+const investorHoldings = new Map(); // Map of investorAddress -> array of holdings
 
 // Utility functions
 function sendResponse(res, statusCode, data) {
@@ -150,10 +198,75 @@ const server = http.createServer(async (req, res) => {
         
         // Market data endpoints
         else if (pathname === '/api/market/prices' && method === 'GET') {
+            // Generate realistic market prices with multiple sources and grades
+            const timestamp = new Date();
+            const prices = [
+                // Arabica prices from different sources
+                {
+                    variety: 0, // ARABICA
+                    grade: 1,
+                    pricePerKg: 4.50,
+                    currency: 'USD',
+                    timestamp: timestamp.toISOString(),
+                    source: 'ICE',
+                    region: 'Global'
+                },
+                {
+                    variety: 0, // ARABICA
+                    grade: 1,
+                    pricePerKg: 4.45,
+                    currency: 'USD',
+                    timestamp: timestamp.toISOString(),
+                    source: 'Yahoo Finance',
+                    region: 'Global'
+                },
+                // Robusta prices
+                {
+                    variety: 1, // ROBUSTA
+                    grade: 1,
+                    pricePerKg: 2.85,
+                    currency: 'USD',
+                    timestamp: timestamp.toISOString(),
+                    source: 'ICE',
+                    region: 'Global'
+                },
+                {
+                    variety: 1, // ROBUSTA
+                    grade: 1,
+                    pricePerKg: 2.80,
+                    currency: 'USD',
+                    timestamp: timestamp.toISOString(),
+                    source: 'Investing.com',
+                    region: 'Global'
+                },
+                // Specialty coffee (premium Arabica)
+                {
+                    variety: 2, // SPECIALTY
+                    grade: 1,
+                    pricePerKg: 6.08,
+                    currency: 'USD',
+                    timestamp: timestamp.toISOString(),
+                    source: 'Estimated (35% premium)',
+                    region: 'Global'
+                },
+                // Organic coffee
+                {
+                    variety: 3, // ORGANIC
+                    grade: 1,
+                    pricePerKg: 5.63,
+                    currency: 'USD',
+                    timestamp: timestamp.toISOString(),
+                    source: 'Estimated (25% premium)',
+                    region: 'Global'
+                }
+            ];
+            
             sendResponse(res, 200, {
                 success: true,
-                prices: mockData.prices,
-                timestamp: new Date().toISOString()
+                data: {
+                    prices: prices,
+                    lastUpdated: timestamp.toISOString()
+                }
             });
         }
         
@@ -164,6 +277,30 @@ const server = http.createServer(async (req, res) => {
                 activeFarmers: 2,
                 totalRevenue: 125000,
                 timestamp: new Date().toISOString()
+            });
+        }
+        
+        else if (pathname === '/api/pricing/seasonal-multipliers' && method === 'GET') {
+            // Seasonal price multipliers by month (1-12)
+            // Based on typical coffee harvest seasons
+            const multipliers = {
+                1: 1.05,   // January - Post-harvest, moderate prices
+                2: 1.08,   // February - Lower supply, prices rise
+                3: 1.10,   // March - Pre-harvest peak
+                4: 1.12,   // April - Highest prices before harvest
+                5: 1.08,   // May - Early harvest begins
+                6: 1.00,   // June - Main harvest, prices normalize
+                7: 0.95,   // July - Peak harvest, lower prices
+                8: 0.92,   // August - Abundant supply
+                9: 0.95,   // September - Harvest ending
+                10: 1.00,  // October - Post-harvest stabilization
+                11: 1.03,  // November - Supply tightening
+                12: 1.05   // December - Holiday demand
+            };
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: multipliers
             });
         }
         
@@ -201,21 +338,41 @@ const server = http.createServer(async (req, res) => {
         }
         // Backwards-compatible endpoint used by older UI code
         else if (pathname === '/api/farmer-verification/register-grove' && method === 'POST') {
-            const newGrove = {
-                id: (mockData.groves.length + 1).toString(),
-                ...body,
-                healthScore: Math.floor(Math.random() * 30) + 70,
-                verificationStatus: 'pending',
-                createdAt: new Date().toISOString()
-            };
+            // Proxy to real backend API
+            const backendPort = process.env.BACKEND_PORT || '3001';
+            const backendUrl = `http://localhost:${backendPort}/api/farmer-verification/register-grove`;
+            
+            try {
+                console.log('[PROXY] Forwarding grove registration to backend:', backendUrl);
+                const result = await proxyToBackend(backendUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                console.log('[PROXY] Backend grove registration response:', result.status, result.data.success ? 'SUCCESS' : 'FAILED');
+                sendResponse(res, result.status, result.data);
+            } catch (error) {
+                console.error('[PROXY] Error proxying grove registration to backend:', error.message);
+                // Fallback to mock implementation
+                const newGrove = {
+                    id: (mockData.groves.length + 1).toString(),
+                    ...body,
+                    healthScore: Math.floor(Math.random() * 30) + 70,
+                    verificationStatus: 'pending',
+                    createdAt: new Date().toISOString()
+                };
 
-            mockData.groves.push(newGrove);
+                mockData.groves.push(newGrove);
 
-            sendResponse(res, 200, {
-                success: true,
-                message: 'Grove registered successfully',
-                groveId: newGrove.id
-            });
+                sendResponse(res, 200, {
+                    success: true,
+                    message: 'Grove registered successfully',
+                    groveId: newGrove.id
+                });
+            }
         }
         
         // Harvest endpoints
@@ -350,18 +507,124 @@ const server = http.createServer(async (req, res) => {
             const farmerAddress = parsedUrl.query.farmerAddress;
             const farmerHarvests = mockData.harvests.filter(h => h.farmerAddress === farmerAddress);
             
-            const totalEarnings = farmerHarvests.reduce((sum, h) => sum + h.totalRevenue, 0);
+            const totalEarnings = farmerHarvests.reduce((sum, h) => sum + (h.totalRevenue || 0), 0);
             const monthlyEarnings = farmerHarvests
                 .filter(h => new Date(h.harvestDate).getMonth() === new Date().getMonth())
-                .reduce((sum, h) => sum + h.totalRevenue, 0);
+                .reduce((sum, h) => sum + (h.totalRevenue || 0), 0);
+            
+            // Calculate farmer's 30% share
+            const farmerTotalShare = totalEarnings * 0.3;
+            const farmerMonthlyShare = monthlyEarnings * 0.3;
+            
+            // Calculate pending (harvests not yet distributed)
+            const pendingHarvests = farmerHarvests.filter(h => !h.revenueDistributed);
+            const pendingDistributions = pendingHarvests.reduce((sum, h) => sum + (h.totalRevenue || 0), 0) * 0.3;
+            
+            // Calculate available balance (distributed but not withdrawn)
+            const distributedHarvests = farmerHarvests.filter(h => h.revenueDistributed);
+            const distributedAmount = distributedHarvests.reduce((sum, h) => sum + (h.totalRevenue || 0), 0) * 0.3;
+            
+            // Get total withdrawn
+            const farmerWithdrawals = mockData.farmerWithdrawals?.filter(w => w.farmerAddress === farmerAddress) || [];
+            const totalWithdrawn = farmerWithdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+            
+            const availableBalance = distributedAmount - totalWithdrawn;
             
             sendResponse(res, 200, {
                 success: true,
                 stats: {
-                    totalEarnings: totalEarnings,
-                    monthlyEarnings: monthlyEarnings,
-                    pendingDistributions: 0.00
+                    totalEarnings: farmerTotalShare,
+                    monthlyEarnings: farmerMonthlyShare,
+                    pendingDistributions: pendingDistributions,
+                    availableBalance: availableBalance,
+                    pendingBalance: pendingDistributions,
+                    totalWithdrawn: totalWithdrawn
                 }
+            });
+        }
+        
+        // Holder earnings endpoint for charts
+        else if (pathname.match(/^\/api\/harvest\/holder\/[^\/]+\/earnings$/) && method === 'GET') {
+            const holderAddress = pathname.split('/')[4];
+            const farmerHarvests = mockData.harvests.filter(h => h.farmerAddress === holderAddress);
+            
+            // Create distribution history from harvests
+            const distributionHistory = farmerHarvests.map(h => ({
+                date: h.harvestDate,
+                amount: (h.totalRevenue || 0) * 0.3, // Farmer gets 30%
+                harvestId: h.id,
+                groveName: h.groveName
+            }));
+            
+            const totalEarnings = distributionHistory.reduce((sum, d) => sum + d.amount, 0);
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    totalEarnings: totalEarnings,
+                    distributionHistory: distributionHistory
+                }
+            });
+        }
+        
+        // Farmer revenue/withdrawal endpoints
+        else if (pathname === '/api/revenue/farmer-balance' && method === 'GET') {
+            const farmerAddress = parsedUrl.query.farmerAddress;
+            const farmerHarvests = mockData.harvests.filter(h => h.farmerAddress === farmerAddress);
+            
+            // Calculate distributed amount (30% of distributed harvests)
+            const distributedHarvests = farmerHarvests.filter(h => h.revenueDistributed);
+            const distributedAmount = distributedHarvests.reduce((sum, h) => sum + (h.totalRevenue || 0), 0) * 0.3;
+            
+            // Get total withdrawn
+            const farmerWithdrawals = mockData.farmerWithdrawals.filter(w => w.farmerAddress === farmerAddress);
+            const totalWithdrawn = farmerWithdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+            
+            const availableBalance = distributedAmount - totalWithdrawn;
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    availableBalance: availableBalance,
+                    totalWithdrawn: totalWithdrawn
+                }
+            });
+        }
+        
+        else if (pathname === '/api/revenue/withdraw-farmer-share' && method === 'POST') {
+            const { groveId, amount, farmerAddress } = body;
+            
+            if (!farmerAddress || !amount || amount <= 0) {
+                sendError(res, 400, 'Invalid withdrawal request');
+                return;
+            }
+            
+            // Create withdrawal record
+            const withdrawal = {
+                id: (mockData.farmerWithdrawals.length + 1).toString(),
+                farmerAddress: farmerAddress,
+                groveId: groveId,
+                amount: amount,
+                date: new Date().toISOString(),
+                status: 'completed'
+            };
+            
+            mockData.farmerWithdrawals.push(withdrawal);
+            
+            sendResponse(res, 200, {
+                success: true,
+                message: 'Withdrawal processed successfully',
+                withdrawalId: withdrawal.id
+            });
+        }
+        
+        else if (pathname === '/api/revenue/withdrawal-history' && method === 'GET') {
+            const farmerAddress = parsedUrl.query.farmerAddress;
+            const withdrawals = mockData.farmerWithdrawals.filter(w => w.farmerAddress === farmerAddress);
+            
+            sendResponse(res, 200, {
+                success: true,
+                withdrawals: withdrawals
             });
         }
         
@@ -448,52 +711,170 @@ const server = http.createServer(async (req, res) => {
         
         // Investment endpoints (mock)
         else if (pathname === '/api/investment/available-groves' && method === 'GET') {
-            const availableGroves = mockData.groves.map(grove => ({
-                ...grove,
-                tokensAvailable: Math.floor(grove.treeCount * 0.5),
-                pricePerToken: 25 + Math.random() * 10,
-                projectedAnnualReturn: 10 + Math.random() * 8
-            }));
+            // Proxy to real backend API
+            const backendPort = process.env.BACKEND_PORT || '3001';
+            const backendUrl = `http://localhost:${backendPort}/api/investment/available-groves`;
             
-            sendResponse(res, 200, {
-                success: true,
-                groves: availableGroves
-            });
+            try {
+                console.log('[PROXY] Forwarding available-groves request to backend:', backendUrl);
+                const result = await proxyToBackend(backendUrl, {
+                    method: 'GET'
+                });
+                
+                console.log('[PROXY] Backend available-groves response:', result.status, `${result.data.groves?.length || 0} groves`);
+                sendResponse(res, result.status, result.data);
+            } catch (error) {
+                console.error('[PROXY] Error proxying available-groves to backend:', error.message);
+                // Fallback to mock implementation
+                const availableGroves = mockData.groves.map(grove => ({
+                    ...grove,
+                    tokensAvailable: Math.floor(grove.treeCount * 0.5),
+                    pricePerToken: 25 + Math.random() * 10,
+                    projectedAnnualReturn: 10 + Math.random() * 8
+                }));
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    groves: availableGroves
+                });
+            }
         }
         
         else if (pathname === '/api/investment/portfolio' && method === 'GET') {
-            const investorAddress = parsedUrl.query.investorAddress;
+            // Proxy to real backend API
+            const backendPort = process.env.BACKEND_PORT || '3001';
+            const backendUrl = `http://localhost:${backendPort}${req.url}`;
             
-            sendResponse(res, 200, {
-                success: true,
-                portfolio: {
-                    totalInvestment: 1250.00,
-                    currentValue: 1387.50,
-                    totalReturns: 137.50,
-                    roi: 11.0,
-                    holdings: [
-                        {
-                            groveId: '1',
-                            groveName: 'Sunrise Valley Grove',
-                            tokenAmount: 25,
-                            purchasePrice: 25.00,
-                            currentValue: 27.50,
-                            totalInvestment: 625.00,
-                            currentWorth: 687.50,
-                            earnings: 62.50,
-                            purchaseDate: '2024-03-01'
-                        }
-                    ]
-                }
-            });
+            try {
+                console.log('[PROXY] Forwarding portfolio request to backend:', backendUrl);
+                const result = await proxyToBackend(backendUrl, {
+                    method: 'GET'
+                });
+                
+                console.log('[PROXY] Backend portfolio response:', result.status, `${result.data.portfolio?.holdings?.length || 0} holdings`);
+                sendResponse(res, result.status, result.data);
+            } catch (error) {
+                console.error('[PROXY] Error proxying portfolio to backend:', error.message);
+                // Fallback to mock implementation
+                const investorAddress = parsedUrl.query.investorAddress;
+                const holdings = investorHoldings.get(investorAddress) || [];
+                
+                let totalInvestment = 0;
+                let currentValue = 0;
+                let totalReturns = 0;
+                
+                holdings.forEach(holding => {
+                    totalInvestment += holding.totalInvestment;
+                    currentValue += holding.currentWorth;
+                });
+                
+                totalReturns = currentValue - totalInvestment;
+                const roi = totalInvestment > 0 ? (totalReturns / totalInvestment) * 100 : 0;
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    portfolio: {
+                        totalInvestment: totalInvestment,
+                        currentValue: currentValue,
+                        totalReturns: totalReturns,
+                        roi: roi,
+                        holdings: holdings
+                    }
+                });
+            }
         }
         
         else if (pathname === '/api/investment/purchase-tokens' && method === 'POST') {
-            sendResponse(res, 200, {
-                success: true,
-                message: 'Tokens purchased successfully',
-                transactionHash: '0x' + Math.random().toString(16).substr(2, 64)
-            });
+            // Proxy to real backend API
+            const backendPort = process.env.BACKEND_PORT || '3001';
+            const backendUrl = `http://localhost:${backendPort}/api/investment/purchase-tokens`;
+            
+            try {
+                console.log('[PROXY] Forwarding purchase request to backend:', backendUrl);
+                const result = await proxyToBackend(backendUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                console.log('[PROXY] Backend response:', result.status, result.data.success ? 'SUCCESS' : 'FAILED');
+                sendResponse(res, result.status, result.data);
+            } catch (error) {
+                console.error('[PROXY] Error proxying purchase to backend:', error.message);
+                // Fallback to mock implementation
+                try {
+                    const { groveId, tokenAmount, investorAddress } = body;
+                    
+                    if (!groveId || !tokenAmount || !investorAddress) {
+                        sendError(res, 400, 'Missing required parameters: groveId, tokenAmount, investorAddress');
+                        return;
+                    }
+                    
+                    if (tokenAmount <= 0) {
+                        sendError(res, 400, 'Token amount must be positive');
+                        return;
+                    }
+                    
+                    const grove = mockData.groves.find(g => g.id === groveId);
+                    if (!grove) {
+                        sendError(res, 404, 'Grove not found');
+                        return;
+                    }
+                    
+                    const pricePerToken = 25 + Math.random() * 10;
+                    const totalInvestment = tokenAmount * pricePerToken;
+                    const currentWorth = totalInvestment * 1.1;
+                    
+                    const newHolding = {
+                        groveId: grove.id,
+                        groveName: grove.groveName,
+                        tokenAmount: tokenAmount,
+                        purchasePrice: pricePerToken,
+                        currentValue: currentWorth,
+                        totalInvestment: totalInvestment,
+                        currentWorth: currentWorth,
+                        earnings: currentWorth - totalInvestment,
+                        purchaseDate: new Date().toISOString()
+                    };
+                    
+                    if (!investorHoldings.has(investorAddress)) {
+                        investorHoldings.set(investorAddress, []);
+                    }
+                    
+                    const holdings = investorHoldings.get(investorAddress);
+                    const existingHoldingIndex = holdings.findIndex(h => h.groveId === groveId);
+                    
+                    if (existingHoldingIndex >= 0) {
+                        const existingHolding = holdings[existingHoldingIndex];
+                        const totalTokens = existingHolding.tokenAmount + tokenAmount;
+                        const totalInvested = existingHolding.totalInvestment + totalInvestment;
+                        const avgPrice = totalInvested / totalTokens;
+                        
+                        holdings[existingHoldingIndex] = {
+                            ...existingHolding,
+                            tokenAmount: totalTokens,
+                            purchasePrice: avgPrice,
+                            totalInvestment: totalInvested,
+                            currentWorth: totalTokens * avgPrice * 1.1,
+                            earnings: totalTokens * avgPrice * 0.1,
+                            purchaseDate: new Date().toISOString()
+                        };
+                    } else {
+                        holdings.push(newHolding);
+                    }
+                    
+                    sendResponse(res, 200, {
+                        success: true,
+                        message: 'Tokens purchased successfully',
+                        transactionHash: '0x' + Math.random().toString(16).substr(2, 64)
+                    });
+                } catch (fallbackError) {
+                    console.error('Error in fallback implementation:', fallbackError);
+                    sendError(res, 500, 'Failed to process token purchase');
+                }
+            }
         }
         
         // Earnings endpoints
@@ -603,11 +984,110 @@ const server = http.createServer(async (req, res) => {
         }
         
         else if (pathname === '/api/marketplace/purchase' && method === 'POST') {
-            sendResponse(res, 200, {
-                success: true,
-                message: 'Tokens purchased successfully',
-                transactionHash: '0x' + Math.random().toString(16).substr(2, 64)
-            });
+            try {
+                const { listingId, tokenAmount, buyerAddress } = body;
+                
+                // Validate inputs
+                if (!listingId || !tokenAmount || !buyerAddress) {
+                    sendError(res, 400, 'Missing required parameters: listingId, tokenAmount, buyerAddress');
+                    return;
+                }
+                
+                if (tokenAmount <= 0) {
+                    sendError(res, 400, 'Token amount must be positive');
+                    return;
+                }
+                
+                // Find the listing (mock data - in a real implementation this would query the database)
+                const mockListings = [
+                    {
+                        id: '1',
+                        groveId: '1',
+                        groveName: 'Sunrise Valley Grove',
+                        tokenAmount: 100,
+                        pricePerToken: 28.50,
+                        sellerAddress: '0.0.123456',
+                        isActive: true
+                    },
+                    {
+                        id: '2',
+                        groveId: '2',
+                        groveName: 'Mountain Peak Coffee',
+                        tokenAmount: 50,
+                        pricePerToken: 32.00,
+                        sellerAddress: '0.0.789012',
+                        isActive: true
+                    }
+                ];
+                
+                const listing = mockListings.find(l => l.id === listingId && l.isActive);
+                if (!listing) {
+                    sendError(res, 404, 'Listing not found or inactive');
+                    return;
+                }
+                
+                // Check if enough tokens available
+                if (tokenAmount > listing.tokenAmount) {
+                    sendError(res, 400, 'Not enough tokens available');
+                    return;
+                }
+                
+                // Calculate purchase details
+                const totalInvestment = tokenAmount * listing.pricePerToken;
+                const currentWorth = totalInvestment * 1.1; // Mock 10% gain
+                
+                // Create holding record
+                const newHolding = {
+                    groveId: listing.groveId,
+                    groveName: listing.groveName,
+                    tokenAmount: tokenAmount,
+                    purchasePrice: listing.pricePerToken,
+                    currentValue: currentWorth,
+                    totalInvestment: totalInvestment,
+                    currentWorth: currentWorth,
+                    earnings: currentWorth - totalInvestment,
+                    purchaseDate: new Date().toISOString()
+                };
+                
+                // Add to buyer's holdings
+                if (!investorHoldings.has(buyerAddress)) {
+                    investorHoldings.set(buyerAddress, []);
+                }
+                
+                const holdings = investorHoldings.get(buyerAddress);
+                // Check if buyer already has holdings in this grove
+                const existingHoldingIndex = holdings.findIndex(h => h.groveId === listing.groveId);
+                
+                if (existingHoldingIndex >= 0) {
+                    // Update existing holding
+                    const existingHolding = holdings[existingHoldingIndex];
+                    const totalTokens = existingHolding.tokenAmount + tokenAmount;
+                    const totalInvested = existingHolding.totalInvestment + totalInvestment;
+                    const avgPrice = totalInvested / totalTokens;
+                    
+                    holdings[existingHoldingIndex] = {
+                        ...existingHolding,
+                        tokenAmount: totalTokens,
+                        purchasePrice: avgPrice,
+                        totalInvestment: totalInvested,
+                        currentWorth: totalTokens * avgPrice * 1.1, // Maintain 10% gain
+                        earnings: totalTokens * avgPrice * 0.1,
+                        purchaseDate: new Date().toISOString() // Update purchase date
+                    };
+                } else {
+                    // Add new holding
+                    holdings.push(newHolding);
+                }
+                
+                sendResponse(res, 200, {
+                    success: true,
+                    message: 'Tokens purchased successfully',
+                    transactionHash: '0x' + Math.random().toString(16).substr(2, 64)
+                });
+            } catch (error) {
+                console.error('Error processing marketplace purchase:', error);
+                sendError(res, 500, 'Failed to process marketplace purchase');
+            }
         }
         
         else if (pathname === '/api/marketplace/stats' && method === 'GET') {
@@ -1334,6 +1814,41 @@ const server = http.createServer(async (req, res) => {
             });
         }
         
+        // LP Token balances endpoint
+        else if (pathname === '/api/balance/lp-tokens' && method === 'GET') {
+            const accountId = parsedUrl.query.accountId;
+            
+            // Mock LP token balances for lending pools
+            const lpTokenBalances = [
+                {
+                    assetAddress: 'USDC',
+                    assetName: 'USDC Stablecoin',
+                    lpTokenAddress: 'LP-USDC-001',
+                    balance: Math.floor(Math.random() * 1000) + 500, // Random balance 500-1500
+                    value: (Math.floor(Math.random() * 1000) + 500) * 1.0, // 1:1 value for USDC
+                    apy: 8.5
+                },
+                {
+                    assetAddress: 'KES',
+                    assetName: 'Kenyan Shilling',
+                    lpTokenAddress: 'LP-KES-001',
+                    balance: Math.floor(Math.random() * 500) + 250, // Random balance 250-750
+                    value: (Math.floor(Math.random() * 500) + 250) * 0.0075, // Approximate value for KES
+                    apy: 12.0
+                }
+            ];
+            
+            sendResponse(res, 200, {
+                success: true,
+                data: {
+                    accountId,
+                    lpTokens: lpTokenBalances,
+                    totalValue: lpTokenBalances.reduce((sum, t) => sum + t.value, 0),
+                    lastUpdated: new Date().toISOString()
+                }
+            });
+        }
+        
         // Transaction history endpoint
         else if (pathname === '/api/transactions/history' && method === 'GET') {
             const userAddress = parsedUrl.query.userAddress;
@@ -1404,6 +1919,7 @@ server.listen(PORT, () => {
     console.log('  POST /api/revenue/claim-earnings');
     console.log('  GET  /api/revenue/farmer-balance?farmerAddress=...');
     console.log('  POST /api/revenue/withdraw-farmer-share');
+
 });
 
 // Graceful shutdown

@@ -1,5 +1,7 @@
 import { IncomingMessage, ServerResponse } from 'http'
 import { LenderContract } from './lender-contract'
+import { withdrawalService } from './withdrawal-service'
+import { transactionRecorder } from './transaction-recording-service'
 
 // Mock data for lending pools since we don't have actual contracts in this environment
 const MOCK_POOLS = [
@@ -86,23 +88,31 @@ export class LendingAPI {
                 return
             }
 
-            // Check if there's enough liquidity (in a real implementation, this would be a contract call)
-            if (amount > pool.availableLiquidity) {
-                sendError(res, 400, 'Insufficient liquidity in pool')
-                return
-            }
+            // Update pool statistics (in a real implementation, this would be a contract call)
+            pool.totalLiquidity += amount
+            pool.availableLiquidity += amount
+            pool.totalLPTokens += amount
 
             // In a real implementation, this would interact with the LenderContract
             // For now, we'll just return a mock response
+            const transactionHash = '0x' + Math.random().toString(16).substr(2, 10)
+            
+            // Record transaction in history
+            await transactionRecorder.recordLiquidityProvided({
+                providerAddress,
+                assetAddress,
+                amount,
+                lpTokensMinted: amount,
+                transactionHash
+            })
+            
             sendResponse(res, 200, {
                 success: true,
-                data: {
-                    assetAddress,
-                    amount,
-                    lpTokensMinted: amount, // 1:1 for demo
-                    transactionHash: '0x' + Math.random().toString(16).substr(2, 10),
-                    providedAt: new Date().toISOString()
-                }
+                assetAddress,
+                amount,
+                lpTokensMinted: amount, // 1:1 for demo
+                transactionHash,
+                providedAt: new Date().toISOString()
             })
         } catch (error) {
             console.error('Error providing liquidity:', error)
@@ -134,19 +144,42 @@ export class LendingAPI {
                 return
             }
 
-            // In a real implementation, this would interact with the LenderContract
-            // For now, we'll just return a mock response
-            const usdcReturned = lpTokenAmount * 1.05 // 5% rewards for demo
-            const rewardsEarned = lpTokenAmount * 0.05
+            const result = await withdrawalService.processLiquidityWithdrawal(
+                providerAddress,
+                assetAddress,
+                lpTokenAmount
+            )
+
+            if (!result.success) {
+                sendError(res, 400, result.error || 'Withdrawal failed')
+                return
+            }
+
+            // Get withdrawal details from history
+            const history = await withdrawalService.getLiquidityWithdrawalHistory(providerAddress, 1)
+            const withdrawal = history[0]
+            
+            const usdcReturned = withdrawal?.usdcReturned || result.amount
+            
+            // Record transaction in history
+            await transactionRecorder.recordLiquidityWithdrawn({
+                providerAddress,
+                assetAddress,
+                lpTokenAmount,
+                usdcReceived: usdcReturned,
+                transactionHash: result.transactionHash
+            })
 
             sendResponse(res, 200, {
                 success: true,
                 data: {
+                    withdrawalId: result.withdrawalId,
                     assetAddress,
-                    lpTokensBurned: lpTokenAmount,
+                    lpTokensBurned: withdrawal?.lpTokenAmount || lpTokenAmount,
                     usdcReturned,
-                    rewardsEarned,
-                    transactionHash: '0x' + Math.random().toString(16).substr(2, 10),
+                    rewardsEarned: withdrawal?.rewardsEarned || 0,
+                    transactionHash: result.transactionHash,
+                    blockExplorerUrl: withdrawal?.blockExplorerUrl,
                     withdrawnAt: new Date().toISOString()
                 }
             })
@@ -186,7 +219,7 @@ export class LendingAPI {
 
             sendResponse(res, 200, {
                 success: true,
-                data: stats
+                pool: stats
             })
         } catch (error) {
             console.error('Error fetching pool statistics:', error)
@@ -302,12 +335,23 @@ export class LendingAPI {
             pool.availableLiquidity -= loanAmount
             pool.totalBorrowed += loanAmount
             pool.utilizationRate = pool.totalBorrowed / pool.totalLiquidity
+            
+            const transactionHash = '0x' + Math.random().toString(16).substr(2, 10)
+            
+            // Record transaction in history
+            await transactionRecorder.recordLoan({
+                borrowerAddress,
+                assetAddress,
+                loanAmount,
+                collateralAmount: collateralRequired,
+                transactionHash
+            })
 
             sendResponse(res, 200, {
                 success: true,
                 data: {
                     ...loanData,
-                    transactionHash: '0x' + Math.random().toString(16).substr(2, 10)
+                    transactionHash
                 }
             })
         } catch (error) {
@@ -353,6 +397,16 @@ export class LendingAPI {
             pool.availableLiquidity += loan.loanAmount
             pool.totalBorrowed -= loan.loanAmount
             pool.utilizationRate = pool.totalBorrowed / pool.totalLiquidity
+            
+            const transactionHash = '0x' + Math.random().toString(16).substr(2, 10)
+            
+            // Record transaction in history
+            await transactionRecorder.recordLoanRepayment({
+                borrowerAddress,
+                assetAddress,
+                repaymentAmount: loan.repaymentAmount,
+                transactionHash
+            })
 
             sendResponse(res, 200, {
                 success: true,
@@ -360,7 +414,7 @@ export class LendingAPI {
                     loanId: loan.loanId,
                     repaymentAmount: loan.repaymentAmount,
                     collateralReturned: loan.collateralAmount,
-                    transactionHash: '0x' + Math.random().toString(16).substr(2, 10),
+                    transactionHash,
                     repaidAt: new Date().toISOString()
                 }
             })
@@ -400,7 +454,7 @@ export class LendingAPI {
 
             sendResponse(res, 200, {
                 success: true,
-                data: loanWithHealth
+                loan: loanWithHealth
             })
         } catch (error) {
             console.error('Error fetching loan details:', error)

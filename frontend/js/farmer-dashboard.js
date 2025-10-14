@@ -25,64 +25,132 @@ class FarmerDashboard {
 
     async renderSkipVerificationBanner() {
         const accountId = window.walletManager?.getAccountId();
-        let skipped = false;
+
+        // Don't show banner if no account is connected
+        if (!accountId) {
+            return;
+        }
+
+        let hasSkipped = false;
 
         try {
             // Check localStorage first
-            if (localStorage.getItem('skipFarmerVerification') === 'true') skipped = true;
+            if (localStorage.getItem('skipFarmerVerification') === 'true') {
+                hasSkipped = true;
+            }
 
             // If not skipped locally, check server-side setting
-            if (!skipped && accountId && window.coffeeAPI && typeof window.coffeeAPI.getUserSettings === 'function') {
-                const resp = await window.coffeeAPI.getUserSettings(accountId);
-                if (resp && resp.success && resp.settings && resp.settings.skipFarmerVerification) skipped = true;
+            if (!hasSkipped && window.coffeeAPI && typeof window.coffeeAPI.getUserSettings === 'function') {
+                const response = await window.coffeeAPI.getUserSettings(accountId);
+                if (response && response.success && response.settings && response.settings.skipFarmerVerification) {
+                    hasSkipped = true;
+                }
             }
-        } catch (e) {
-            // ignore errors
+        } catch (error) {
+            // Log error but don't crash the dashboard
+            console.error('Error fetching user settings for verification banner:', error);
+            // Continue with hasSkipped = false to show the banner
         }
 
         // Remove existing banner
         const existing = document.querySelector('.verification-skip-banner');
-        if (existing) existing.remove();
+        if (existing) {
+            existing.remove();
+        }
 
-        if (!skipped) return;
+        // Only show banner if user has NOT skipped verification
+        if (hasSkipped) {
+            return;
+        }
 
+        // Create and show the skip verification banner
         const banner = document.createElement('div');
         banner.className = 'verification-skip-banner';
         banner.innerHTML = `
             <div class="banner-inner">
-                <span>🔔 You chose to complete verification later.</span>
-                <button class="btn btn-primary" id="resumeVerificationBtn">Complete verification</button>
-                <button class="btn btn-secondary" id="dismissSkipBtn">Dismiss</button>
+                <span>⚠️ Complete farmer verification to access all features, or skip for now.</span>
+                <button class="btn btn-primary" id="skipVerificationBtn">Skip Verification</button>
+                <button class="btn btn-secondary" id="dismissBannerBtn">Dismiss</button>
             </div>
         `;
 
         // Insert banner at top of farmer dashboard container
         const dashboard = document.querySelector('.farmer-dashboard');
-        if (dashboard) dashboard.prepend(banner);
+        if (dashboard) {
+            dashboard.prepend(banner);
+        }
 
-        document.getElementById('resumeVerificationBtn')?.addEventListener('click', async () => {
-            try {
-                // Clear local and server skip flags
-                localStorage.removeItem('skipFarmerVerification');
-                if (accountId && window.coffeeAPI && typeof window.coffeeAPI.saveUserSettings === 'function') {
-                    await window.coffeeAPI.saveUserSettings(accountId, { skipFarmerVerification: false, demoBypass: false })
+        // Handle skip verification button click
+        const skipBtn = document.getElementById('skipVerificationBtn');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', async () => {
+                await this.handleSkipVerification();
+            });
+        }
+
+        // Handle dismiss button click
+        const dismissBtn = document.getElementById('dismissBannerBtn');
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+                banner.remove();
+            });
+        }
+    }
+
+    async handleSkipVerification() {
+        const accountId = window.walletManager?.getAccountId();
+
+        if (!accountId) {
+            this.showNotification('No account connected', 'error');
+            return;
+        }
+
+        try {
+            // Update settings on server
+            if (window.coffeeAPI && typeof window.coffeeAPI.updateUserSettings === 'function') {
+                const response = await window.coffeeAPI.updateUserSettings(accountId, {
+                    skipFarmerVerification: true
+                });
+
+                if (response && response.success) {
+                    // Update localStorage
+                    localStorage.setItem('skipFarmerVerification', 'true');
+
+                    // Remove the banner
+                    const banner = document.querySelector('.verification-skip-banner');
+                    if (banner) {
+                        banner.remove();
+                    }
+
+                    // Show success notification
+                    this.showNotification('Verification skipped successfully', 'success');
+                } else {
+                    throw new Error(response?.error || 'Failed to update settings');
                 }
-            } catch (e) {}
-            banner.remove();
-            // Open verification modal
-            window.walletManager?.showFarmerOnboardingModal(null);
-        });
+            } else {
+                throw new Error('API method not available');
+            }
+        } catch (error) {
+            console.error('Error skipping verification:', error);
+            this.showNotification('Failed to update settings. Please try again.', 'error');
+        }
+    }
 
-        document.getElementById('dismissSkipBtn')?.addEventListener('click', () => {
-            banner.remove();
-        });
+    showNotification(message, type = 'info') {
+        // Use existing toast notification if available
+        if (window.walletManager && typeof window.walletManager.showToast === 'function') {
+            window.walletManager.showToast(message, type);
+        } else {
+            // Fallback to console
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
     }
 
     setupEventListeners() {
         // Section navigation
         const menuItems = document.querySelectorAll('.farmer-dashboard .menu-item');
         console.log('Found menu items:', menuItems.length);
-        
+
         menuItems.forEach((item, index) => {
             console.log(`Attaching event listener to menu item ${index}:`, item);
             item.addEventListener('click', (e) => {
@@ -115,20 +183,20 @@ class FarmerDashboard {
         const harvestForm = document.getElementById('harvestForm');
         if (harvestForm) {
             harvestForm.addEventListener('submit', (e) => this.handleHarvestSubmit(e));
-            
+
             // Add event listeners for form elements that affect projected revenue
             const yieldKgInput = document.getElementById('yieldKg');
             const qualityGradeInput = document.getElementById('qualityGrade');
             const coffeeVarietySelect = document.getElementById('coffeeVariety');
             const harvestDateInput = document.getElementById('harvestDate');
             const harvestGroveSelect = document.getElementById('harvestGrove');
-            
+
             const updateRevenueHandler = () => this.updateProjectedRevenue();
-            
+
             if (yieldKgInput) {
                 yieldKgInput.addEventListener('input', updateRevenueHandler);
             }
-            
+
             if (qualityGradeInput) {
                 qualityGradeInput.addEventListener('input', updateRevenueHandler);
                 // Also update the grade description display
@@ -139,15 +207,15 @@ class FarmerDashboard {
                     document.getElementById('gradeDescription').textContent = gradeDescription;
                 });
             }
-            
+
             if (coffeeVarietySelect) {
                 coffeeVarietySelect.addEventListener('change', updateRevenueHandler);
             }
-            
+
             if (harvestDateInput) {
                 harvestDateInput.addEventListener('change', updateRevenueHandler);
             }
-            
+
             if (harvestGroveSelect) {
                 harvestGroveSelect.addEventListener('change', updateRevenueHandler);
             }
@@ -240,7 +308,7 @@ class FarmerDashboard {
 
     switchSection(section) {
         console.log('Switching to section:', section);
-        
+
         // Update active menu item
         document.querySelectorAll('.farmer-dashboard .menu-item').forEach(item => {
             item.classList.remove('active');
@@ -256,7 +324,7 @@ class FarmerDashboard {
 
         const targetSection = document.getElementById(`${section}Section`);
         console.log('Target section element:', targetSection);
-        
+
         if (targetSection) {
             targetSection.classList.add('active');
         }
@@ -295,6 +363,9 @@ class FarmerDashboard {
                     case 'health':
                         await this.loadTreeHealth(farmerAddress);
                         break;
+                    case 'pricing':
+                        await this.loadPricing();
+                        break;
                     case 'transactions':
                         await this.loadTransactionHistory(farmerAddress);
                         break;
@@ -328,6 +399,9 @@ class FarmerDashboard {
                 case 'health':
                     await this.loadTreeHealth(farmerAddress);
                     break;
+                case 'pricing':
+                    await this.loadPricing();
+                    break;
                 case 'transactions':
                     await this.loadTransactionHistory(farmerAddress);
                     break;
@@ -358,7 +432,21 @@ class FarmerDashboard {
 
             if (response.success) {
                 // Normalize IDs to strings so lookups are consistent
-                this.groves = (response.groves || []).map(g => Object.assign({}, g, { id: String(g.id) }));
+                this.groves = (response.groves || []).map(grove => {
+                    // Ensure coordinates are properly formatted
+                    let coordinates = grove.coordinates;
+                    if (!coordinates && (grove.coordinatesLat || grove.coordinatesLng)) {
+                        coordinates = {
+                            lat: grove.coordinatesLat || 0,
+                            lng: grove.coordinatesLng || 0
+                        };
+                    }
+
+                    return Object.assign({}, grove, {
+                        id: String(grove.id),
+                        coordinates: coordinates
+                    });
+                });
             } else {
                 // Fallback to mock data for testing
                 this.groves = [
@@ -390,7 +478,7 @@ class FarmerDashboard {
                     }
                 ];
             }
-            
+
             console.log('Loaded groves:', this.groves);
             this.renderGroves();
         } catch (error) {
@@ -420,16 +508,16 @@ class FarmerDashboard {
 
         container.innerHTML = this.groves.map(grove => `
             <div class="grove-card">
-                <h4>${grove.groveName}</h4>
+                <h4>${grove.groveName || 'Unnamed Grove'}</h4>
                 <div class="grove-info">
-                    <span><strong>Location:</strong> ${grove.location}</span>
-                    <span><strong>Trees:</strong> ${grove.treeCount}</span>
-                    <span><strong>Variety:</strong> ${grove.coffeeVariety}</span>
-                    <span><strong>Expected Yield:</strong> ${grove.expectedYieldPerTree} kg/tree</span>
+                    <span><strong>Location:</strong> ${grove.location || 'Not specified'}</span>
+                    <span><strong>Trees:</strong> ${grove.treeCount || 0}</span>
+                    <span><strong>Variety:</strong> ${grove.coffeeVariety || 'Not specified'}</span>
+                    <span><strong>Expected Yield:</strong> ${grove.expectedYieldPerTree ? grove.expectedYieldPerTree + ' kg/tree' : 'Not specified'}</span>
                     <span><strong>Health Score:</strong> ${grove.healthScore || 'N/A'}</span>
                     <span><strong>Status:</strong> 
-                        <span class="status-badge status-${grove.verificationStatus}">
-                            ${grove.verificationStatus}
+                        <span class="status-badge status-${grove.verificationStatus || 'pending'}">
+                            ${grove.verificationStatus || 'pending'}
                         </span>
                     </span>
                 </div>
@@ -447,7 +535,7 @@ class FarmerDashboard {
 
     showGroveModal() {
         console.log('showGroveModal called');
-        
+
         if (!window.walletManager.requireFarmer()) return;
 
         // Allow opening the grove modal when demo bypass is active
@@ -536,6 +624,8 @@ class FarmerDashboard {
                 window.walletManager.showToast('Grove registered successfully!', 'success');
                 this.closeModals();
                 await this.loadGroves(groveData.farmerAddress);
+            } else {
+                throw new Error(response.error || 'Failed to register grove');
             }
         } catch (error) {
             console.error('Grove registration failed:', error);
@@ -551,9 +641,15 @@ class FarmerDashboard {
 
         try {
             const response = await window.coffeeAPI.getHarvestHistory(farmerAddress);
+            console.log('Harvest history response:', response);
+            console.log('Response data:', response.data);
+            console.log('Response harvests:', response.harvests);
 
             if (response.success) {
-                this.harvests = response.harvests || [];
+                // Fix: Access harvests from response.data.harvests
+                this.harvests = response.data?.harvests || response.harvests || [];
+                console.log('Loaded harvests:', this.harvests);
+                console.log('Number of harvests:', this.harvests.length);
                 this.renderHarvests();
                 await this.populateGroveSelect();
             }
@@ -564,9 +660,16 @@ class FarmerDashboard {
 
     renderHarvests() {
         const container = document.getElementById('harvestList');
-        if (!container) return;
+        console.log('renderHarvests called, container:', container);
+        console.log('Harvests to render:', this.harvests);
+
+        if (!container) {
+            console.error('harvestList container not found!');
+            return;
+        }
 
         if (this.harvests.length === 0) {
+            console.log('No harvests to display');
             container.innerHTML = `
                 <div class="empty-state">
                     <h4>No harvest reports yet</h4>
@@ -575,6 +678,8 @@ class FarmerDashboard {
             `;
             return;
         }
+
+        console.log('Rendering', this.harvests.length, 'harvests');
 
         container.innerHTML = this.harvests.map(harvest => `
             <div class="list-item">
@@ -654,9 +759,9 @@ class FarmerDashboard {
                     if (select) {
                         select.value = this.selectedGroveForHarvest;
                         select.dispatchEvent(new Event('change'));
-                        
+
                         // Find the grove name for confirmation
-                                    const grove = this.getGroveById(this.selectedGroveForHarvest);
+                        const grove = this.getGroveById(this.selectedGroveForHarvest);
                         if (grove) {
                             window.walletManager.showToast(`Grove "${grove.groveName}" pre-selected`, 'info');
                         }
@@ -688,7 +793,7 @@ class FarmerDashboard {
 
     reportHarvestForGrove(groveId) {
         console.log('reportHarvestForGrove called with groveId:', groveId);
-        
+
         if (!window.walletManager.requireFarmer()) return;
 
         // Allow reporting harvest when demo bypass is active
@@ -712,7 +817,7 @@ class FarmerDashboard {
             return;
         }
 
-    const grove = this.getGroveById(groveId);
+        const grove = this.getGroveById(groveId);
         if (!grove) {
             console.error('Grove not found for ID:', groveId);
             window.walletManager.showToast('Grove not found', 'error');
@@ -752,7 +857,7 @@ class FarmerDashboard {
 
         const formData = new FormData(e.target);
         const groveId = formData.get('groveId');
-        
+
         // Get the grove name from the grove ID
         const grove = this.getGroveById(groveId);
         if (!grove) {
@@ -770,6 +875,12 @@ class FarmerDashboard {
             notes: formData.get('notes')
         };
 
+        // Validate required fields
+        if (!harvestData.harvestDate || !harvestData.yieldKg || !harvestData.qualityGrade) {
+            window.walletManager.showToast('Please fill in all required fields', 'error');
+            return;
+        }
+
         try {
             this.isSubmittingHarvest = true; // Set loading state
             window.walletManager.showLoading('Submitting harvest report...');
@@ -780,6 +891,8 @@ class FarmerDashboard {
                 window.walletManager.showToast('Harvest reported successfully!', 'success');
                 this.closeModals();
                 await this.loadHarvests(harvestData.farmerAddress);
+            } else {
+                throw new Error(response.error || 'Failed to report harvest');
             }
         } catch (error) {
             console.error('Harvest reporting failed:', error);
@@ -802,41 +915,44 @@ class FarmerDashboard {
             if (this.groves.length === 0) {
                 await this.loadGroves(farmerAddress);
             }
-            
+
             // Fetch revenue statistics
             const statsResponse = await window.coffeeAPI.getHarvestStats(farmerAddress);
-            
+
             // Fetch earnings history
             const earningsResponse = await window.coffeeAPI.getHolderEarnings(farmerAddress);
-            
+
             // Fetch withdrawal history
             const withdrawalsResponse = await window.coffeeAPI.getFarmerWithdrawalHistory(farmerAddress);
 
             // Render revenue statistics
             if (statsResponse.success) {
-                this.renderRevenueStats(statsResponse.stats);
+                // Handle both 'stats' and 'data' response formats
+                const stats = statsResponse.stats || statsResponse.data;
+                this.renderRevenueStats(stats);
             }
 
             // Render revenue chart
-            if (earningsResponse.success) {
-                this.renderRevenueChart(earningsResponse.earnings.earningsHistory || []);
+            if (earningsResponse.success && earningsResponse.data) {
+                this.renderRevenueChart(earningsResponse.data.distributionHistory || []);
             }
-            
+
             // Render distributions
-            if (earningsResponse.distributions) {
-                this.renderDistributions(earningsResponse.distributions);
+            if (earningsResponse.success && earningsResponse.data && earningsResponse.data.distributionHistory) {
+                this.renderDistributions(earningsResponse.data.distributionHistory);
             }
-            
+
             // Render withdrawal history
             if (withdrawalsResponse.success) {
                 this.renderWithdrawalHistory(withdrawalsResponse.withdrawals);
             }
-            
+
             // Populate the withdrawal grove dropdown
             this.populateWithdrawalGroveSelect();
-            
+
             // Update withdrawal form balances
-            this.updateWithdrawalBalances(statsResponse.stats);
+            const stats = statsResponse.stats || statsResponse.data;
+            this.updateWithdrawalBalances(stats);
         } catch (error) {
             console.error('Failed to load revenue data:', error);
             window.walletManager.showToast('Failed to load revenue data', 'error');
@@ -851,7 +967,7 @@ class FarmerDashboard {
      */
     renderRevenueStats(stats) {
         if (!stats) return;
-        
+
         // Ensure values are numbers before calling toFixed
         const totalEarnings = typeof stats.totalEarnings === 'number' ? stats.totalEarnings : parseFloat(stats.totalEarnings) || 0;
         const monthlyEarnings = typeof stats.monthlyEarnings === 'number' ? stats.monthlyEarnings : parseFloat(stats.monthlyEarnings) || 0;
@@ -859,16 +975,16 @@ class FarmerDashboard {
         const availableBalance = typeof stats.availableBalance === 'number' ? stats.availableBalance : parseFloat(stats.availableBalance) || 0;
         const pendingBalance = typeof stats.pendingBalance === 'number' ? stats.pendingBalance : parseFloat(stats.pendingBalance) || 0;
         const totalWithdrawn = typeof stats.totalWithdrawn === 'number' ? stats.totalWithdrawn : parseFloat(stats.totalWithdrawn) || 0;
-        
+
         document.getElementById('totalEarnings').textContent = `$${totalEarnings.toFixed(2)}`;
         document.getElementById('monthlyEarnings').textContent = `$${monthlyEarnings.toFixed(2)}`;
         document.getElementById('pendingDistributions').textContent = `$${pendingDistributions.toFixed(2)}`;
-        
+
         // Update withdrawal card stats
         document.getElementById('farmerAvailableBalance').textContent = `$${availableBalance.toFixed(2)}`;
         document.getElementById('farmerPendingBalance').textContent = `$${pendingBalance.toFixed(2)}`;
         document.getElementById('farmerTotalWithdrawn').textContent = `$${totalWithdrawn.toFixed(2)}`;
-        
+
         // Update withdrawal help text
         const helpText = document.getElementById('withdrawalHelp');
         if (helpText) {
@@ -1015,7 +1131,7 @@ class FarmerDashboard {
      */
     updateWithdrawalBalances(stats) {
         if (!stats) return;
-        
+
         const availableBalance = stats.availableBalance || 0;
         const helpText = document.getElementById('withdrawalHelp');
         if (helpText) {
@@ -1052,14 +1168,14 @@ class FarmerDashboard {
         if (projectedSection) {
             projectedSection.style.display = 'block';
         }
-        
+
         // Update revenue values
         if (revenueData.data) {
             const data = revenueData.data;
             document.getElementById('projectedTotal').textContent = `$${data.projectedRevenue.toFixed(2)}`;
             document.getElementById('projectedFarmerShare').textContent = `$${(data.projectedRevenue * 0.3).toFixed(2)}`;
             document.getElementById('projectedInvestorShare').textContent = `$${(data.projectedRevenue * 0.7).toFixed(2)}`;
-            
+
             // Update price breakdown
             document.getElementById('basePrice').textContent = `$${data.basePrice.toFixed(2)}`;
             document.getElementById('seasonalMultiplier').textContent = data.seasonalMultiplier.toFixed(2);
@@ -1076,12 +1192,12 @@ class FarmerDashboard {
         const qualityGradeInput = document.getElementById('qualityGrade');
         const coffeeVarietySelect = document.getElementById('coffeeVariety');
         const harvestDateInput = document.getElementById('harvestDate');
-        
+
         // Check if all required elements exist
         if (!groveSelect || !yieldKgInput || !qualityGradeInput || !coffeeVarietySelect || !harvestDateInput) {
             return;
         }
-        
+
         // Get values
         const groveId = groveSelect.value;
         const yieldKg = parseFloat(yieldKgInput.value);
@@ -1089,7 +1205,7 @@ class FarmerDashboard {
         // Fix: Convert coffee variety to uppercase to match backend expectations
         const coffeeVariety = coffeeVarietySelect.value.toUpperCase();
         const harvestDate = harvestDateInput.value;
-        
+
         // Validate required inputs
         if (!groveId || !yieldKg || isNaN(yieldKg) || !qualityGrade || isNaN(qualityGrade) || !coffeeVariety || !harvestDate) {
             // Hide projected revenue section if inputs are invalid
@@ -1099,7 +1215,7 @@ class FarmerDashboard {
             }
             return;
         }
-        
+
         try {
             // Get the grove to get the groveTokenAddress
             const grove = this.getGroveById(groveId);
@@ -1107,10 +1223,10 @@ class FarmerDashboard {
                 console.error('Grove not found for ID:', groveId);
                 return;
             }
-            
+
             // Get harvest month (1-12)
             const harvestMonth = new Date(harvestDate).getMonth() + 1;
-            
+
             // Call price oracle to calculate projected revenue
             const revenueData = await window.priceOracle.calculateProjectedRevenue(
                 grove.id, // groveTokenAddress
@@ -1119,7 +1235,7 @@ class FarmerDashboard {
                 yieldKg,
                 harvestMonth
             );
-            
+
             // Update the UI with projected revenue data
             // Check if displayProjectedRevenue method exists, if not use a fallback
             if (typeof this.displayProjectedRevenue === 'function') {
@@ -1552,7 +1668,7 @@ class FarmerDashboard {
             const balanceResponse = await window.coffeeAPI.getFarmerBalance(farmerAddress);
             if (balanceResponse.success) {
                 const availableBalance = parseFloat(balanceResponse.data.availableBalance || 0);
-                
+
                 if (amount > availableBalance) {
                     window.walletManager.hideLoading();
                     window.walletManager.showToast(`Amount exceeds available balance. Maximum withdrawable: $${availableBalance.toFixed(2)}`, 'error');
@@ -1565,10 +1681,10 @@ class FarmerDashboard {
 
             if (response.success) {
                 window.walletManager.showToast('Withdrawal processed successfully!', 'success');
-                
+
                 // Reset form
                 e.target.reset();
-                
+
                 // Refresh revenue data
                 await this.loadRevenue(farmerAddress);
             } else {
@@ -1589,17 +1705,17 @@ class FarmerDashboard {
         try {
             // Get farmer address
             const farmerAddress = window.walletManager.getAccountId();
-            
+
             // Get farmer's actual balance
             const balanceResponse = await window.coffeeAPI.getFarmerBalance(farmerAddress);
-            
+
             const availableBalanceEl = document.getElementById('farmerAvailableBalance');
             const amountInput = document.getElementById('withdrawalAmount');
             const helpText = document.getElementById('withdrawalHelp');
 
             if (availableBalanceEl && amountInput && helpText) {
                 let balance = 0;
-                
+
                 if (balanceResponse.success) {
                     balance = parseFloat(balanceResponse.data.availableBalance || 0);
                 } else {
@@ -1607,7 +1723,7 @@ class FarmerDashboard {
                     const balanceText = availableBalanceEl.textContent;
                     balance = parseFloat(balanceText.replace(/[^0-9.-]+/g, ''));
                 }
-                
+
                 if (!isNaN(balance) && balance > 0) {
                     amountInput.value = balance.toFixed(2);
                     helpText.textContent = `Available: $${balance.toFixed(2)}`;
@@ -1670,7 +1786,7 @@ class FarmerDashboard {
         }
 
         // Sort transactions by timestamp (newest first)
-        const sortedTransactions = [...transactions].sort((a, b) => 
+        const sortedTransactions = [...transactions].sort((a, b) =>
             new Date(b.timestamp) - new Date(a.timestamp)
         );
 
@@ -1710,11 +1826,11 @@ class FarmerDashboard {
         const totalRevenue = transactions
             .filter(txn => txn.type === 'distribution')
             .reduce((sum, txn) => sum + parseFloat(txn.amount || 0), 0);
-        
+
         const completedTransactions = transactions
             .filter(txn => txn.status === 'completed')
             .length;
-        
+
         const pendingTransactions = transactions
             .filter(txn => txn.status === 'pending')
             .length;
@@ -1724,6 +1840,21 @@ class FarmerDashboard {
         document.getElementById('farmerTotalRevenue').textContent = `$${totalRevenue.toFixed(2)}`;
         document.getElementById('farmerCompletedTransactions').textContent = completedTransactions;
         document.getElementById('farmerPendingTransactions').textContent = pendingTransactions;
+    }
+
+    /**
+     * Load market pricing data
+     */
+    async loadPricing() {
+        console.log('Loading market pricing data...');
+        
+        // Initialize market prices display if not already done
+        if (!window.marketPricesDisplay) {
+            window.marketPricesDisplay = new MarketPricesDisplay(window.coffeeAPI);
+        }
+        
+        // Initialize the display
+        await window.marketPricesDisplay.initialize();
     }
 }
 

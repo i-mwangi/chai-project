@@ -55,13 +55,13 @@ async function testConnection() {
         console.log("========================================");
         console.log(`HBAR: ${balance.hbars.toString()}`);
         
-        if (balance.tokens && balance.tokens.size > 0) {
-            console.log("\nToken Balances:");
-            balance.tokens.forEach((amount, tokenId) => {
+        // Log token balances
+        console.log('\n=== Token Balances ===');
+        if (balance.tokens) {
+            // Iterate over the TokenBalanceMap properly
+            for (const [tokenId, amount] of balance.tokens) {
                 console.log(`  ${tokenId.toString()}: ${amount.toString()}`);
-            });
-        } else {
-            console.log("\nNo token balances found");
+            }
         }
 
         console.log("\n========================================");

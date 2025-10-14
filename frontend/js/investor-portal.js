@@ -103,7 +103,14 @@ class InvestorPortal {
             locationFilter.addEventListener('change', () => this.applyFilters());
         }
         if (yieldFilter) {
-            yieldFilter.addEventListener('input', () => this.applyFilters());
+            yieldFilter.addEventListener('input', () => {
+                // Update the displayed value
+                const valueDisplay = document.getElementById('yieldFilterValue');
+                if (valueDisplay) {
+                    valueDisplay.textContent = parseFloat(yieldFilter.value).toFixed(1);
+                }
+                this.applyFilters();
+            });
         }
     }
 
@@ -203,6 +210,11 @@ class InvestorPortal {
             option.textContent = location;
             locationFilter.appendChild(option);
         });
+        
+        // Re-attach event listener to ensure it works
+        locationFilter.removeEventListener('change', this.applyFiltersHandler);
+        this.applyFiltersHandler = () => this.applyFilters();
+        locationFilter.addEventListener('change', this.applyFiltersHandler);
     }
 
     renderAvailableGroves(groves = this.availableGroves) {
@@ -219,13 +231,15 @@ class InvestorPortal {
             return;
         }
 
-        container.innerHTML = groves.map(grove => `
+        container.innerHTML = groves.map(grove => {
+            const healthScore = grove.healthScore || grove.currentHealthScore || 0;
+            return `
             <div class="marketplace-card">
                 <div class="grove-header">
                     <h4>${grove.groveName}</h4>
                     <div class="health-indicator">
-                        <span class="health-score ${this.getHealthClass(grove.healthScore)}">
-                            ${grove.healthScore}
+                        <span class="health-score ${this.getHealthClass(healthScore)}">
+                            ${healthScore}
                         </span>
                         <small>Health Score</small>
                     </div>
@@ -266,15 +280,42 @@ class InvestorPortal {
                 </div>
                 
                 <div class="grove-actions">
-                    <button class="btn btn-secondary" onclick="investorPortal.viewGroveDetails('${grove.id}')">
+                    <button class="btn btn-secondary grove-details-btn" data-grove-id="${grove.id}">
                         View Details
                     </button>
-                    <button class="btn btn-primary" onclick="investorPortal.showPurchaseModal('${grove.id}')">
+                    <button class="btn btn-primary grove-invest-btn" data-grove-id="${grove.id}">
                         Invest Now
                     </button>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
+
+        // Add event listeners for buttons using event delegation
+        const detailButtons = container.querySelectorAll('.grove-details-btn');
+        const investButtons = container.querySelectorAll('.grove-invest-btn');
+        
+        console.log(`[InvestorPortal] Attaching listeners to ${detailButtons.length} detail buttons and ${investButtons.length} invest buttons`);
+        
+        detailButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const groveId = e.currentTarget.dataset.groveId;
+                console.log(`[InvestorPortal] View Details clicked for grove: ${groveId}`);
+                this.viewGroveDetails(groveId);
+            });
+        });
+
+        investButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const groveId = e.currentTarget.dataset.groveId;
+                console.log(`[InvestorPortal] Invest Now clicked for grove: ${groveId}`);
+                this.showPurchaseModal(groveId);
+            });
+        });
     }
 
     getHealthClass(score) {
@@ -300,9 +341,14 @@ class InvestorPortal {
     }
 
     showPurchaseModal(groveId) {
-        const grove = this.availableGroves.find(g => g.id === groveId);
-        if (!grove) return;
+        console.log(`[InvestorPortal] showPurchaseModal called with groveId: ${groveId}`);
+        const grove = this.availableGroves.find(g => g.id == groveId);
+        if (!grove) {
+            console.error(`[InvestorPortal] Grove not found for purchase: ${groveId}`);
+            return;
+        }
 
+        console.log(`[InvestorPortal] Opening purchase modal for grove:`, grove.groveName);
         // Create purchase modal dynamically
         const modal = document.createElement('div');
         modal.className = 'modal active';
@@ -388,19 +434,34 @@ class InvestorPortal {
                 document.body.removeChild(modal);
             }
         });
+
+        // Purchase form handler
+        const purchaseForm = modal.querySelector('#purchaseForm');
+        purchaseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('[InvestorPortal] Purchase form submitted!');
+            await this.handleTokenPurchase(groveId, parseInt(tokenAmountInput.value));
+            document.body.removeChild(modal);
+        });
     }
 
     viewGroveDetails(groveId) {
-        const grove = this.availableGroves.find(g => g.id === groveId);
+        console.log(`[InvestorPortal] viewGroveDetails called with groveId: ${groveId}`);
+        console.log(`[InvestorPortal] Available groves:`, this.availableGroves.map(g => g.id));
+        const grove = this.availableGroves.find(g => g.id == groveId);
         if (!grove) {
+            console.error(`[InvestorPortal] Grove not found: ${groveId}`);
             window.walletManager.showToast('Grove not found', 'error');
             return;
         }
 
-        // Create detailed grove modal
-        const modal = document.createElement('div');
-        modal.className = 'modal active';
-        modal.innerHTML = `
+        console.log(`[InvestorPortal] Opening details for grove:`, grove.groveName);
+        
+        try {
+            // Create detailed grove modal
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
                     <h4>Grove Details: ${grove.groveName}</h4>
@@ -472,29 +533,41 @@ class InvestorPortal {
         `;
 
         document.body.appendChild(modal);
+        console.log(`[InvestorPortal] Modal appended to body`);
 
         // Close modal handlers
         modal.querySelectorAll('.modal-close').forEach(btn => {
             btn.addEventListener('click', () => {
+                console.log(`[InvestorPortal] Closing modal via close button`);
                 document.body.removeChild(modal);
             });
         });
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
+                console.log(`[InvestorPortal] Closing modal via backdrop click`);
                 document.body.removeChild(modal);
             }
         });
+        
+            console.log(`[InvestorPortal] Modal event listeners attached`);
+        } catch (error) {
+            console.error(`[InvestorPortal] Error creating modal:`, error);
+            window.walletManager.showToast('Error displaying grove details', 'error');
+        }
     }
 
     viewHoldingDetails(groveId) {
-        const holding = this.activeHoldings.find(h => h.groveId === groveId);
+        console.log(`[InvestorPortal] viewHoldingDetails called for grove: ${groveId}`);
+        const holding = this.portfolio?.holdings.find(h => h.groveId == groveId);
         if (!holding) {
+            console.error(`[InvestorPortal] Holding not found for grove: ${groveId}`);
             window.walletManager.showToast('Holding not found', 'error');
             return;
         }
 
-        const grove = this.availableGroves.find(g => g.id === holding.groveId);
+        console.log(`[InvestorPortal] Found holding:`, holding);
+        const grove = this.availableGroves.find(g => g.id == holding.groveId);
         if (!grove) {
             window.walletManager.showToast('Grove not found', 'error');
             return;
@@ -568,15 +641,15 @@ class InvestorPortal {
                             <div class="detail-list">
                                 <div class="detail-row">
                                     <span class="label">Number of Tokens:</span>
-                                    <span class="value">${holding.tokenCount}</span>
+                                    <span class="value">${holding.tokenAmount || 0}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="label">Investment Value:</span>
-                                    <span class="value">$${holding.investmentValue.toFixed(2)}</span>
+                                    <span class="value">$${((holding.purchasePrice || 0) * (holding.tokenAmount || 0)).toFixed(2)}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="label">Annual Earnings:</span>
-                                    <span class="value">$${holding.expectedAnnualEarnings.toFixed(2)}</span>
+                                    <span class="value">$${0.00}</span>
                                 </div>
                             </div>
                         </div>
@@ -584,8 +657,8 @@ class InvestorPortal {
                     
                     <div class="modal-actions">
                         <button class="btn btn-secondary modal-close">Close</button>
-                        <button class="btn btn-primary" onclick="investorPortal.showSellModal('${grove.id}'); document.body.removeChild(this.closest('.modal'));">
-                            Sell Tokens
+                        <button class="btn btn-primary holding-sell-from-details-btn" data-grove-id="${grove.id}" data-token-amount="${holding.tokenAmount || 0}">
+                            List for Sale
                         </button>
                     </div>
                 </div>
@@ -606,24 +679,43 @@ class InvestorPortal {
                 document.body.removeChild(modal);
             }
         });
-    // Purchase form handler
-    const purchaseForm = modal.querySelector('#purchaseForm');
-    purchaseForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await this.handleTokenPurchase(groveId, parseInt(tokenAmountInput.value));
-        document.body.removeChild(modal);
-    });
+
+        // Sell button handler
+        const sellBtn = modal.querySelector('.holding-sell-from-details-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', (e) => {
+                const groveId = e.currentTarget.dataset.groveId;
+                const tokenAmount = parseInt(e.currentTarget.dataset.tokenAmount);
+                document.body.removeChild(modal);
+                this.listForSale(groveId, tokenAmount);
+            });
+        }
 }
 
 async handleTokenPurchase(groveId, tokenAmount) {
     const investorAddress = window.walletManager.getAccountId();
+    
+    console.log(`[InvestorPortal] ===== PURCHASE STARTING =====`);
+    console.log(`[InvestorPortal] Grove ID: ${groveId}`);
+    console.log(`[InvestorPortal] Token Amount: ${tokenAmount}`);
+    console.log(`[InvestorPortal] Investor Address: ${investorAddress}`);
+    
+    if (!investorAddress) {
+        console.error('[InvestorPortal] ERROR: No investor address!');
+        window.walletManager.showToast('Please connect your wallet first', 'error');
+        return;
+    }
+    
     window.walletManager.showLoading('Processing token purchase...');
 
     try {
-        const response = await window.coffeeAPI.purchaseTokens(groveId, tokenAmount);
+        console.log(`[InvestorPortal] Calling API...`);
+        const response = await window.coffeeAPI.purchaseTokens(groveId, tokenAmount, investorAddress);
+        console.log(`[InvestorPortal] API Response:`, response);
 
         if (response.success) {
-            window.walletManager.showToast('Tokens purchased successfully!', 'success');
+            console.log(`[InvestorPortal] ✅ Purchase successful! Holding ID: ${response.data?.holdingId}`);
+            window.walletManager.showToast(`Successfully purchased ${tokenAmount} tokens!`, 'success');
             
             // Refresh balances after transaction within 5 seconds
             if (window.balancePoller && response.transactionHash) {
@@ -631,30 +723,45 @@ async handleTokenPurchase(groveId, tokenAmount) {
             }
             
             // Reload portfolio
+            console.log(`[InvestorPortal] Reloading portfolio...`);
             await this.loadPortfolio(investorAddress);
+            
+            // Reload available groves to show updated token counts
+            console.log(`[InvestorPortal] Reloading available groves...`);
+            await this.loadAvailableGroves();
         } else {
+            console.error(`[InvestorPortal] ❌ Purchase failed:`, response.error);
             throw new Error(response.error || 'Failed to purchase tokens');
         }
     } catch (error) {
-        console.error('Token purchase failed:', error);
-        window.walletManager.showToast('Failed to purchase tokens', 'error');
+        console.error('[InvestorPortal] ❌ Token purchase error:', error);
+        window.walletManager.showToast('Failed to purchase tokens: ' + error.message, 'error');
     } finally {
         window.walletManager.hideLoading();
+        console.log(`[InvestorPortal] ===== PURCHASE COMPLETE =====`);
     }
 }
 
     async loadPortfolio(investorAddress) {
+        console.log(`[InvestorPortal] Loading portfolio for investor: ${investorAddress}`);
         window.walletManager.showLoading('Loading portfolio...');
 
         try {
             const response = await window.coffeeAPI.getPortfolio(investorAddress);
+            console.log(`[InvestorPortal] Portfolio response:`, response);
 
             if (response.success) {
                 this.portfolio = response.portfolio;
+                console.log(`[InvestorPortal] Portfolio loaded:`, this.portfolio);
+                console.log(`[InvestorPortal] Holdings count:`, this.portfolio.holdings?.length || 0);
                 this.renderPortfolioStats();
                 this.renderPortfolioChart();
                 this.renderHoldings();
+            } else {
+                console.error(`[InvestorPortal] Failed to load portfolio:`, response.error);
             }
+        } catch (error) {
+            console.error(`[InvestorPortal] Error loading portfolio:`, error);
         } finally {
             window.walletManager.hideLoading();
         }
@@ -663,10 +770,15 @@ async handleTokenPurchase(groveId, tokenAmount) {
     renderPortfolioStats() {
         if (!this.portfolio) return;
 
-        document.getElementById('totalInvestment').textContent = `$${this.portfolio.totalInvestment.toFixed(2)}`;
-        document.getElementById('currentValue').textContent = `$${this.portfolio.currentValue.toFixed(2)}`;
-        document.getElementById('totalReturns').textContent = `$${this.portfolio.totalReturns.toFixed(2)}`;
-        document.getElementById('roi').textContent = `${this.portfolio.roi.toFixed(1)}%`;
+        const totalInvestment = this.portfolio.totalInvestment || 0;
+        const currentValue = this.portfolio.currentValue || 0;
+        const totalReturns = this.portfolio.totalReturns || 0;
+        const roi = this.portfolio.roi || 0;
+
+        document.getElementById('totalInvestment').textContent = `$${totalInvestment.toFixed(2)}`;
+        document.getElementById('currentValue').textContent = `$${currentValue.toFixed(2)}`;
+        document.getElementById('totalReturns').textContent = `$${totalReturns.toFixed(2)}`;
+        document.getElementById('roi').textContent = `${roi.toFixed(1)}%`;
     }
 
     renderPortfolioChart() {
@@ -688,7 +800,11 @@ async handleTokenPurchase(groveId, tokenAmount) {
             data: {
                 labels: holdings.map(h => h.groveName),
                 datasets: [{
-                    data: holdings.map(h => h.currentWorth),
+                    data: holdings.map(h => {
+                        const purchasePrice = h.purchasePrice || 0;
+                        const tokenAmount = h.tokenAmount || 0;
+                        return purchasePrice * tokenAmount;
+                    }),
                     backgroundColor: [
                         '#8B4513',
                         '#A0522D',
@@ -739,41 +855,64 @@ async handleTokenPurchase(groveId, tokenAmount) {
         }
 
         container.innerHTML = this.portfolio.holdings.map(holding => {
-            const gainLoss = holding.currentWorth - holding.totalInvestment;
+            // Calculate values from available data
+            const purchasePrice = holding.purchasePrice || 0;
+            const tokenAmount = holding.tokenAmount || 0;
+            const totalInvestment = purchasePrice * tokenAmount;
+            const currentValue = purchasePrice; // For now, same as purchase price
+            const currentWorth = currentValue * tokenAmount;
+            const earnings = 0; // No earnings yet
+            
+            const gainLoss = currentWorth - totalInvestment;
             const gainLossClass = gainLoss >= 0 ? 'text-success' : 'text-danger';
-            const gainLossPercent = ((gainLoss / holding.totalInvestment) * 100).toFixed(1);
+            const gainLossPercent = totalInvestment > 0 ? ((gainLoss / totalInvestment) * 100).toFixed(1) : '0.0';
+            
+            // Get health score and location from holding data
+            const healthScore = holding.currentHealthScore || holding.healthScore || 0;
+            const location = holding.location || 'Unknown';
+            const coffeeVariety = holding.coffeeVariety || 'Unknown';
 
             return `
                 <div class="list-item">
                     <div class="list-item-header">
                         <h4>${holding.groveName}</h4>
                         <div class="holding-value">
-                            <span class="current-value">$${holding.currentWorth.toFixed(2)}</span>
+                            <span class="current-value">$${currentWorth.toFixed(2)}</span>
                             <span class="${gainLossClass}">
                                 ${gainLoss >= 0 ? '+' : ''}$${gainLoss.toFixed(2)} (${gainLossPercent}%)
                             </span>
                         </div>
                     </div>
+                    <div class="grove-meta" style="margin: 10px 0; display: flex; gap: 8px; align-items: center;">
+                        <span class="variety-tag">${coffeeVariety}</span>
+                        <span class="location-tag">${location}</span>
+                        <div class="health-indicator">
+                            <span class="health-score ${this.getHealthClass(healthScore)}">
+                                ${healthScore}
+                            </span>
+                            <small>Health Score</small>
+                        </div>
+                    </div>
                     <div class="list-item-content">
                         <div class="list-item-detail">
                             <label>Tokens Owned</label>
-                            <span>${holding.tokenAmount}</span>
+                            <span>${tokenAmount}</span>
                         </div>
                         <div class="list-item-detail">
                             <label>Purchase Price</label>
-                            <span>$${holding.purchasePrice.toFixed(2)}</span>
+                            <span>$${purchasePrice.toFixed(2)}</span>
                         </div>
                         <div class="list-item-detail">
                             <label>Current Price</label>
-                            <span>$${holding.currentValue.toFixed(2)}</span>
+                            <span>$${currentValue.toFixed(2)}</span>
                         </div>
                         <div class="list-item-detail">
                             <label>Total Investment</label>
-                            <span>$${holding.totalInvestment.toFixed(2)}</span>
+                            <span>$${totalInvestment.toFixed(2)}</span>
                         </div>
                         <div class="list-item-detail">
                             <label>Total Earnings</label>
-                            <span class="text-success">$${holding.earnings.toFixed(2)}</span>
+                            <span class="text-success">$${earnings.toFixed(2)}</span>
                         </div>
                         <div class="list-item-detail">
                             <label>Purchase Date</label>
@@ -781,16 +920,45 @@ async handleTokenPurchase(groveId, tokenAmount) {
                         </div>
                     </div>
                     <div class="holding-actions">
-                        <button class="btn btn-secondary" onclick="investorPortal.viewHoldingDetails('${holding.groveId}')">
+                        <button class="btn btn-secondary holding-details-btn" data-grove-id="${holding.groveId}">
                             View Details
                         </button>
-                        <button class="btn btn-warning" onclick="investorPortal.listForSale('${holding.groveId}', ${holding.tokenAmount})">
+                        <button class="btn btn-warning holding-sell-btn" data-grove-id="${holding.groveId}" data-token-amount="${tokenAmount}">
                             List for Sale
                         </button>
                     </div>
                 </div>
             `;
         }).join('');
+
+        // Add event listeners for holding action buttons
+        const detailsButtons = container.querySelectorAll('.holding-details-btn');
+        const sellButtons = container.querySelectorAll('.holding-sell-btn');
+
+        console.log(`[InvestorPortal] Attaching listeners to ${detailsButtons.length} details buttons and ${sellButtons.length} sell buttons`);
+
+        detailsButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const groveId = e.currentTarget.dataset.groveId;
+                console.log(`[InvestorPortal] View holding details clicked for grove: ${groveId}`);
+                this.viewHoldingDetails(groveId);
+            });
+        });
+
+        sellButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const groveId = e.currentTarget.dataset.groveId;
+                const tokenAmount = parseInt(e.currentTarget.dataset.tokenAmount);
+                console.log(`[InvestorPortal] List for sale clicked for grove: ${groveId}, tokens: ${tokenAmount}`);
+                this.listForSale(groveId, tokenAmount);
+            });
+        });
+
+        console.log(`[InvestorPortal] Holdings rendered with event listeners attached`);
     }
 
     async loadMarketplace() {
@@ -1026,12 +1194,23 @@ async handleTokenPurchase(groveId, tokenAmount) {
                     </div>
                 </div>
                 <div class="distribution-actions">
-                    <button class="btn btn-primary" onclick="investorPortal.claimEarnings('${distribution.distributionId}', '${distribution.holderAddress}')">
+                    <button class="btn btn-primary claim-earnings-btn" data-distribution-id="${distribution.distributionId}">
                         Claim Earnings
                     </button>
                 </div>
             </div>
         `).join('');
+
+        // Add event listeners for claim buttons
+        const claimButtons = container.querySelectorAll('.claim-earnings-btn');
+        claimButtons.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const distributionId = e.currentTarget.dataset.distributionId;
+                const holderAddress = window.walletManager.getAccountId();
+                console.log(`[InvestorPortal] Claiming earnings for distribution: ${distributionId}, holder: ${holderAddress}`);
+                await this.claimEarnings(distributionId, holderAddress);
+            });
+        });
     }
 
     /**
@@ -1364,20 +1543,6 @@ async handleTokenPurchase(groveId, tokenAmount) {
         } finally {
             window.walletManager.hideLoading();
         }
-    }
-
-    viewGroveDetails(groveId) {
-        const grove = this.availableGroves.find(g => g.id === groveId);
-        if (!grove) return;
-
-        window.walletManager.showToast(`Grove details for ${grove.groveName}`, 'success');
-    }
-
-    viewHoldingDetails(groveId) {
-        const holding = this.portfolio?.holdings.find(h => h.groveId === groveId);
-        if (!holding) return;
-
-        window.walletManager.showToast(`Holding details for ${holding.groveName}`, 'success');
     }
 
     listForSale(groveId, tokenAmount) {
@@ -2058,7 +2223,17 @@ async handleTokenPurchase(groveId, tokenAmount) {
                 }
             }
         } catch (error) {
-            console.error('Failed to load active loan:', error);
+            // "No active loan found" is not an error, it's expected
+            if (error.message && error.message.includes('No active loan')) {
+                console.log('[InvestorPortal] No active loan - this is normal');
+                // Hide active loan container
+                const activeLoanContainer = document.getElementById('activeLoanContainer');
+                if (activeLoanContainer) {
+                    activeLoanContainer.style.display = 'none';
+                }
+            } else {
+                console.error('[InvestorPortal] Failed to load active loan:', error);
+            }
         }
     }
 

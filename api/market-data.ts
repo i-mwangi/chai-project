@@ -2,8 +2,8 @@ import { Request, Response } from 'express'
 import { CoffeeMarketProvider, CoffeeVariety, MarketAlert } from '../providers/coffee-market-provider.js'
 import { MarketAlertService } from '../providers/market-alert-service.js'
 import { db } from '../db/index.js'
-import { priceHistory, marketAlerts, farmers } from '../db/schema/index.js'
-import { eq, and, gte, desc, asc } from 'drizzle-orm'
+import { priceHistory, marketAlerts, farmers, coffeeGroves, harvestRecords } from '../db/schema/index.js'
+import { eq, and, gte, desc, asc, sql } from 'drizzle-orm'
 
 let marketProvider: CoffeeMarketProvider
 let alertService: MarketAlertService
@@ -465,13 +465,47 @@ export async function getMarketOverview(req: Request, res: Response) {
             if (dbErr && dbErr.stack) console.error(dbErr.stack)
         }
 
+        // Get platform statistics
+        let totalGroves = 0
+        let activeFarmers = 0
+        let totalRevenue = 0
+
+        try {
+            // Get total groves count
+            const grovesResult = await db.select({ count: sql<number>`count(*)` })
+                .from(coffeeGroves)
+            totalGroves = grovesResult[0]?.count || 0
+
+            // Get active farmers count (unique farmer addresses)
+            const farmersResult = await db.select({ 
+                count: sql<number>`count(distinct ${coffeeGroves.farmerAddress})` 
+            })
+                .from(coffeeGroves)
+            activeFarmers = farmersResult[0]?.count || 0
+
+            // Get total revenue from all harvests
+            const revenueResult = await db.select({ 
+                total: sql<number>`sum(${harvestRecords.totalRevenue})` 
+            })
+                .from(harvestRecords)
+            totalRevenue = revenueResult[0]?.total || 0
+
+        } catch (statsErr: any) {
+            console.error('Failed to query platform statistics:', statsErr)
+            // Continue with zeros if stats query fails
+        }
+
         res.json({
             success: true,
             data: {
                 varieties: overview,
                 recentAlertsCount: recentAlertsCount?.length || 0,
                 lastUpdated: new Date()
-            }
+            },
+            // Add platform stats at root level for backward compatibility
+            totalGroves,
+            activeFarmers,
+            totalRevenue
         })
         
     } catch (error:any) {

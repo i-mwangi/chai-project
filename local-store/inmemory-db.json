@@ -1,0 +1,12 @@
+{
+  "table_1": [
+    {
+      "account": "0.0.888888",
+      "skipFarmerVerification": true,
+      "skipInvestorVerification": true,
+      "demoBypass": true,
+      "updatedAt": 1759978674783,
+      "id": 1
+    }
+  ]
+}

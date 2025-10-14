@@ -9,6 +9,8 @@
  * - Grove management and token holder tracking
  */
 
+// Load Node 18 polyfill first
+import "./node18-polyfill"
 import "dotenv/config"
 import "../loadIntoEnv"
 import { createServer, IncomingMessage, ServerResponse } from 'http'
@@ -20,7 +22,10 @@ import { TreeMonitoringAPI } from './tree-monitoring'
 import { TreeHealthReportingService } from './tree-health-reporting'
 import { LendingAPI } from './lending-api'
 import { RevenueDistributionAPI } from './revenue-distribution-api'
-import { 
+import { InvestmentAPI } from './investment-api'
+import { runMigrations } from '../db/migrate'
+import { runHealthCheck, DatabaseHealthCheck } from '../db/health-check'
+import {
     initializeMarketServices,
     getCurrentPrices,
     getPriceHistory,
@@ -32,13 +37,14 @@ import {
     triggerPriceUpdate,
     getMarketOverview
 } from './market-data'
-import { 
-    CoffeeGroveAnalytics, 
-    InvestorPortfolioAnalytics, 
-    FarmerEarningsAnalytics, 
+import {
+    CoffeeGroveAnalytics,
+    InvestorPortfolioAnalytics,
+    FarmerEarningsAnalytics,
     MarketTrendAnalytics,
-    PlatformAnalytics 
+    PlatformAnalytics
 } from '../lib/coffee-analytics'
+import { transactionRecorder } from './transaction-recording-service'
 import {
     getMarketplaceListings,
     listTokensForSale,
@@ -50,8 +56,10 @@ import {
     getUserListings
 } from './marketplace'
 import { db } from '../db'
-import { userSettings, coffeeGroves } from '../db/schema'
-import { eq } from 'drizzle-orm'
+import { userSettings, coffeeGroves, tokenHoldings } from '../db/schema'
+import { eq, and, sql } from 'drizzle-orm'
+import { getUserSettings, updateUserSettings } from './user-settings'
+import { validateAccountIdParam, validateUserSettingsBody, ensureUserSettingsTable } from './validation'
 
 const PORT = parseInt(process.env.API_PORT || '3001')
 
@@ -107,12 +115,13 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
     const treeHealthReportingService = new TreeHealthReportingService()
     const lendingAPI = new LendingAPI()
     const revenueDistributionAPI = new RevenueDistributionAPI()
+    const investmentAPI = new InvestmentAPI()
     // Note: user settings persisted to DB via `user_settings` table in schema
-    
+
     // Initialize market services with coffee price oracle contract ID
     const coffeeOracleContractId = process.env.COFFEE_ORACLE_CONTRACT_ID || '0.0.123456'
     initializeMarketServices(coffeeOracleContractId)
-    
+
     const server = createServer(async (req: EnhancedRequest, res: ServerResponse) => {
         // Handle CORS preflight requests
         if (req.method === 'OPTIONS') {
@@ -124,11 +133,11 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             res.end()
             return
         }
-        
+
         const parsedUrl = parse(req.url || '', true)
         const pathname = parsedUrl.pathname || ''
         const method = req.method || 'GET'
-        
+
         // Parse request body for POST/PUT requests
         if (method === 'POST' || method === 'PUT') {
             try {
@@ -138,10 +147,10 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 return
             }
         }
-        
+
         // Add query parameters
         req.query = parsedUrl.query
-        
+
         // Create an Express-like response adapter so existing modules
         // that call `res.status(...).json(...)` or `res.json(...)`
         // continue to work with the raw Node `ServerResponse`.
@@ -170,8 +179,16 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
         }
 
         try {
-            // Farmer Verification Routes
-            if (pathname === '/api/farmer-verification/submit-documents' && method === 'POST') {
+            // Health Check Route
+            if (pathname === '/api/health' && method === 'GET') {
+                const healthResult = await runHealthCheck()
+                sendResponse(res, healthResult.healthy ? 200 : 503, {
+                    success: healthResult.healthy,
+                    ...healthResult
+                })
+
+                // Farmer Verification Routes
+            } else if (pathname === '/api/farmer-verification/submit-documents' && method === 'POST') {
                 await farmerVerificationAPI.submitDocuments(req, expressRes as any)
             } else if (pathname === '/api/farmer-verification/verify' && method === 'POST') {
                 await farmerVerificationAPI.verifyFarmer(req, expressRes as any)
@@ -184,8 +201,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 await farmerVerificationAPI.getPendingVerifications(req, expressRes as any)
             } else if (pathname === '/api/farmer-verification/upload' && method === 'POST') {
                 await farmerVerificationAPI.uploadFile(req, expressRes as any)
-            
-            // Investor Verification Routes
+
+                // Investor Verification Routes
             } else if (pathname === '/api/investor-verification/submit-documents' && method === 'POST') {
                 await investorVerificationAPI.submitDocuments(req, expressRes as any)
             } else if (pathname.startsWith('/api/investor-verification/status/') && method === 'GET') {
@@ -197,14 +214,16 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 await investorVerificationAPI.processVerification(req, expressRes as any)
             } else if (pathname === '/api/investor-verification/metrics' && method === 'GET') {
                 await investorVerificationAPI.getVerificationMetrics(req, expressRes as any)
-            
-            // Harvest Reporting Routes
+
+                // Harvest Reporting Routes
             } else if (pathname === '/api/harvest/report' && method === 'POST') {
                 await harvestReportingAPI.reportHarvest(req, expressRes as any)
             } else if (pathname === '/api/harvest/history' && method === 'GET') {
                 await harvestReportingAPI.getHarvestHistory(req, expressRes as any)
             } else if (pathname === '/api/harvest/pending' && method === 'GET') {
                 await harvestReportingAPI.getPendingHarvests(req, expressRes as any)
+            } else if (pathname === '/api/harvest/distribute-onchain' && method === 'POST') {
+                await harvestReportingAPI.distributeRevenueOnChain(req, expressRes as any)
             } else if (pathname === '/api/harvest/distribute' && method === 'POST') {
                 await harvestReportingAPI.markHarvestDistributed(req, expressRes as any)
             } else if (pathname === '/api/harvest/stats' && method === 'GET') {
@@ -224,8 +243,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             } else if (pathname.startsWith('/api/harvest/') && pathname.endsWith('/earnings') && method === 'GET') {
                 const harvestId = pathname.split('/')[3]
                 await harvestReportingAPI.getHarvestEarnings(req, expressRes as any, harvestId)
-            
-            // Market Data Routes
+
+                // Market Data Routes
             } else if (pathname === '/api/market/prices' && method === 'GET') {
                 await getCurrentPrices(req as any, expressRes as any)
             } else if (pathname === '/api/market/price-history' && method === 'GET') {
@@ -246,50 +265,70 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 const farmerAddress = pathname.split('/').pop() || ''
                 req.params = { farmerAddress }
                 await updateNotificationPreferences(req as any, expressRes as any)
-            // User settings (simple key/value store per account)
+                // User settings (simple key/value store per account)
             } else if (pathname.startsWith('/api/user/settings/') && method === 'PUT') {
                 const accountId = pathname.split('/').pop() || ''
-                const settings = req.body || {}
+
+                // Validate account ID
+                if (!validateAccountIdParam(accountId, res)) {
+                    return
+                }
+
+                // Validate request body
+                if (!validateUserSettingsBody(req.body, res)) {
+                    return
+                }
+
                 try {
-                    // Upsert-like behavior: try update, otherwise insert
-                    const existing = await db.query.userSettings.findFirst({ where: eq(userSettings.account, accountId) })
-                    if (existing) {
-                        await db.update(userSettings).set({
-                            skipFarmerVerification: settings.skipFarmerVerification ? 1 : 0,
-                            skipInvestorVerification: settings.skipInvestorVerification ? 1 : 0,
-                            demoBypass: settings.demoBypass ? 1 : 0,
-                            updatedAt: Date.now()
-                        }).where(eq(userSettings.account, accountId))
-                    } else {
-                        await db.insert(userSettings).values({
-                            account: accountId,
-                            skipFarmerVerification: settings.skipFarmerVerification ? 1 : 0,
-                            skipInvestorVerification: settings.skipInvestorVerification ? 1 : 0,
-                            demoBypass: settings.demoBypass ? 1 : 0,
-                            updatedAt: Date.now()
-                        })
-                    }
-                    const saved = await db.query.userSettings.findFirst({ where: eq(userSettings.account, accountId) })
-                    sendResponse(res, 200, { success: true, settings: saved || {} })
-                } catch (e) {
-                    console.error('Error saving user settings:', e)
-                    sendError(res, 500, 'Failed to save user settings')
+                    // Ensure table exists with automatic creation fallback
+                    await ensureUserSettingsTable(db)
+
+                    // Update settings using the service
+                    const updatedSettings = await updateUserSettings(accountId, req.body)
+
+                    sendResponse(res, 200, {
+                        success: true,
+                        settings: updatedSettings
+                    })
+                } catch (error) {
+                    console.error('[Server] Error updating user settings:', error)
+
+                    // Provide detailed error message
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+                    sendError(res, 500, `Failed to update user settings: ${errorMessage}`)
                 }
             } else if (pathname.startsWith('/api/user/settings/') && method === 'GET') {
                 const accountId = pathname.split('/').pop() || ''
+
+                // Validate account ID
+                if (!validateAccountIdParam(accountId, res)) {
+                    return
+                }
+
                 try {
-                    const settings = await db.query.userSettings.findFirst({ where: eq(userSettings.account, accountId) })
-                    sendResponse(res, 200, { success: true, settings: settings || {} })
-                } catch (e) {
-                    console.error('Error fetching user settings:', e)
-                    sendError(res, 500, 'Failed to fetch user settings')
+                    // Ensure table exists with automatic creation fallback
+                    await ensureUserSettingsTable(db)
+
+                    // Get settings using the service (with caching and error recovery)
+                    const settings = await getUserSettings(accountId)
+
+                    sendResponse(res, 200, {
+                        success: true,
+                        settings
+                    })
+                } catch (error) {
+                    console.error('[Server] Error fetching user settings:', error)
+
+                    // Provide detailed error message
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+                    sendError(res, 500, `Failed to fetch user settings: ${errorMessage}`)
                 }
             } else if (pathname === '/api/market/update-prices' && method === 'POST') {
                 await triggerPriceUpdate(req as any, expressRes as any)
             } else if (pathname === '/api/market/overview' && method === 'GET') {
                 await getMarketOverview(req as any, expressRes as any)
-            
-            // Grove management endpoints (UI expects /api/groves)
+
+                // Grove management endpoints (UI expects /api/groves)
             } else if (pathname.startsWith('/api/groves') && method === 'GET') {
                 try {
                     const farmerAddress = (req.query && (req.query as any).farmerAddress) ? String((req.query as any).farmerAddress) : undefined
@@ -309,12 +348,32 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                         } else {
                             groves = candidates
                         }
+                        // Format coordinates for frontend
+                        groves = groves.map((g: any) => {
+                            return {
+                                ...g,
+                                coordinates: g.coordinatesLat && g.coordinatesLng ? {
+                                    lat: g.coordinatesLat,
+                                    lng: g.coordinatesLng
+                                } : undefined
+                            }
+                        })
                     } else {
                         if (farmerAddress) {
                             groves = await db.select().from(coffeeGroves).where(eq(coffeeGroves.farmerAddress, farmerAddress))
                         } else {
                             groves = await db.select().from(coffeeGroves)
                         }
+                        // Format coordinates for frontend
+                        groves = groves.map((g: any) => {
+                            return {
+                                ...g,
+                                coordinates: g.coordinatesLat && g.coordinatesLng ? {
+                                    lat: g.coordinatesLat,
+                                    lng: g.coordinatesLng
+                                } : undefined
+                            }
+                        })
                     }
                     sendResponse(res, 200, { success: true, groves })
                 } catch (error) {
@@ -325,7 +384,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 // Delegate to the existing farmer verification handler for registration logic
                 await farmerVerificationAPI.registerGroveOwnership(req, expressRes as any)
 
-            // Investment endpoints (basic compatibility with frontend/demo)
+                // Investment endpoints (basic compatibility with frontend/demo)
             } else if (pathname === '/api/investment/available-groves' && method === 'GET') {
                 try {
                     // Pull groves from the DB and shape them like the demo/mock server expects
@@ -337,22 +396,45 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     } else {
                         groves = await db.select().from(coffeeGroves)
                     }
-                    const availableGroves = groves.map(grove => {
+                    // Calculate available tokens for each grove
+                    const availableGroves = await Promise.all(groves.map(async (grove) => {
                         const treeCount = Number((grove as any).treeCount || 0)
+                        const groveId = (grove as any).id
+
+                        // Calculate total tokens for this grove
+                        const totalTokens = (grove as any).totalTokensIssued || (treeCount * ((grove as any).tokensPerTree || 1))
+
+                        // Get total tokens already sold
+                        const soldTokensResult = await db
+                            .select({ total: sql<number>`COALESCE(SUM(${tokenHoldings.tokenAmount}), 0)` })
+                            .from(tokenHoldings)
+                            .where(and(
+                                eq(tokenHoldings.groveId, groveId),
+                                eq(tokenHoldings.isActive, true)
+                            ))
+
+                        const soldTokens = Number(soldTokensResult[0]?.total || 0)
+                        const tokensAvailable = totalTokens - soldTokens
+
                         return {
                             ...grove,
-                            tokensAvailable: Math.floor(treeCount * 0.5),
+                            healthScore: grove.currentHealthScore || 0,
+                            tokensAvailable: tokensAvailable,
                             pricePerToken: 25 + Math.floor(Math.random() * 100) / 10,
                             projectedAnnualReturn: 10 + Math.floor(Math.random() * 80) / 10
                         }
-                    })
+                    }))
                     sendResponse(res, 200, { success: true, groves: availableGroves })
                 } catch (error) {
                     console.error('Error fetching available groves:', error)
                     sendError(res, 500, 'Failed to fetch available groves')
                 }
+            } else if (pathname === '/api/investment/purchase-tokens' && method === 'POST') {
+                await investmentAPI.purchaseTokens(req, res)
+            } else if (pathname === '/api/investment/portfolio' && method === 'GET') {
+                await investmentAPI.getPortfolio(req, res)
 
-            // Tree Monitoring Routes
+                // Tree Monitoring Routes
             } else if (pathname === '/api/tree-monitoring/sensor-data' && method === 'POST') {
                 await treeMonitoringAPI.ingestSensorData(req, expressRes as any)
             } else if (pathname.startsWith('/api/tree-monitoring/sensor-data/') && method === 'GET') {
@@ -375,8 +457,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             } else if (pathname.startsWith('/api/tree-monitoring/maintenance/') && method === 'GET') {
                 const groveId = pathname.split('/').pop() || ''
                 await treeMonitoringAPI.getMaintenanceActivities(req, expressRes as any, groveId)
-            
-            // Tree Health Reporting Routes
+
+                // Tree Health Reporting Routes
             } else if (pathname.startsWith('/api/tree-monitoring/reports/health-trend/') && method === 'GET') {
                 const groveId = pathname.split('/').pop() || ''
                 await treeHealthReportingService.generateHealthTrendReport(req, res, groveId)
@@ -391,8 +473,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             } else if (pathname.startsWith('/api/tree-monitoring/reports/risk-assessment/') && method === 'GET') {
                 const groveId = pathname.split('/').pop() || ''
                 await treeHealthReportingService.generateRiskAssessment(req, res, groveId)
-            
-            // Lending Pool Routes
+
+                // Lending Pool Routes
             } else if (pathname === '/api/lending/pools' && method === 'GET') {
                 await lendingAPI.getLendingPools(req, res)
             } else if (pathname === '/api/lending/provide-liquidity' && method === 'POST') {
@@ -411,14 +493,14 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 // Handle both path parameters and query parameters
                 let borrowerAddress = ''
                 let assetAddress = ''
-                
+
                 // Check for path parameters first
                 const pathParts = pathname.split('/')
                 if (pathParts.length >= 6) {
                     borrowerAddress = pathParts[4] || ''
                     assetAddress = pathParts[5] || ''
                 }
-                
+
                 // If not in path, check query parameters
                 if (!borrowerAddress && req.query && (req.query as any).borrowerAddress) {
                     borrowerAddress = (req.query as any).borrowerAddress as string
@@ -426,10 +508,10 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 if (!assetAddress && req.query && (req.query as any).assetAddress) {
                     assetAddress = (req.query as any).assetAddress as string
                 }
-                
+
                 await lendingAPI.getLoanDetails(req, res, borrowerAddress, assetAddress)
-            
-            // Revenue Distribution Routes
+
+                // Revenue Distribution Routes
             } else if (pathname === '/api/revenue/create-distribution' && method === 'POST') {
                 await revenueDistributionAPI.createDistribution(req, res)
             } else if (pathname === '/api/revenue/distribution-history' && method === 'GET') {
@@ -444,8 +526,121 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 await revenueDistributionAPI.withdrawFarmerShare(req, res)
             } else if (pathname === '/api/revenue/withdrawal-history' && method === 'GET') {
                 await revenueDistributionAPI.getFarmerWithdrawalHistory(req, res)
-            
-            // Analytics Routes - Grove Performance
+
+                // Transaction History Routes
+            } else if (pathname === '/api/transactions/history' && method === 'GET') {
+                try {
+                    const { userAddress, limit = 50, offset = 0, type } = req.query
+
+                    if (!userAddress) {
+                        sendError(res, 400, 'userAddress is required')
+                        return
+                    }
+
+                    console.log('[TransactionHistory] Fetching for user:', userAddress)
+
+                    try {
+                        // Import database and schema
+                        const { db } = await import('../db')
+                        const { transactionHistory } = await import('../db/schema')
+                        const { or, eq, desc, and } = await import('drizzle-orm')
+
+                        // Build where condition
+                        const userCondition = or(
+                            eq(transactionHistory.fromAddress, userAddress as string),
+                            eq(transactionHistory.toAddress, userAddress as string)
+                        )
+
+                        const whereCondition = type
+                            ? and(userCondition, eq(transactionHistory.type, type as string))
+                            : userCondition
+
+                        // Get transactions
+                        const transactions = await db.select()
+                            .from(transactionHistory)
+                            .where(whereCondition)
+                            .orderBy(desc(transactionHistory.timestamp))
+                            .limit(parseInt(limit as string))
+                            .offset(parseInt(offset as string))
+
+                        console.log('[TransactionHistory] Found', transactions.length, 'transactions')
+
+                        // Get total count
+                        const allTransactions = await db.select()
+                            .from(transactionHistory)
+                            .where(whereCondition)
+
+                        const total = allTransactions.length
+
+                        sendResponse(res, 200, {
+                            success: true,
+                            transactions: transactions,
+                            total: total,
+                            limit: parseInt(limit as string),
+                            offset: parseInt(offset as string)
+                        })
+                    } catch (dbError) {
+                        // If database query fails, return empty array
+                        console.warn('[TransactionHistory] Database query failed, returning empty:', dbError)
+                        sendResponse(res, 200, {
+                            success: true,
+                            transactions: [],
+                            total: 0,
+                            limit: parseInt(limit as string),
+                            offset: parseInt(offset as string)
+                        })
+                    }
+                } catch (error) {
+                    console.error('[TransactionHistory] Error:', error)
+                    sendError(res, 500, 'Failed to fetch transaction history')
+                }
+            } else if (pathname.startsWith('/api/transactions/') && method === 'GET') {
+                try {
+                    const transactionId = pathname.split('/').pop()
+
+                    // Mock single transaction lookup
+                    sendResponse(res, 200, {
+                        success: true,
+                        transaction: null
+                    })
+                } catch (error) {
+                    console.error('Error fetching transaction:', error)
+                    sendError(res, 500, 'Failed to fetch transaction')
+                }
+            } else if (pathname === '/api/transactions/save' && method === 'POST') {
+                try {
+                    const transactionData = req.body
+
+                    // Mock save transaction
+                    sendResponse(res, 200, {
+                        success: true,
+                        message: 'Transaction saved successfully',
+                        transactionId: Date.now().toString()
+                    })
+                } catch (error) {
+                    console.error('Error saving transaction:', error)
+                    sendError(res, 500, 'Failed to save transaction')
+                }
+            } else if (pathname === '/api/transactions/update' && method === 'PUT') {
+                try {
+                    const { transactionId, updates } = req.body
+
+                    if (!transactionId) {
+                        sendError(res, 400, 'transactionId is required')
+                        return
+                    }
+
+                    // Mock update transaction
+                    sendResponse(res, 200, {
+                        success: true,
+                        message: 'Transaction updated successfully'
+                    })
+                } catch (error) {
+                    console.error('Error updating transaction:', error)
+                    sendError(res, 500, 'Failed to update transaction')
+                }
+
+                // Analytics Routes - Grove Performance
             } else if (pathname.startsWith('/api/analytics/grove/') && pathname.endsWith('/performance') && method === 'GET') {
                 const groveId = parseInt(pathname.split('/')[4])
                 const { startDate, endDate } = req.query || {}
@@ -490,8 +685,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     console.error('Error fetching maintenance analytics:', error)
                     sendError(res, 500, 'Failed to fetch maintenance data')
                 }
-            
-            // Analytics Routes - Investor Portfolio
+
+                // Analytics Routes - Investor Portfolio
             } else if (pathname.startsWith('/api/analytics/investor/') && pathname.endsWith('/portfolio') && method === 'GET') {
                 const investorAddress = pathname.split('/')[4]
                 try {
@@ -510,8 +705,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     console.error('Error fetching return projections:', error)
                     sendError(res, 500, 'Failed to fetch return projections')
                 }
-            
-            // Analytics Routes - Farmer Earnings
+
+                // Analytics Routes - Farmer Earnings
             } else if (pathname.startsWith('/api/analytics/farmer/') && pathname.endsWith('/earnings') && method === 'GET') {
                 const farmerAddress = pathname.split('/')[4]
                 const { startDate, endDate } = req.query || {}
@@ -538,8 +733,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     console.error('Error fetching farmer performance:', error)
                     sendError(res, 500, 'Failed to fetch farmer performance data')
                 }
-            
-            // Analytics Routes - Market Trends
+
+                // Analytics Routes - Market Trends
             } else if (pathname === '/api/analytics/market/price-trends' && method === 'GET') {
                 const variety = parseInt(req.query?.variety as string) || 1
                 const grade = parseInt(req.query?.grade as string) || 1
@@ -575,8 +770,8 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     console.error('Error fetching market insights:', error)
                     sendError(res, 500, 'Failed to fetch market insights')
                 }
-            
-            // Analytics Routes - Platform Statistics
+
+                // Analytics Routes - Platform Statistics
             } else if (pathname === '/api/analytics/platform/stats' && method === 'GET') {
                 try {
                     const stats = await PlatformAnalytics.getPlatformStats()
@@ -594,11 +789,11 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     console.error('Error fetching platform growth:', error)
                     sendError(res, 500, 'Failed to fetch platform growth data')
                 }
-            
-            // Health check and API info
+
+                // Health check and API info
             } else if (pathname === '/health' && method === 'GET') {
-                sendResponse(res, 200, { 
-                    success: true, 
+                sendResponse(res, 200, {
+                    success: true,
                     message: 'Coffee Tree Platform API is running',
                     timestamp: new Date().toISOString(),
                     version: '1.0.0'
@@ -699,7 +894,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                         ]
                     }
                 })
-            // Marketplace Routes
+                // Marketplace Routes
             } else if (pathname === '/api/marketplace/listings' && method === 'GET') {
                 await getMarketplaceListings(req, res)
             } else if (pathname === '/api/marketplace/list-tokens' && method === 'POST') {
@@ -716,20 +911,20 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 await getMarketplaceStats(req, res)
             } else if (pathname === '/api/marketplace/user-listings' && method === 'GET') {
                 await getUserListings(req, res)
-            
-            // Pricing API Routes
+
+                // Pricing API Routes
             } else if (pathname === '/api/pricing/seasonal-price' && method === 'POST') {
                 const { variety, grade, month } = req.body || {};
-                
+
                 if (!variety || grade === undefined || !month) {
                     sendError(res, 400, 'variety, grade, and month are required');
                     return;
                 }
-                
+
                 try {
                     // For demo purposes, we'll create a mock response since we don't have the actual contract setup
                     // In a real implementation, you would initialize the PriceOracleContract and call getSeasonalCoffeePrice
-                    
+
                     // Mock seasonal multipliers (these would come from the contract in a real implementation)
                     const seasonalMultipliers = {
                         1: 0.9,  // January - Low season
@@ -745,7 +940,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                         11: 0.95,// November - Normal
                         12: 0.9  // December - Low season
                     };
-                    
+
                     // Base prices by variety (these would come from the contract in a real implementation)
                     const basePrices = {
                         'ARABICA': 4.50,
@@ -753,12 +948,12 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                         'SPECIALTY': 6.00,
                         'ORGANIC': 5.20
                     };
-                    
+
                     const varietyKey = typeof variety === 'string' ? variety.toUpperCase() : variety;
                     const basePrice = basePrices[varietyKey] || 4.00;
                     const multiplier = seasonalMultipliers[month] || 1.0;
                     const seasonalPrice = basePrice * multiplier;
-                    
+
                     sendResponse(res, 200, {
                         success: true,
                         data: {
@@ -776,20 +971,20 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 }
             } else if (pathname === '/api/pricing/projected-revenue' && method === 'POST') {
                 const { groveTokenAddress, variety, grade, expectedYieldKg, harvestMonth } = req.body || {};
-                
+
                 // Validate required parameters
                 if (!variety || grade === undefined || !expectedYieldKg || !harvestMonth) {
                     sendError(res, 400, 'variety, grade, expectedYieldKg, and harvestMonth are required');
                     return;
                 }
-                
+
                 // Normalize variety to uppercase
                 const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
-                
+
                 try {
                     // For demo purposes, we'll create a mock response since we don't have the actual contract setup
                     // In a real implementation, you would initialize the PriceOracleContract and call calculateProjectedRevenue
-                    
+
                     // Mock seasonal multipliers (these would come from the contract in a real implementation)
                     const seasonalMultipliers = {
                         1: 0.9,  // January - Low season
@@ -805,7 +1000,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                         11: 0.95,// November - Normal
                         12: 0.9  // December - Low season
                     };
-                    
+
                     // Base prices by variety (these would come from the contract in a real implementation)
                     const basePrices = {
                         'ARABICA': 4.50,
@@ -813,12 +1008,12 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                         'SPECIALTY': 6.00,
                         'ORGANIC': 5.20
                     };
-                    
+
                     const basePrice = basePrices[normalizedVariety] || 4.00;
                     const multiplier = seasonalMultipliers[harvestMonth] || 1.0;
                     const pricePerKg = basePrice * multiplier;
                     const projectedRevenue = expectedYieldKg * pricePerKg;
-                    
+
                     sendResponse(res, 200, {
                         success: true,
                         data: {
@@ -838,15 +1033,15 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                 }
             } else if (pathname === '/api/pricing/validate-price' && method === 'POST') {
                 const { variety, grade, proposedPrice } = req.body || {};
-                
+
                 if (!variety || grade === undefined || !proposedPrice) {
                     sendError(res, 400, 'variety, grade, and proposedPrice are required');
                     return;
                 }
-                
+
                 // Normalize variety to uppercase
                 const normalizedVariety = typeof variety === 'string' ? variety.toUpperCase() : variety;
-                
+
                 try {
                     // Base prices by variety (these would come from the contract in a real implementation)
                     const basePrices = {
@@ -855,14 +1050,14 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                         'SPECIALTY': 6.00,
                         'ORGANIC': 5.20
                     };
-                    
+
                     const marketPrice = basePrices[normalizedVariety] || 4.00;
                     const minPrice = marketPrice * 0.5;
                     const maxPrice = marketPrice * 2.0;
-                    
+
                     const isValid = proposedPrice >= minPrice && proposedPrice <= maxPrice;
                     let message = '';
-                    
+
                     if (isValid) {
                         message = 'Price is within acceptable range';
                     } else if (proposedPrice < minPrice) {
@@ -870,7 +1065,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     } else {
                         message = `Price too high. Maximum acceptable: $${maxPrice.toFixed(2)}/kg`;
                     }
-                    
+
                     sendResponse(res, 200, {
                         success: true,
                         data: {
@@ -892,41 +1087,41 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     const varieties = [
                         {
                             variety: 'ARABICA',
-                            grades: Array.from({length: 10}, (_, i) => ({
+                            grades: Array.from({ length: 10 }, (_, i) => ({
                                 grade: i + 1,
                                 price: 2.50 + (i * 0.35)
                             }))
                         },
                         {
                             variety: 'ROBUSTA',
-                            grades: Array.from({length: 10}, (_, i) => ({
+                            grades: Array.from({ length: 10 }, (_, i) => ({
                                 grade: i + 1,
                                 price: 1.80 + (i * 0.24)
                             }))
                         },
                         {
                             variety: 'SPECIALTY',
-                            grades: Array.from({length: 10}, (_, i) => ({
+                            grades: Array.from({ length: 10 }, (_, i) => ({
                                 grade: i + 1,
                                 price: 3.50 + (i * 0.55)
                             }))
                         },
                         {
                             variety: 'ORGANIC',
-                            grades: Array.from({length: 10}, (_, i) => ({
+                            grades: Array.from({ length: 10 }, (_, i) => ({
                                 grade: i + 1,
                                 price: 3.00 + (i * 0.45)
                             }))
                         },
                         {
                             variety: 'TYPICA',
-                            grades: Array.from({length: 10}, (_, i) => ({
+                            grades: Array.from({ length: 10 }, (_, i) => ({
                                 grade: i + 1,
                                 price: 3.20 + (i * 0.40)
                             }))
                         }
                     ];
-                    
+
                     sendResponse(res, 200, {
                         success: true,
                         data: {
@@ -955,7 +1150,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                         11: 0.95,// November - Normal
                         12: 0.9  // December - Low season
                     };
-                    
+
                     sendResponse(res, 200, {
                         success: true,
                         data: {
@@ -967,8 +1162,81 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
                     console.error('Error fetching seasonal multipliers:', error);
                     sendError(res, 500, 'Failed to fetch seasonal multipliers');
                 }
-            
-            // Debug endpoint: dump in-memory DB storage or query groves
+
+                // Balance endpoints - USDC balance
+            } else if (pathname === '/api/balance/usdc' && method === 'GET') {
+                try {
+                    const { accountId } = req.query || {};
+
+                    if (!accountId) {
+                        sendError(res, 400, 'Missing required parameter: accountId');
+                        return;
+                    }
+
+                    // Mock USDC balance - in a real implementation, this would query the actual USDC token balance
+                    // For demo purposes, we'll return a random balance between 1000 and 10000 USDC
+                    const mockBalance = Math.floor(Math.random() * 9000) + 1000;
+
+                    sendResponse(res, 200, {
+                        success: true,
+                        data: {
+                            accountId,
+                            asset: 'USDC',
+                            balance: mockBalance,
+                            decimals: 6,
+                            symbol: 'USDC',
+                            name: 'USD Coin'
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error fetching USDC balance:', error);
+                    sendError(res, 500, 'Failed to fetch USDC balance');
+                }
+
+                // Balance endpoints - LP token balances
+            } else if (pathname === '/api/balance/lp-tokens' && method === 'GET') {
+                try {
+                    const { accountId } = req.query || {};
+
+                    if (!accountId) {
+                        sendError(res, 400, 'Missing required parameter: accountId');
+                        return;
+                    }
+
+                    // Mock LP token balances - in a real implementation, this would query the actual LP token balances
+                    // For demo purposes, we'll return mock data for LP tokens
+                    const mockLPTokens = [
+                        {
+                            asset: 'USDC',
+                            lpTokenAddress: 'LP-USDC-001',
+                            balance: Math.floor(Math.random() * 5000) + 1000,
+                            decimals: 6,
+                            symbol: 'LP-USDC',
+                            name: 'LP Token for USDC'
+                        },
+                        {
+                            asset: 'KES',
+                            lpTokenAddress: 'LP-KES-001',
+                            balance: Math.floor(Math.random() * 3000) + 500,
+                            decimals: 6,
+                            symbol: 'LP-KES',
+                            name: 'LP Token for KES'
+                        }
+                    ];
+
+                    sendResponse(res, 200, {
+                        success: true,
+                        data: {
+                            accountId,
+                            lpTokens: mockLPTokens
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error fetching LP token balances:', error);
+                    sendError(res, 500, 'Failed to fetch LP token balances');
+                }
+
+                // Debug endpoint: dump in-memory DB storage or query groves
             } else if (pathname === '/__debug/db' && method === 'GET') {
                 try {
                     // If running with in-memory DB, expose the raw storage map
@@ -991,7 +1259,7 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             sendError(res, 500, 'Internal server error')
         }
     })
-    
+
     server.listen(port, () => {
         console.log(`Coffee Tree Platform API server running on port ${port}`)
         if (DISABLE_INVESTOR_KYC) {
@@ -999,10 +1267,10 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
             console.warn('         This mode auto-approves investors and should only be used for demos or testing.')
             console.warn('         Do NOT enable in production environments where regulatory compliance is required.\n')
         }
-        console.log(`Health check: http://localhost:${port}/health`)
+        console.log(`Health check: http://localhost:${port}/api/health`)
         console.log(`API info: http://localhost:${port}/api`)
         console.log('')
-    console.log('Verification: farmer and investor verification flows are DISABLED in this build (auto-approve mode).')
+        console.log('Verification: farmer and investor verification flows are DISABLED in this build (auto-approve mode).')
         console.log('')
         console.log('Harvest Reporting Endpoints:')
         console.log('  POST /api/harvest/report')
@@ -1059,16 +1327,83 @@ function createCoffeeTreePlatformServer(port: number = 3001) {
         console.log('  GET  /api/analytics/platform/stats')
         console.log('  GET  /api/analytics/platform/growth')
     })
-    
+
     return server
 }
 
+// Run migrations and start the server
+async function startServer() {
+    try {
+        console.log('🚀 Starting Coffee Tree Platform API Server...')
+        console.log('')
+
+        // Run database migrations
+        console.log('📊 Running database migrations...')
+        const migrationResult = await runMigrations()
+
+        if (!migrationResult.success) {
+            console.error('❌ Critical migrations failed. Server startup aborted.')
+            console.error('Migration errors:', migrationResult.errors)
+            process.exit(1)
+        }
+
+        if (migrationResult.migrationsRun.length > 0) {
+            console.log(`✅ Successfully ran ${migrationResult.migrationsRun.length} migrations`)
+            migrationResult.migrationsRun.forEach(migration => {
+                console.log(`   - ${migration}`)
+            })
+        } else {
+            console.log('✅ No pending migrations')
+        }
+        console.log('')
+
+        // Run health check
+        console.log('🏥 Running database health check...')
+        const healthResult = await runHealthCheck()
+
+        if (!healthResult.healthy) {
+            console.warn('⚠️  Database health check failed, but continuing startup...')
+            healthResult.diagnostics.forEach(diagnostic => {
+                console.warn(`   ${diagnostic}`)
+            })
+        } else {
+            console.log('✅ Database health check passed')
+        }
+        console.log('')
+
+        // Start connection pool monitoring for SQLite
+        console.log('🔄 Starting connection pool monitoring...')
+        const healthCheck = new DatabaseHealthCheck()
+        healthCheck.startConnectionMonitoring()
+        console.log('✅ Connection pool monitoring started')
+        console.log('')
+
+        // Start the server
+        const server = createCoffeeTreePlatformServer(PORT)
+
+            // Store health check instance for graceful shutdown
+            ; (server as any).__healthCheck = healthCheck
+
+        return server
+    } catch (error) {
+        console.error('❌ Failed to start server:', error)
+        process.exit(1)
+    }
+}
+
 // Start the server
-const server = createCoffeeTreePlatformServer(PORT)
+const server = await startServer()
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
     console.log('SIGTERM received, shutting down gracefully')
+
+    // Stop connection pool monitoring
+    const healthCheck = (server as any).__healthCheck
+    if (healthCheck) {
+        healthCheck.stopConnectionMonitoring()
+    }
+
     server.close(() => {
         console.log('Server closed')
         process.exit(0)

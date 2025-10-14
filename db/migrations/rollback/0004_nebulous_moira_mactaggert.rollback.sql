@@ -1,0 +1,19 @@
+-- Rollback: Drop investor verification indexes
+DROP INDEX IF EXISTS idx_investor_verifications_expired;
+DROP INDEX IF EXISTS idx_investor_verifications_pending_created;
+DROP INDEX IF EXISTS idx_investor_verifications_status_type;
+DROP INDEX IF EXISTS idx_investor_profiles_created_at;
+DROP INDEX IF EXISTS idx_investor_profiles_risk_tolerance;
+DROP INDEX IF EXISTS idx_investor_profiles_investor_type;
+DROP INDEX IF EXISTS idx_investor_profiles_country;
+DROP INDEX IF EXISTS idx_investor_verification_history_verifier;
+DROP INDEX IF EXISTS idx_investor_verification_history_timestamp;
+DROP INDEX IF EXISTS idx_investor_verification_history_action_type;
+DROP INDEX IF EXISTS idx_investor_verification_history_verification_id;
+DROP INDEX IF EXISTS idx_investor_verifications_created_at;
+DROP INDEX IF EXISTS idx_investor_verifications_access_level;
+DROP INDEX IF EXISTS idx_investor_verifications_expiry;
+DROP INDEX IF EXISTS idx_investor_verifications_date;
+DROP INDEX IF EXISTS idx_investor_verifications_verifier;
+DROP INDEX IF EXISTS idx_investor_verifications_type;
+DROP INDEX IF EXISTS idx_investor_verifications_status;

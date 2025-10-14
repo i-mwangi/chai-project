@@ -1,0 +1,12 @@
+-- Rollback: Drop initial tables
+DROP TABLE IF EXISTS withdrawnLiquidity;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS realwordAssetTimeseries;
+DROP TABLE IF EXISTS providedLiquidity;
+DROP TABLE IF EXISTS prices;
+DROP TABLE IF EXISTS loans;
+DROP TABLE IF EXISTS loanRepayment;
+DROP TABLE IF EXISTS liquidations;
+DROP TABLE IF EXISTS lendingReserves;
+DROP TABLE IF EXISTS kyc;
+DROP TABLE IF EXISTS assets;

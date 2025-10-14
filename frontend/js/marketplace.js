@@ -18,6 +18,21 @@ class CoffeeTreeMarketplace {
     }
 
     setupEventListeners() {
+        // View Trade History button - use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            const tradeHistoryBtn = document.getElementById('viewTradeHistoryBtn');
+            console.log('[Marketplace] Looking for trade history button:', tradeHistoryBtn);
+            if (tradeHistoryBtn) {
+                console.log('[Marketplace] Trade history button found, attaching listener');
+                tradeHistoryBtn.addEventListener('click', () => {
+                    console.log('[Marketplace] View Trade History clicked');
+                    this.loadTradeHistory();
+                });
+            } else {
+                console.error('[Marketplace] Trade history button NOT found!');
+            }
+        }, 100);
+
         // Event delegation for dynamically created elements
         document.addEventListener('click', (e) => {
             if (e.target.matches('[data-action="buy-tokens"]')) {
@@ -697,21 +712,48 @@ class CoffeeTreeMarketplace {
     }
 
     async loadTradeHistory() {
+        console.log('[Marketplace] Loading trade history...');
         try {
             const response = await window.coffeeAPI.getTradeHistory();
+            console.log('[Marketplace] Trade history response:', response);
             
             if (response.success) {
                 this.trades = response.trades;
+                console.log('[Marketplace] Trades loaded:', this.trades.length);
                 this.renderTradeHistory();
+            } else {
+                console.error('[Marketplace] Failed to load trades:', response.error);
             }
         } catch (error) {
-            console.error('Failed to load trade history:', error);
+            console.error('[Marketplace] Error loading trade history:', error);
         }
     }
 
     renderTradeHistory() {
+        console.log('[Marketplace] Rendering trade history...');
         const container = document.getElementById('tradeHistory');
-        if (!container) return;
+        console.log('[Marketplace] Trade history container:', container);
+        if (!container) {
+            console.error('[Marketplace] Trade history container not found!');
+            return;
+        }
+
+        // Toggle visibility using computed style
+        const computedDisplay = window.getComputedStyle(container).display;
+        const isHidden = computedDisplay === 'none';
+        console.log('[Marketplace] Computed display:', computedDisplay);
+        console.log('[Marketplace] Is hidden:', isHidden);
+        
+        if (isHidden) {
+            // Show and render
+            container.style.display = 'block';
+            console.log('[Marketplace] ✅ Showing trade history - should be visible now!');
+        } else {
+            // Hide
+            container.style.display = 'none';
+            console.log('[Marketplace] ❌ Hiding trade history');
+            return;
+        }
 
         if (this.trades.length === 0) {
             container.innerHTML = `

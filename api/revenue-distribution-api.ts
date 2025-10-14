@@ -7,6 +7,8 @@
 
 import { IncomingMessage, ServerResponse } from 'http'
 import { revenueDistributionService } from './revenue-distribution-service'
+import { withdrawalService } from './withdrawal-service'
+import { transactionRecorder } from './transaction-recording-service'
 
 // Utility functions (copied from server.ts)
 function sendResponse(res: ServerResponse, statusCode: number, data: any) {
@@ -151,13 +153,25 @@ export class RevenueDistributionAPI {
 
             // In a real implementation, this would call the revenue distribution service
             // For now, we'll just return a mock response
+            const amount = 187.75
+            const transactionHash = '0x' + Math.random().toString(16).substr(2, 10)
+            
+            // Record transaction in history
+            await transactionRecorder.recordDistribution({
+                groveId: 'grove-' + distributionId,
+                holderAddress,
+                amount: Math.round(amount * 100), // Convert to cents
+                distributionId,
+                transactionHash
+            })
+            
             sendResponse(res, 200, {
                 success: true,
                 data: {
                     distributionId,
                     holderAddress,
-                    amount: 187.75,
-                    transactionHash: '0x' + Math.random().toString(16).substr(2, 10),
+                    amount,
+                    transactionHash,
                     claimedAt: new Date().toISOString()
                 }
             })
@@ -179,15 +193,20 @@ export class RevenueDistributionAPI {
                 return
             }
 
-            // In a real implementation, this would call the revenue distribution service
-            // For now, we'll return mock data
+            const balance = await withdrawalService.getFarmerBalance(farmerAddress)
+
             sendResponse(res, 200, {
                 success: true,
                 data: {
                     farmerAddress,
-                    balance: 1250.75,
-                    pendingWithdrawals: 0,
-                    lastWithdrawal: new Date(Date.now() - 86400000 * 5).toISOString() // 5 days ago
+                    availableBalance: balance.availableBalance / 100,
+                    pendingBalance: balance.pendingBalance / 100,
+                    totalEarned: balance.totalEarned / 100,
+                    totalWithdrawn: balance.totalWithdrawn / 100,
+                    maxWithdrawable: balance.maxWithdrawable / 100,
+                    lastWithdrawal: balance.lastWithdrawalAt 
+                        ? new Date(balance.lastWithdrawalAt).toISOString() 
+                        : null
                 }
             })
         } catch (error) {
@@ -203,8 +222,8 @@ export class RevenueDistributionAPI {
         try {
             const { groveId, amount, farmerAddress } = (req as any).body || {}
 
-            if (!groveId || !amount || !farmerAddress) {
-                sendError(res, 400, 'Missing required parameters: groveId, amount, farmerAddress')
+            if (!amount || !farmerAddress) {
+                sendError(res, 400, 'Missing required parameters: amount, farmerAddress')
                 return
             }
 
@@ -213,15 +232,25 @@ export class RevenueDistributionAPI {
                 return
             }
 
-            // In a real implementation, this would call the revenue distribution service
-            // For now, we'll just return a mock response
+            const result = await withdrawalService.processFarmerWithdrawal({
+                address: farmerAddress,
+                amount,
+                groveId: groveId ? parseInt(groveId) : undefined
+            })
+
+            if (!result.success) {
+                sendError(res, 400, result.error || 'Withdrawal failed')
+                return
+            }
+
             sendResponse(res, 200, {
                 success: true,
                 data: {
+                    withdrawalId: result.withdrawalId,
                     groveId,
-                    amount,
+                    amount: result.amount,
                     farmerAddress,
-                    transactionHash: '0x' + Math.random().toString(16).substr(2, 10),
+                    transactionHash: result.transactionHash,
                     withdrawnAt: new Date().toISOString()
                 }
             })
@@ -243,26 +272,23 @@ export class RevenueDistributionAPI {
                 return
             }
 
-            // In a real implementation, this would call the revenue distribution service
-            // For now, we'll return mock data
-            const mockWithdrawals = [
-                {
-                    withdrawalId: 'withdrawal_001',
-                    amount: 500.00,
-                    transactionHash: '0x123abc',
-                    withdrawnAt: new Date(Date.now() - 86400000 * 7).toISOString() // 7 days ago
-                },
-                {
-                    withdrawalId: 'withdrawal_002',
-                    amount: 750.75,
-                    transactionHash: '0x456def',
-                    withdrawnAt: new Date(Date.now() - 86400000 * 14).toISOString() // 14 days ago
-                }
-            ]
+            const withdrawals = await withdrawalService.getFarmerWithdrawalHistory(farmerAddress)
 
             sendResponse(res, 200, {
                 success: true,
-                withdrawals: mockWithdrawals
+                data: {
+                    farmerAddress,
+                    withdrawals: withdrawals.map(w => ({
+                        withdrawalId: w.id,
+                        amount: w.amount,
+                        status: w.status,
+                        transactionHash: w.transactionHash,
+                        blockExplorerUrl: w.blockExplorerUrl,
+                        errorMessage: w.errorMessage,
+                        withdrawnAt: w.completedAt ? new Date(w.completedAt).toISOString() : null,
+                        requestedAt: new Date(w.requestedAt).toISOString()
+                    }))
+                }
             })
         } catch (error) {
             console.error('Error fetching farmer withdrawal history:', error)

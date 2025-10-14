@@ -622,7 +622,10 @@
                                     <select id="locationFilter">
                                         <option value="">All Locations</option>
                                     </select>
-                                    <input type="range" id="yieldFilter" min="0" max="10" step="0.1" placeholder="Min Yield">
+                                    <div class="yield-filter-container">
+                                        <label for="yieldFilter">Min Yield: <span id="yieldFilterValue">0</span> kg/tree</label>
+                                        <input type="range" id="yieldFilter" min="0" max="10" step="0.1" value="0">
+                                    </div>
                                 </div>
                             </div>
                             
@@ -672,7 +675,7 @@
                             <div class="section-header">
                                 <h3>Secondary Market</h3>
                                 <div class="section-actions">
-                                    <button class="btn btn-secondary" onclick="marketplace.loadTradeHistory()">
+                                    <button class="btn btn-secondary" id="viewTradeHistoryBtn">
                                         View Trade History
                                     </button>
                                 </div>
@@ -893,9 +896,10 @@
                                         </form>
                                     </div>
                                 </div>
+                            </div>
 
-                              <!-- Loans Section -->
-                              <div class="loans-container">
+                            <!-- Loans Section -->
+                            <div class="loans-container">
                                   <div class="section-header">
                                       <h4>Loans</h4>
                                       <small>Borrow against your coffee tree token holdings</small>
@@ -1429,11 +1433,28 @@
     <script src="js/balance-poller.js"></script>
     <script src="js/marketplace.js"></script>
     <script src="js/price-oracle.js"></script>
+    <script src="js/market-prices-display.js"></script>
     <script src="js/token-admin.js"></script>
     <script src="js/admin-panel.js"></script>
     <script src="js/farmer-dashboard.js"></script>
     <script src="js/investor-portal.js"></script>
     <script src="js/main.js"></script>
     <script src="demo-helper.js"></script>
+    <script>
+        // Check if we should navigate to a specific view
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if we should navigate to a specific view
+            const targetView = localStorage.getItem('targetView');
+            if (targetView) {
+                localStorage.removeItem('targetView');
+                // Delay to ensure everything is initialized
+                setTimeout(() => {
+                    if (window.viewManager) {
+                        window.viewManager.switchView(targetView);
+                    }
+                }, 100);
+            }
+        });
+    </script>
 </body>
 </html>

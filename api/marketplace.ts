@@ -3,7 +3,24 @@
  * Handles secondary market trading functionality
  */
 
-import { Request, Response } from 'express';
+import { IncomingMessage, ServerResponse } from 'http';
+import { transactionRecorder } from './transaction-recording-service';
+
+// Utility functions
+function sendResponse(res: ServerResponse, statusCode: number, data: any) {
+    res.writeHead(statusCode, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+    });
+    res.end(JSON.stringify(data));
+}
+
+function sendError(res: ServerResponse, statusCode: number, message: string) {
+    sendResponse(res, statusCode, {
+        success: false,
+        error: message
+    });
+}
 
 // Mock data for development
 const mockListings = [
@@ -75,47 +92,41 @@ const mockTrades = [
 /**
  * Get all active marketplace listings
  */
-export async function getMarketplaceListings(req: Request, res: Response) {
+export async function getMarketplaceListings(req: IncomingMessage, res: ServerResponse) {
     try {
         // Filter only active listings
         const activeListings = mockListings.filter(listing => 
             listing.isActive && new Date(listing.expirationDate) > new Date()
         );
 
-        res.json({
+        sendResponse(res, 200, {
             success: true,
             listings: activeListings,
             total: activeListings.length
         });
     } catch (error) {
         console.error('Error fetching marketplace listings:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch marketplace listings'
-        });
+        sendError(res, 500, 'Failed to fetch marketplace listings'
+        );
     }
 }
 
 /**
  * List tokens for sale on the marketplace
  */
-export async function listTokensForSale(req: Request, res: Response) {
+export async function listTokensForSale(req: IncomingMessage, res: ServerResponse) {
     try {
-        const { groveId, tokenAmount, pricePerToken, durationDays, sellerAddress } = req.body;
+        const { groveId, tokenAmount, pricePerToken, durationDays, sellerAddress } = (req as any).body;
 
         // Validate input
         if (!groveId || !tokenAmount || !pricePerToken || !durationDays || !sellerAddress) {
-            return res.status(400).json({
-                success: false,
-                error: 'Missing required fields'
-            });
+            sendError(res, 400, 'Missing required fields');
+            return;
         }
 
         if (tokenAmount <= 0 || pricePerToken <= 0 || durationDays <= 0) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid values for amount, price, or duration'
-            });
+            sendError(res, 400, 'Invalid values for amount, price, or duration');
+            return;
         }
 
         // Create new listing
@@ -138,58 +149,47 @@ export async function listTokensForSale(req: Request, res: Response) {
 
         mockListings.push(newListing);
 
-        res.json({
+        sendResponse(res, 200, {
             success: true,
             listing: newListing,
             message: 'Tokens listed for sale successfully'
         });
     } catch (error) {
         console.error('Error listing tokens for sale:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to list tokens for sale'
-        });
+        sendError(res, 500, 'Failed to list tokens for sale');
     }
 }
 
 /**
  * Purchase tokens from marketplace listing
  */
-export async function purchaseFromMarketplace(req: Request, res: Response) {
+export async function purchaseFromMarketplace(req: IncomingMessage, res: ServerResponse) {
     try {
-        const { listingId, tokenAmount, buyerAddress } = req.body;
+        const { listingId, tokenAmount, buyerAddress } = (req as any).body;
 
         // Validate input
         if (!listingId || !tokenAmount || !buyerAddress) {
-            return res.status(400).json({
-                success: false,
-                error: 'Missing required fields'
-            });
+            sendError(res, 400, 'Missing required fields'
+            ); return;
         }
 
         // Find listing
         const listing = mockListings.find(l => l.id === listingId && l.isActive);
         if (!listing) {
-            return res.status(404).json({
-                success: false,
-                error: 'Listing not found or inactive'
-            });
+            sendError(res, 404, 'Listing not found or inactive'
+            ); return;
         }
 
         // Check if enough tokens available
         if (tokenAmount > listing.tokenAmount) {
-            return res.status(400).json({
-                success: false,
-                error: 'Not enough tokens available'
-            });
+            sendError(res, 400, 'Not enough tokens available'
+            ); return;
         }
 
         // Check if buyer is not the seller
         if (buyerAddress === listing.sellerAddress) {
-            return res.status(400).json({
-                success: false,
-                error: 'Cannot buy your own listing'
-            });
+            sendError(res, 400, 'Cannot buy your own listing'
+            ); return;
         }
 
         // Calculate costs
@@ -219,7 +219,17 @@ export async function purchaseFromMarketplace(req: Request, res: Response) {
             listing.isActive = false;
         }
 
-        res.json({
+        // Record transaction in history
+        await transactionRecorder.recordSale({
+            sellerAddress: listing.sellerAddress,
+            buyerAddress: buyerAddress,
+            groveId: listing.groveName, // Use groveName as groveId
+            tokenAmount: tokenAmount,
+            usdcAmount: totalPrice,
+            transactionHash: `0x${Date.now().toString(16)}`
+        })
+
+        sendResponse(res, 200, {
             success: true,
             trade: newTrade,
             totalPrice,
@@ -229,75 +239,63 @@ export async function purchaseFromMarketplace(req: Request, res: Response) {
         });
     } catch (error) {
         console.error('Error purchasing from marketplace:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to purchase tokens'
-        });
+        sendError(res, 500, 'Failed to purchase tokens'
+        );
     }
 }
 
 /**
  * Cancel a marketplace listing
  */
-export async function cancelListing(req: Request, res: Response) {
+export async function cancelListing(req: IncomingMessage, res: ServerResponse) {
     try {
-        const { listingId, sellerAddress } = req.body;
+        const { listingId, sellerAddress } = (req as any).body;
 
         // Find listing
         const listing = mockListings.find(l => l.id === listingId);
         if (!listing) {
-            return res.status(404).json({
-                success: false,
-                error: 'Listing not found'
-            });
+            sendError(res, 404, 'Listing not found'
+            ); return;
         }
 
         // Check if user is the seller
         if (listing.sellerAddress !== sellerAddress) {
-            return res.status(403).json({
-                success: false,
-                error: 'Only the seller can cancel this listing'
-            });
+            sendError(res, 403, 'Only the seller can cancel this listing'
+            ); return;
         }
 
         // Cancel listing
         listing.isActive = false;
 
-        res.json({
+        sendResponse(res, 200, {
             success: true,
             message: 'Listing cancelled successfully'
         });
     } catch (error) {
         console.error('Error cancelling listing:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to cancel listing'
-        });
+        sendError(res, 500, 'Failed to cancel listing'
+        );
     }
 }
 
 /**
  * Update a marketplace listing
  */
-export async function updateListing(req: Request, res: Response) {
+export async function updateListing(req: IncomingMessage, res: ServerResponse) {
     try {
-        const { listingId, newPrice, newDuration, sellerAddress } = req.body;
+        const { listingId, newPrice, newDuration, sellerAddress } = (req as any).body;
 
         // Find listing
         const listing = mockListings.find(l => l.id === listingId);
         if (!listing) {
-            return res.status(404).json({
-                success: false,
-                error: 'Listing not found'
-            });
+            sendError(res, 404, 'Listing not found'
+            ); return;
         }
 
         // Check if user is the seller
         if (listing.sellerAddress !== sellerAddress) {
-            return res.status(403).json({
-                success: false,
-                error: 'Only the seller can update this listing'
-            });
+            sendError(res, 403, 'Only the seller can update this listing'
+            ); return;
         }
 
         // Update listing
@@ -308,26 +306,24 @@ export async function updateListing(req: Request, res: Response) {
             listing.expirationDate = new Date(Date.now() + newDuration * 24 * 60 * 60 * 1000).toISOString();
         }
 
-        res.json({
+        sendResponse(res, 200, {
             success: true,
             listing,
             message: 'Listing updated successfully'
         });
     } catch (error) {
         console.error('Error updating listing:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to update listing'
-        });
+        sendError(res, 500, 'Failed to update listing'
+        );
     }
 }
 
 /**
  * Get trade history
  */
-export async function getTradeHistory(req: Request, res: Response) {
+export async function getTradeHistory(req: IncomingMessage, res: ServerResponse) {
     try {
-        const { userAddress } = req.query;
+        const { userAddress } = (req as any).query;
 
         let trades = mockTrades;
 
@@ -341,24 +337,22 @@ export async function getTradeHistory(req: Request, res: Response) {
         // Sort by date (most recent first)
         trades.sort((a, b) => new Date(b.tradeDate).getTime() - new Date(a.tradeDate).getTime());
 
-        res.json({
+        sendResponse(res, 200, {
             success: true,
             trades,
             total: trades.length
         });
     } catch (error) {
         console.error('Error fetching trade history:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch trade history'
-        });
+        sendError(res, 500, 'Failed to fetch trade history'
+        );
     }
 }
 
 /**
  * Get marketplace statistics
  */
-export async function getMarketplaceStats(req: Request, res: Response) {
+export async function getMarketplaceStats(req: IncomingMessage, res: ServerResponse) {
     try {
         const activeListings = mockListings.filter(l => l.isActive);
         const totalTokensAvailable = activeListings.reduce((sum, listing) => sum + listing.tokenAmount, 0);
@@ -368,7 +362,7 @@ export async function getMarketplaceStats(req: Request, res: Response) {
         const totalTrades = mockTrades.length;
         const totalVolume = mockTrades.reduce((sum, trade) => sum + trade.totalPrice, 0);
 
-        res.json({
+        sendResponse(res, 200, {
             success: true,
             stats: {
                 activeListings: activeListings.length,
@@ -381,41 +375,35 @@ export async function getMarketplaceStats(req: Request, res: Response) {
         });
     } catch (error) {
         console.error('Error fetching marketplace stats:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch marketplace statistics'
-        });
+        sendError(res, 500, 'Failed to fetch marketplace statistics'
+        );
     }
 }
 
 /**
  * Get user's active listings
  */
-export async function getUserListings(req: Request, res: Response) {
+export async function getUserListings(req: IncomingMessage, res: ServerResponse) {
     try {
-        const { sellerAddress } = req.query;
+        const { sellerAddress } = (req as any).query;
 
         if (!sellerAddress) {
-            return res.status(400).json({
-                success: false,
-                error: 'Seller address is required'
-            });
+            sendError(res, 400, 'Seller address is required'
+            ); return;
         }
 
         const userListings = mockListings.filter(listing => 
             listing.sellerAddress === sellerAddress && listing.isActive
         );
 
-        res.json({
+        sendResponse(res, 200, {
             success: true,
             listings: userListings,
             total: userListings.length
         });
     } catch (error) {
         console.error('Error fetching user listings:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch user listings'
-        });
+        sendError(res, 500, 'Failed to fetch user listings'
+        );
     }
 }

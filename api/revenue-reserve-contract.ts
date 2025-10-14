@@ -17,7 +17,7 @@ import { coffeeGroves, tokenHoldings } from '../db/schema'
 import { eq } from 'drizzle-orm'
 
 // Contract ABI for CoffeeRevenueReserve
-const RESERVE_ABI = require('../abi/Reserve.json').abi
+// const RESERVE_ABI = require('../abi/Reserve.json').abi
 
 interface DistributionResult {
     success: boolean

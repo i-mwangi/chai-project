@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal</title>
+    <link rel="stylesheet" href="frontend/styles/main.css">
+</head>
+<body>
+    <h1>Modal Test</h1>
+    <button id="testBtn" class="btn btn-primary">Open Test Modal</button>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', () => {
+            console.log('Button clicked');
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4>Test Modal</h4>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>This is a test modal. If you can see this, the modal system works!</p>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary modal-close">Close</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            console.log('Modal appended');
+
+            // Close handlers
+            modal.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    console.log('Closing modal');
+                    document.body.removeChild(modal);
+                });
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    console.log('Closing modal via backdrop');
+                    document.body.removeChild(modal);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ class WalletManager {
         this.isConnected = false;
         this.accountId = null;
         this.userType = null; // 'farmer' or 'investor'
+        this.demoMode = true; // Enable demo mode by default
         this.init();
     }
 
@@ -40,73 +41,58 @@ class WalletManager {
         }
     }
 
-    async connectWallet() {
-        try {
-            // Show loading
+    connectWallet() {
+        // In demo mode, simulate wallet connection
+        if (this.demoMode) {
             this.showLoading('Connecting wallet...');
-
-            // For demo purposes, we'll simulate wallet connection
-            // In a real implementation, this would integrate with HashPack or other Hedera wallets
-            const mockAccountId = this.generateMockAccountId();
             
-            // Simulate wallet connection delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Determine user type based on account (mock logic)
-            const userType = this.determineUserType(mockAccountId);
-
-            this.accountId = mockAccountId;
-            this.userType = userType;
-            this.isConnected = true;
-
-            // Save to localStorage
-            localStorage.setItem('connectedAccount', mockAccountId);
-            localStorage.setItem('userType', userType);
-
-            this.updateUI();
-            this.hideLoading();
-            
-            this.showToast(`Connected as ${userType}`, 'success');
-
-            // Start balance polling
-            if (window.balancePoller) {
-                window.balancePoller.startPolling();
-            }
-
-            // Initialize admin panel if user is admin
-            await this.initializeAdminPanel();
-
-            // Verification is disabled in this build (frontend no-op)
-            // we intentionally skip calling the verification flows so no modal appears
-
-        } catch (error) {
-            console.error('Wallet connection failed:', error);
-            this.hideLoading();
-            this.showToast('Failed to connect wallet', 'error');
-        }
-    }
-
-    async initializeAdminPanel() {
-        try {
-            // Initialize TokenAdminManager if not already initialized
-            if (!window.tokenAdminManager) {
-                window.tokenAdminManager = new TokenAdminManager(window.coffeeAPI, this);
-            }
-            
-            // Validate admin role
-            const isAdmin = await window.tokenAdminManager.validateAdminRole(this.accountId);
-            
-            // Initialize admin panel UI
-            if (window.adminPanel) {
-                await window.adminPanel.initialize(window.tokenAdminManager);
-            }
-            
-            if (isAdmin) {
-                console.log('Admin panel initialized for user:', this.accountId);
-            }
-        } catch (error) {
-            console.error('Error initializing admin panel:', error);
-            // Don't throw - admin panel is optional
+            setTimeout(() => {
+                // Generate a random account ID for demo
+                const accountId = `0.0.${Math.floor(100000 + Math.random() * 900000)}`;
+                
+                // Set the account ID
+                this.accountId = accountId;
+                
+                // Default to investor unless specified otherwise
+                let userType = 'investor'; // Default to investor
+                
+                // Check if user type is already set in localStorage (from demo helper)
+                const storedUserType = localStorage.getItem('userType');
+                if (storedUserType) {
+                    userType = storedUserType;
+                }
+                
+                this.userType = userType;
+                
+                // Save to localStorage
+                localStorage.setItem('connectedAccount', accountId);
+                localStorage.setItem('userType', userType);
+                
+                // Mark as connected
+                this.isConnected = true;
+                
+                // Update UI
+                this.updateUI();
+                this.hideLoading();
+                
+                // Show success message
+                this.showToast('Wallet connected successfully!', 'success');
+                
+                // Update navigation
+                this.updateNavigation();
+                
+                // Notify other components
+                this.notifyWalletConnected();
+                
+                // Auto-switch to appropriate view based on user type
+                if (window.viewManager) {
+                    if (this.userType === 'farmer') {
+                        window.viewManager.switchView('farmer');
+                    } else {
+                        window.viewManager.switchView('investor');
+                    }
+                }
+            }, 1500);
         }
     }
 
@@ -126,24 +112,6 @@ class WalletManager {
 
         this.updateUI();
         this.showToast('Wallet disconnected', 'success');
-    }
-
-    generateMockAccountId() {
-        // Generate a mock Hedera account ID (format: 0.0.xxxxx)
-        const accountNum = Math.floor(Math.random() * 900000) + 100000;
-        return `0.0.${accountNum}`;
-    }
-
-    determineUserType(accountId) {
-        // Mock logic to determine user type based on account ID
-        // In a real implementation, this might check on-chain data or user preferences
-        const lastDigit = parseInt(accountId.split('.')[2]) % 10;
-        return lastDigit < 5 ? 'farmer' : 'investor';
-    }
-
-    async checkFarmerVerification() {
-        // Verification intentionally disabled on frontend — no-op
-        return;
     }
 
     updateUI() {
@@ -235,12 +203,12 @@ class WalletManager {
 
         container.appendChild(toast);
 
-        // Auto-remove after 5 seconds
+        // Auto-remove after 10 seconds
         setTimeout(() => {
             if (toast.parentNode) {
                 toast.parentNode.removeChild(toast);
             }
-        }, 5000);
+        }, 10000);
     }
 
     // Utility methods for other components
@@ -286,113 +254,14 @@ class WalletManager {
         return true;
     }
 
-    async checkInvestorVerification() {
-        // Verification intentionally disabled on frontend — no-op
-        return;
-    }
-
-    showFarmerOnboardingModal(verification) {
-        // Frontend verification UI disabled — don't render the modal
-        return;
-        modal.querySelectorAll('.modal-close').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                // mark that the user chose to skip farmer verification for now
-                try {
-                            localStorage.setItem('skipFarmerVerification', 'true');
-                            localStorage.setItem('demoBypass', 'true');
-                    // Persist to backend if possible
-                    const accountId = this.accountId;
-                    if (accountId && window.coffeeAPI && typeof window.coffeeAPI.saveUserSettings === 'function') {
-                        await window.coffeeAPI.saveUserSettings(accountId, { skipFarmerVerification: true, demoBypass: true })
-                    }
-                } catch (e) {}
-                this.showToast('You can complete verification later from your profile', 'info');
-                document.body.removeChild(modal);
-            });
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
+    notifyWalletConnected() {
+        // Dispatch custom event for other components to listen to
+        window.dispatchEvent(new CustomEvent('walletConnected', {
+            detail: {
+                accountId: this.accountId,
+                userType: this.userType
             }
-        });
-    }
-
-    async startVerificationProcess() {
-        // Close onboarding modal
-        const modal = document.getElementById('farmerOnboardingModal');
-        if (modal) {
-            document.body.removeChild(modal);
-        }
-
-        // Clear skip flag since user is actively starting verification
-        try {
-            localStorage.removeItem('skipFarmerVerification');
-            const accountId = this.accountId;
-            if (accountId && window.coffeeAPI && typeof window.coffeeAPI.saveUserSettings === 'function') {
-                await window.coffeeAPI.saveUserSettings(accountId, { skipFarmerVerification: false, demoBypass: false })
-            }
-        } catch (e) {}
-
-        // Navigate to verification section
-        if (window.viewManager) {
-            window.viewManager.switchView('farmer');
-        }
-        
-        setTimeout(() => {
-            if (window.farmerDashboard && typeof window.farmerDashboard.switchSection === 'function') {
-                window.farmerDashboard.switchSection('verification');
-                this.showToast('Complete your verification to unlock all features', 'info');
-            }
-        }, 500);
-    }
-
-    showInvestorOnboardingModal(verification) {
-        // Frontend verification UI disabled — don't render the modal
-        return;
-        modal.querySelectorAll('.modal-close').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                // mark that the user chose to skip investor verification for now
-                try {
-                    localStorage.setItem('skipInvestorVerification', 'true');
-                    const accountId = this.accountId;
-                    if (accountId && window.coffeeAPI && typeof window.coffeeAPI.saveUserSettings === 'function') {
-                        await window.coffeeAPI.saveUserSettings(accountId, { skipInvestorVerification: true, demoBypass: true })
-                    }
-                } catch (e) {}
-                this.showToast('You can complete verification later from your profile', 'info');
-                document.body.removeChild(modal);
-            });
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
-            }
-        });
-    }
-
-    async startInvestorVerificationProcess() {
-        // Close onboarding modal
-        const modal = document.getElementById('investorOnboardingModal');
-        if (modal) {
-            document.body.removeChild(modal);
-        }
-
-        // Clear skip flag since user is actively starting investor verification
-        try { localStorage.removeItem('skipInvestorVerification'); } catch (e) {}
-
-        // Navigate to investor verification
-        if (window.viewManager) {
-            window.viewManager.switchView('investor');
-        }
-        
-        setTimeout(() => {
-            if (window.investorPortal && typeof window.investorPortal.switchSection === 'function') {
-                window.investorPortal.switchSection('verification');
-                this.showToast('Complete your verification to unlock all investment features', 'info');
-            }
-        }, 500);
+        }));
     }
 }
 

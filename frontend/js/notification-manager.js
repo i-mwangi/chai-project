@@ -8,7 +8,7 @@ class NotificationManager {
         this.notifications = [];
         this.container = null;
         this.nextId = 1;
-        this.autoDismissTimeout = 5000; // 5 seconds
+        this.autoDismissTimeout = 10000; // 10 seconds
         this.init();
     }
 
@@ -100,7 +100,7 @@ class NotificationManager {
         } = config;
 
         const id = this.nextId++;
-        
+
         // Create notification element
         const notification = this.createNotificationElement({
             id,

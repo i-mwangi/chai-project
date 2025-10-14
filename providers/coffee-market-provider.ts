@@ -5,6 +5,7 @@ import {
     ContractFunctionParameters,
     ContractCallQuery
 } from '@hashgraph/sdk'
+import { CoffeePriceScraper } from './coffee-price-scraper.js'
 
 // Coffee market data interfaces
 export interface CoffeeMarketPrice {
@@ -88,9 +89,11 @@ export class CoffeeMarketProvider {
         volatilityThreshold: 10 // Alert if volatility exceeds 10%
     }
     private alertSubscribers: ((alert: MarketAlert) => void)[] = []
+    private scraper: CoffeePriceScraper
 
     constructor(contractId: string) {
         this.contractId = contractId
+        this.scraper = new CoffeePriceScraper()
         this.initializePriceHistory()
     }
 
@@ -337,27 +340,78 @@ export class CoffeeMarketProvider {
     }
 
     /**
+     * Fetch prices using web scraping (fallback method)
+     */
+    private async fetchScrapedPrices(): Promise<CoffeeMarketPrice[]> {
+        const prices: CoffeeMarketPrice[] = []
+        
+        try {
+            console.log('Fetching prices via web scraping...')
+            const scrapedPrices = await this.scraper.fetchAllPrices()
+            
+            scrapedPrices.forEach(scraped => {
+                const variety = this.mapVarietyString(scraped.variety)
+                if (variety !== undefined) {
+                    prices.push({
+                        variety,
+                        grade: 1,
+                        pricePerKg: scraped.price,
+                        currency: 'USD',
+                        timestamp: scraped.timestamp,
+                        source: scraped.source,
+                        region: 'Global'
+                    })
+                }
+            })
+            
+            console.log(`Successfully scraped ${prices.length} prices`)
+        } catch (error) {
+            console.error('Error fetching scraped prices:', error)
+        }
+        
+        return prices
+    }
+
+    /**
      * Fetch all coffee prices from multiple sources
      */
     public async fetchAllPrices(): Promise<CoffeeMarketPrice[]> {
         const allPrices: CoffeeMarketPrice[] = []
 
-        // Fetch from all sources in parallel
-        const [icePrices, cmePrices, exchangePrices] = await Promise.allSettled([
-            this.fetchICEPrices(),
-            this.fetchCMEPrices(),
-            this.fetchCoffeeExchangePrices()
-        ])
+        // Try API sources first (if API keys are configured)
+        const hasApiKeys = COFFEE_APIS.ICE.apiKey || COFFEE_APIS.CME.apiKey || COFFEE_APIS.COFFEE_EXCHANGE.apiKey
+        
+        if (hasApiKeys) {
+            // Fetch from all sources in parallel
+            const [icePrices, cmePrices, exchangePrices] = await Promise.allSettled([
+                this.fetchICEPrices(),
+                this.fetchCMEPrices(),
+                this.fetchCoffeeExchangePrices()
+            ])
 
-        // Collect successful results
-        if (icePrices.status === 'fulfilled') {
-            allPrices.push(...icePrices.value)
+            // Collect successful results
+            if (icePrices.status === 'fulfilled') {
+                allPrices.push(...icePrices.value)
+            }
+            if (cmePrices.status === 'fulfilled') {
+                allPrices.push(...cmePrices.value)
+            }
+            if (exchangePrices.status === 'fulfilled') {
+                allPrices.push(...exchangePrices.value)
+            }
         }
-        if (cmePrices.status === 'fulfilled') {
-            allPrices.push(...cmePrices.value)
+
+        // If no API prices were fetched, use web scraping
+        if (allPrices.length === 0) {
+            console.log('No API keys configured, using web scraping...')
+            const scrapedPrices = await this.fetchScrapedPrices()
+            allPrices.push(...scrapedPrices)
         }
-        if (exchangePrices.status === 'fulfilled') {
-            allPrices.push(...exchangePrices.value)
+
+        // If scraping also failed, use fallback prices
+        if (allPrices.length === 0) {
+            console.log('Web scraping failed, using fallback prices')
+            allPrices.push(...this.getFallbackPrices('FALLBACK'))
         }
 
         // Update price history and check for alerts

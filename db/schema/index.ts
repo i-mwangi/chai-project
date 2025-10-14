@@ -174,6 +174,12 @@ export const tokenHoldings = sqliteTable("token_holdings", {
     purchasePrice: integer("purchase_price").notNull(),
     purchaseDate: integer("purchase_date").notNull(),
     isActive: integer("is_active", { mode: 'boolean' }).default(true)
+}, (table) => {
+    return {
+        holderAddressIdx: index("token_holdings_holder_address_idx").on(table.holderAddress),
+        groveIdIdx: index("token_holdings_grove_id_idx").on(table.groveId),
+        isActiveIdx: index("token_holdings_is_active_idx").on(table.isActive)
+    }
 })
 
 
@@ -370,5 +376,61 @@ export const userSettings = sqliteTable("user_settings", {
     skipFarmerVerification: integer("skip_farmer_verification", { mode: 'boolean' }).default(false),
     skipInvestorVerification: integer("skip_investor_verification", { mode: 'boolean' }).default(false),
     demoBypass: integer("demo_bypass", { mode: 'boolean' }).default(false),
+    updatedAt: integer("updated_at").default(Date.now())
+})
+
+// Withdrawal tables
+export const farmerWithdrawals = sqliteTable("farmer_withdrawals", {
+    id: text("id").unique().primaryKey().notNull(),
+    farmerAddress: text("farmer_address").notNull(),
+    groveId: integer("grove_id").references(() => coffeeGroves.id),
+    amount: integer("amount").notNull(),
+    status: text("status").notNull(),
+    transactionHash: text("transaction_hash"),
+    blockExplorerUrl: text("block_explorer_url"),
+    errorMessage: text("error_message"),
+    requestedAt: integer("requested_at").notNull(),
+    completedAt: integer("completed_at"),
+    createdAt: integer("created_at").default(Date.now()),
+    updatedAt: integer("updated_at").default(Date.now())
+}, (table) => {
+    return {
+        farmerAddressIdx: index("farmer_withdrawals_farmer_idx").on(table.farmerAddress),
+        statusIdx: index("farmer_withdrawals_status_idx").on(table.status),
+        requestedAtIdx: index("farmer_withdrawals_requested_idx").on(table.requestedAt)
+    }
+})
+
+export const liquidityWithdrawals = sqliteTable("liquidity_withdrawals", {
+    id: text("id").unique().primaryKey().notNull(),
+    providerAddress: text("provider_address").notNull(),
+    assetAddress: text("asset_address").notNull(),
+    lpTokenAmount: integer("lp_token_amount").notNull(),
+    usdcReturned: integer("usdc_returned").notNull(),
+    rewardsEarned: integer("rewards_earned").notNull(),
+    status: text("status").notNull(),
+    transactionHash: text("transaction_hash"),
+    blockExplorerUrl: text("block_explorer_url"),
+    errorMessage: text("error_message"),
+    requestedAt: integer("requested_at").notNull(),
+    completedAt: integer("completed_at"),
+    createdAt: integer("created_at").default(Date.now()),
+    updatedAt: integer("updated_at").default(Date.now())
+}, (table) => {
+    return {
+        providerAddressIdx: index("liquidity_withdrawals_provider_idx").on(table.providerAddress),
+        assetAddressIdx: index("liquidity_withdrawals_asset_idx").on(table.assetAddress),
+        statusIdx: index("liquidity_withdrawals_status_idx").on(table.status),
+        requestedAtIdx: index("liquidity_withdrawals_requested_idx").on(table.requestedAt)
+    }
+})
+
+export const farmerBalances = sqliteTable("farmer_balances", {
+    farmerAddress: text("farmer_address").unique().primaryKey().notNull(),
+    availableBalance: integer("available_balance").notNull().default(0),
+    pendingBalance: integer("pending_balance").notNull().default(0),
+    totalEarned: integer("total_earned").notNull().default(0),
+    totalWithdrawn: integer("total_withdrawn").notNull().default(0),
+    lastWithdrawalAt: integer("last_withdrawal_at"),
     updatedAt: integer("updated_at").default(Date.now())
 })

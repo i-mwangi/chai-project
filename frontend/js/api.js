@@ -4,7 +4,7 @@
  */
 
 class CoffeeTreeAPI {
-    constructor(baseURL = 'http://localhost:3002') {  // Changed from 3001 to 3002 to match server
+    constructor(baseURL = 'http://localhost:3001') {  // Changed back to 3001 to match server
         this.baseURL = baseURL;
     }
 
@@ -14,7 +14,7 @@ class CoffeeTreeAPI {
         const fetchWithTimeout = (url, cfg, timeout = 60000) => { // Increased from 30000 to 60000 ms (1 minute)
             return new Promise((resolve, reject) => {
                 const timer = setTimeout(() => {
-                    reject(new Error('Request timed out'))
+                    reject(new Error('Request timed out after ' + (timeout/1000) + ' seconds'))
                 }, timeout)
 
                 fetch(url, cfg).then(res => {
@@ -57,26 +57,40 @@ class CoffeeTreeAPI {
             // ignore localStorage errors
         }
 
-        if (config.body && typeof config.body === 'object') {
+        if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
             config.body = JSON.stringify(config.body);
         }
 
         try {
             const response = await fetchWithTimeout(url, config, 60000); // Increased from 30000 to 60000 ms (1 minute)
-            const data = await response.json();
+            
+            // Handle non-JSON responses
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
 
-            if (!response.ok) {
-                const message = data?.error || data?.message || `HTTP error! status: ${response.status}`;
-                const err = new Error(message);
-                err.status = response.status
-                throw err;
+                if (!response.ok) {
+                    const message = data?.error || data?.message || `HTTP error! status: ${response.status}`;
+                    const err = new Error(message);
+                    err.status = response.status
+                    throw err;
+                }
+
+                return data;
+            } else {
+                // For non-JSON responses, return the text
+                const text = await response.text();
+                if (!response.ok) {
+                    const err = new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+                    err.status = response.status
+                    throw err;
+                }
+                return { success: true, data: text };
             }
-
-            return data;
         } catch (error) {
             console.error(`API request failed: ${endpoint}`, error);
             // Re-throw with a clearer message for UI to display
-            throw new Error(error?.message || String(error));
+            throw new Error(`API Error: ${error?.message || String(error)}`);
         }
     }
 
@@ -353,10 +367,6 @@ class CoffeeTreeAPI {
         return this.request(`/api/marketplace/user-listings?sellerAddress=${sellerAddress}`);
     }
 
-    async getHolderEarnings(holderAddress) {
-        return this.request(`/api/earnings/holder?holderAddress=${holderAddress}`);
-    }
-
     // Revenue Distribution API
     async createDistribution(harvestId, totalRevenue) {
         return this.request('/api/revenue/create-distribution', {
@@ -396,15 +406,118 @@ class CoffeeTreeAPI {
     }
 
     // User settings (per-account key/value store)
-    async saveUserSettings(accountId, settings) {
-        return this.request(`/api/user/settings/${accountId}`, {
-            method: 'PUT',
-            body: settings
-        });
+    
+    /**
+     * Get user settings for a specific account
+     * @param {string} accountId - Hedera account ID (e.g., "0.0.123456")
+     * @returns {Promise<Object>} User settings object
+     */
+    async getUserSettings(accountId) {
+        return this.requestWithRetry(`/api/user/settings/${accountId}`, {
+            method: 'GET'
+        }, 3);
     }
 
-    async getUserSettings(accountId) {
-        return this.request(`/api/user/settings/${accountId}`);
+    /**
+     * Update user settings for a specific account
+     * @param {string} accountId - Hedera account ID (e.g., "0.0.123456")
+     * @param {Object} settings - Settings object to update
+     * @returns {Promise<Object>} Updated settings object
+     */
+    async updateUserSettings(accountId, settings) {
+        return this.requestWithRetry(`/api/user/settings/${accountId}`, {
+            method: 'PUT',
+            body: settings
+        }, 3);
+    }
+
+    /**
+     * Legacy method - kept for backward compatibility
+     * @deprecated Use updateUserSettings instead
+     */
+    async saveUserSettings(accountId, settings) {
+        return this.updateUserSettings(accountId, settings);
+    }
+
+    /**
+     * Make an API request with retry logic
+     * @param {string} endpoint - API endpoint
+     * @param {Object} options - Request options
+     * @param {number} maxRetries - Maximum number of retry attempts (default: 3)
+     * @returns {Promise<Object>} Response data
+     */
+    async requestWithRetry(endpoint, options = {}, maxRetries = 3) {
+        let lastError = null;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return await this.request(endpoint, options);
+            } catch (error) {
+                lastError = error;
+                
+                // Don't retry on client errors (4xx) except for 429 (rate limit)
+                if (error.status >= 400 && error.status < 500 && error.status !== 429) {
+                    throw this.createUserFriendlyError(error, endpoint);
+                }
+                
+                // If this was the last attempt, throw the error
+                if (attempt === maxRetries) {
+                    throw this.createUserFriendlyError(error, endpoint);
+                }
+                
+                // Calculate exponential backoff delay: 100ms, 200ms, 400ms, etc.
+                const delay = Math.min(100 * Math.pow(2, attempt - 1), 2000);
+                console.warn(`Request failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`, error.message);
+                
+                // Wait before retrying
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+        
+        // This should never be reached, but just in case
+        throw this.createUserFriendlyError(lastError, endpoint);
+    }
+
+    /**
+     * Create a user-friendly error message
+     * @param {Error} error - Original error
+     * @param {string} endpoint - API endpoint that failed
+     * @returns {Error} Error with user-friendly message
+     */
+    createUserFriendlyError(error, endpoint) {
+        let message = 'An unexpected error occurred. Please try again.';
+        
+        // Network errors
+        if (error.message.includes('timed out')) {
+            message = 'The request took too long. Please check your connection and try again.';
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            message = 'Unable to connect to the server. Please check your internet connection.';
+        }
+        // HTTP status errors
+        else if (error.status === 400) {
+            message = 'Invalid request. Please check your input and try again.';
+        } else if (error.status === 401) {
+            message = 'Authentication required. Please log in and try again.';
+        } else if (error.status === 403) {
+            message = 'You do not have permission to perform this action.';
+        } else if (error.status === 404) {
+            message = 'The requested resource was not found.';
+        } else if (error.status === 429) {
+            message = 'Too many requests. Please wait a moment and try again.';
+        } else if (error.status >= 500) {
+            message = 'Server error. Please try again later.';
+        }
+        // Use original error message if it's more specific
+        else if (error.message && !error.message.includes('API Error:')) {
+            message = error.message;
+        }
+        
+        const userError = new Error(message);
+        userError.originalError = error;
+        userError.endpoint = endpoint;
+        userError.status = error.status;
+        
+        return userError;
     }
 
     // Lending Pool API - Liquidity Provision
@@ -413,16 +526,24 @@ class CoffeeTreeAPI {
     }
 
     async provideLiquidity(assetAddress, amount) {
+        const providerAddress = window.walletManager?.getAccountId();
+        if (!providerAddress) {
+            throw new Error('Wallet not connected');
+        }
         return this.request('/api/lending/provide-liquidity', {
             method: 'POST',
-            body: { assetAddress, amount }
+            body: { assetAddress, amount, providerAddress }
         });
     }
 
     async withdrawLiquidity(assetAddress, lpTokenAmount) {
+        const providerAddress = window.walletManager?.getAccountId();
+        if (!providerAddress) {
+            throw new Error('Wallet not connected');
+        }
         return this.request('/api/lending/withdraw-liquidity', {
             method: 'POST',
-            body: { assetAddress, lpTokenAmount }
+            body: { assetAddress, lpTokenAmount, providerAddress }
         });
     }
 
@@ -439,16 +560,24 @@ class CoffeeTreeAPI {
     }
 
     async takeOutLoan(assetAddress, loanAmount) {
+        const borrowerAddress = window.walletManager?.getAccountId();
+        if (!borrowerAddress) {
+            throw new Error('Wallet not connected');
+        }
         return this.request('/api/lending/take-loan', {
             method: 'POST',
-            body: { assetAddress, loanAmount }
+            body: { assetAddress, loanAmount, borrowerAddress }
         });
     }
 
     async repayLoan(assetAddress) {
+        const borrowerAddress = window.walletManager?.getAccountId();
+        if (!borrowerAddress) {
+            throw new Error('Wallet not connected');
+        }
         return this.request('/api/lending/repay-loan', {
             method: 'POST',
-            body: { assetAddress }
+            body: { assetAddress, borrowerAddress }
         });
     }
 
@@ -555,6 +684,7 @@ class CoffeeTreeAPI {
     }
 
     // Transaction History API
+    // Transaction History API
     async getTransactionHistory(userAddress, options = {}) {
         const params = new URLSearchParams({
             userAddress,
@@ -578,15 +708,6 @@ class CoffeeTreeAPI {
                 updates
             }
         });
-    }
-
-    // Transaction History API
-    async getTransactionHistory(userAddress, options = {}) {
-        const params = new URLSearchParams({
-            userAddress,
-            ...options
-        });
-        return this.request(`/api/transactions/history?${params.toString()}`);
     }
 
     async getTransactionById(transactionId) {

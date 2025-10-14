@@ -3,6 +3,7 @@ import { parse } from 'url'
 import { db } from '../db'
 import { farmerVerifications, coffeeGroves, userSettings } from '../db/schema'
 import { eq } from 'drizzle-orm'
+import { groveTokenizationService } from './grove-tokenization-service'
 
 // Farmer verification is intentionally disabled in this build (Option A).
 // The API will treat farmers as verified and allow grove registration without
@@ -445,24 +446,61 @@ class FarmerVerificationAPI {
                     groveName: bodyAny.groveName,
                     farmerAddress: bodyAny.farmerAddress,
                     location: bodyAny.location || 'Unknown',
-                    coordinates: bodyAny.coordinates || null,
+                    coordinatesLat: bodyAny.coordinates ? Number(bodyAny.coordinates.lat) : null,
+                    coordinatesLng: bodyAny.coordinates ? Number(bodyAny.coordinates.lng) : null,
                     treeCount: Number(bodyAny.treeCount) || 0,
                     coffeeVariety: bodyAny.coffeeVariety || 'Unknown',
                     expectedYieldPerTree: Number(bodyAny.expectedYieldPerTree) || null,
-                    verificationStatus: ((farmer && farmer.verificationStatus === 'verified') || (userSetting && userSetting.demoBypass) || demoBypass) ? 'verified' : 'pending',
+                    verificationStatus: (DISABLE_FARMER_VERIFICATION || (farmer && farmer.verificationStatus === 'verified') || (userSetting && userSetting.demoBypass) || demoBypass) ? 'verified' : 'pending',
                     createdAt: Date.now(),
                     updatedAt: Date.now()
                 }
 
-                await db.insert(coffeeGroves).values(groveRecord)
+                // Insert grove into database first
+                const insertResult = await db.insert(coffeeGroves).values(groveRecord).returning()
+                const insertedGrove = insertResult[0]
+
+                console.log(`✅ Grove registered in database: ${insertedGrove.groveName} (ID: ${insertedGrove.id})`)
+
+                // Step 2: Tokenize the grove on Hedera (if configured)
+                let tokenizationResult = null
+                if (groveTokenizationService.isAvailable() && insertedGrove.treeCount > 0) {
+                    console.log(`\n🚀 Initiating grove tokenization on Hedera...`)
+                    
+                    tokenizationResult = await groveTokenizationService.tokenizeGrove({
+                        groveId: insertedGrove.id,
+                        groveName: insertedGrove.groveName,
+                        treeCount: insertedGrove.treeCount,
+                        tokensPerTree: 10 // Default: 10 tokens per tree
+                    })
+
+                    if (tokenizationResult.success) {
+                        console.log(`✅ Grove tokenized successfully on Hedera`)
+                    } else {
+                        console.warn(`⚠️  Grove tokenization failed: ${tokenizationResult.error}`)
+                        console.warn(`   Grove registered in database but not tokenized on-chain`)
+                    }
+                } else {
+                    console.log(`ℹ️  Skipping tokenization (contract not configured or no trees)`)
+                }
 
                 return sendResponse(res, 201, {
                     success: true,
                     message: 'Grove registered successfully',
                     data: {
-                        groveName: groveRecord.groveName,
-                        farmerAddress: groveRecord.farmerAddress,
-                        registrationDate: new Date().toISOString()
+                        groveId: insertedGrove.id,
+                        groveName: insertedGrove.groveName,
+                        farmerAddress: insertedGrove.farmerAddress,
+                        registrationDate: new Date().toISOString(),
+                        tokenization: tokenizationResult ? {
+                            success: tokenizationResult.success,
+                            tokenAddress: tokenizationResult.tokenAddress,
+                            totalTokensIssued: tokenizationResult.totalTokensIssued,
+                            error: tokenizationResult.error
+                        } : {
+                            success: false,
+                            message: 'Tokenization not configured'
+                        }
                     }
                 })
             }

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Revenue Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #6d3410;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Revenue Display Test</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Report a Test Harvest</h2>
+        <button onclick="reportTestHarvest()">Report Test Harvest (100kg × $5/kg = $500)</button>
+        <div id="harvestResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 2: Check Revenue Stats</h2>
+        <button onclick="checkRevenueStats()">Get Revenue Stats</button>
+        <div id="statsResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Step 3: Check Earnings History (for chart)</h2>
+        <button onclick="checkEarningsHistory()">Get Earnings History</button>
+        <div id="earningsResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        const FARMER_ADDRESS = '0.0.123456';
+
+        async function reportTestHarvest() {
+            const result = document.getElementById('harvestResult');
+            result.textContent = 'Reporting harvest...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/harvest/report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        farmerAddress: FARMER_ADDRESS,
+                        groveName: 'Test Grove',
+                        harvestDate: new Date().toISOString().split('T')[0],
+                        yieldKg: 100,
+                        qualityGrade: 8,
+                        salePricePerKg: 5.0,
+                        notes: 'Test harvest for revenue display'
+                    })
+                });
+                
+                const data = await response.json();
+                result.className = 'result success';
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function checkRevenueStats() {
+            const result = document.getElementById('statsResult');
+            result.textContent = 'Fetching stats...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/harvest/stats?farmerAddress=${FARMER_ADDRESS}`);
+                const data = await response.json();
+                
+                result.className = 'result success';
+                result.textContent = JSON.stringify(data, null, 2);
+                
+                // Highlight the important values
+                if (data.success && data.stats) {
+                    result.textContent += '\n\n=== EXPECTED VALUES ===\n';
+                    result.textContent += `Total Earnings (30% of revenue): $${data.stats.totalEarnings.toFixed(2)}\n`;
+                    result.textContent += `This Month: $${data.stats.monthlyEarnings.toFixed(2)}\n`;
+                    result.textContent += `Pending Distributions: $${data.stats.pendingDistributions.toFixed(2)}\n`;
+                }
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function checkEarningsHistory() {
+            const result = document.getElementById('earningsResult');
+            result.textContent = 'Fetching earnings history...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/harvest/holder/${FARMER_ADDRESS}/earnings`);
+                const data = await response.json();
+                
+                result.className = 'result success';
+                result.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success && data.data) {
+                    result.textContent += '\n\n=== CHART DATA ===\n';
+                    result.textContent += `Total Earnings: $${data.data.totalEarnings.toFixed(2)}\n`;
+                    result.textContent += `Distribution History Items: ${data.data.distributionHistory.length}\n`;
+                }
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

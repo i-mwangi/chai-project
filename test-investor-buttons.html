@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Investor Buttons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+        }
+
+        .marketplace-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Investor Button Test</h1>
+    <div id="testContainer"></div>
+
+    <script>
+        // Test if window.investorPortal exists
+        console.log('Testing investor portal buttons...');
+        console.log('window.investorPortal exists:', typeof window.investorPortal);
+
+        // Create test grove data
+        const testGrove = {
+            id: 'test-grove-1',
+            groveName: 'Test Grove',
+            location: 'Test Location',
+            coffeeVariety: 'Arabica',
+            treeCount: 100,
+            expectedYieldPerTree: 5,
+            tokensAvailable: 50,
+            pricePerToken: 100,
+            projectedAnnualReturn: 12,
+            healthScore: 85
+        };
+
+        // Render test card
+        const container = document.getElementById('testContainer');
+        container.innerHTML = `
+            <div class="marketplace-card">
+                <h3>${testGrove.groveName}</h3>
+                <p>Location: ${testGrove.location}</p>
+                <div class="grove-actions">
+                    <button class="btn btn-secondary grove-details-btn" data-grove-id="${testGrove.id}">
+                        View Details
+                    </button>
+                    <button class="btn btn-primary grove-invest-btn" data-grove-id="${testGrove.id}">
+                        Invest Now
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add event listeners
+        console.log('Adding event listeners...');
+
+        const detailsBtn = container.querySelector('.grove-details-btn');
+        const investBtn = container.querySelector('.grove-invest-btn');
+
+        console.log('Details button found:', !!detailsBtn);
+        console.log('Invest button found:', !!investBtn);
+
+        if (detailsBtn) {
+            detailsBtn.addEventListener('click', (e) => {
+                console.log('Details button clicked!');
+                const groveId = e.target.dataset.groveId;
+                alert('View Details clicked for grove: ' + groveId);
+            });
+        }
+
+        if (investBtn) {
+            investBtn.addEventListener('click', (e) => {
+                console.log('Invest button clicked!');
+                const groveId = e.target.dataset.groveId;
+                alert('Invest Now clicked for grove: ' + groveId);
+            });
+        }
+
+        console.log('Test setup complete. Try clicking the buttons.');
+    </script>
+</body>
+
+</html>

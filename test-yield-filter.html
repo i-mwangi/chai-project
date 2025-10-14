@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Yield Filter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .yield-filter-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 300px;
+            margin: 20px 0;
+        }
+        .yield-filter-container label {
+            font-size: 0.875rem;
+            color: #666;
+            font-weight: 500;
+        }
+        .yield-filter-container #yieldFilterValue {
+            color: #8B4513;
+            font-weight: 700;
+        }
+        .yield-filter-container input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(to right, #8B4513 0%, #A0522D 100%);
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
+        }
+        .yield-filter-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #8B4513;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .grove-list {
+            margin-top: 20px;
+        }
+        .grove-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Yield Filter Test</h1>
+    
+    <div class="yield-filter-container">
+        <label for="yieldFilter">Min Yield: <span id="yieldFilterValue">0.0</span> kg/tree</label>
+        <input type="range" id="yieldFilter" min="0" max="10" step="0.1" value="0">
+    </div>
+    
+    <div class="grove-list" id="groveList">
+        <!-- Groves will be displayed here -->
+    </div>
+
+    <script>
+        // Sample grove data
+        const groves = [
+            { name: 'Test Grove', yield: 8.0, location: 'Test Location' },
+            { name: 'pinyo', yield: 1.0, location: 'Simulation' },
+            { name: 'jap', yield: 0.643, location: 'Simulation' },
+            { name: 'henry', yield: 1.0, location: 'Simulation' },
+            { name: 'kija', yield: 1.0, location: 'muranga' }
+        ];
+
+        const yieldFilter = document.getElementById('yieldFilter');
+        const yieldFilterValue = document.getElementById('yieldFilterValue');
+        const groveList = document.getElementById('groveList');
+
+        function renderGroves(minYield) {
+            const filtered = groves.filter(g => g.yield >= minYield);
+            
+            groveList.innerHTML = `
+                <h3>Showing ${filtered.length} of ${groves.length} groves</h3>
+                ${filtered.map(g => `
+                    <div class="grove-item">
+                        <strong>${g.name}</strong> - 
+                        Yield: ${g.yield} kg/tree - 
+                        Location: ${g.location}
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        yieldFilter.addEventListener('input', () => {
+            const value = parseFloat(yieldFilter.value);
+            yieldFilterValue.textContent = value.toFixed(1);
+            renderGroves(value);
+        });
+
+        // Initial render
+        renderGroves(0);
+    </script>
+</body>
+</html>

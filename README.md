@@ -115,7 +115,7 @@ start-demo.bat
 ```
 
 This will:
-1. Start the Mock API Server on port 3001
+1. Start the Mock API Server on port 3002
 2. Start the Frontend Server on port 3000
 3. Automatically open your browser to the landing page
 
@@ -129,7 +129,7 @@ For developers who prefer using npm scripts (works on Windows, macOS, and Linux)
    ```bash
    npm run dev
    ```
-   This command starts both the frontend server and mock API server simultaneously.
+   This command starts both the frontend server (port 3000) and mock API server (port 3002) simultaneously.
 
 2. **Start frontend server only**:
    ```bash
@@ -139,6 +139,7 @@ For developers who prefer using npm scripts (works on Windows, macOS, and Linux)
    ```bash
    node frontend/server.js
    ```
+   The frontend server will run on port 3000.
 
 3. **Start API server**:
    - For mock API:
@@ -149,6 +150,7 @@ For developers who prefer using npm scripts (works on Windows, macOS, and Linux)
      ```bash
      node frontend/api-server.js
      ```
+     The mock API server will run on port 3002.
    - For full API with Hedera integration:
      ```bash
      npm run api
@@ -157,6 +159,7 @@ For developers who prefer using npm scripts (works on Windows, macOS, and Linux)
      ```bash
      npx tsx api/server.ts
      ```
+     The full API server will run on port 3001.
 
 #### Option 3: Hedera Testnet (Real Blockchain)
 
@@ -192,10 +195,10 @@ If you prefer to start the services manually:
 
 1. Start the API server:
    ```bash
-   # Mock API (no Hedera needed)
+   # Mock API (no Hedera needed) - runs on port 3002
    node frontend/api-server.js
    
-   # OR Real Hedera API (requires setup)
+   # OR Real Hedera API (requires setup) - runs on port 3001
    npx tsx api/server.ts
    ```
 
@@ -203,14 +206,23 @@ If you prefer to start the services manually:
    ```bash
    node frontend/server.js
    ```
+   The frontend server will run on port 3000.
 
 3. Open your browser and visit `http://localhost:3000`
+
+### Server Port Configuration
+
+The Chai Platform uses the following port configuration:
+- **Frontend Server**: Port 3000
+- **Mock API Server**: Port 3002
+- **Full API Server**: Port 3001
 
 ### Accessing the Application
 
 Once the servers are running, you can access the application at:
 - **Frontend**: http://localhost:3000
-- **API Health Check**: http://localhost:3001/health
+- **Mock API Health Check**: http://localhost:3002/health
+- **Full API Health Check**: http://localhost:3001/health
 
 ### Navigating the Application
 
