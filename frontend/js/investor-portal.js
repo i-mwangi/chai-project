@@ -2709,7 +2709,7 @@ async handleTokenPurchase(groveId, tokenAmount) {
                             </div>
                             <div class="transaction-meta">
                                 <span>${manager.formatTimestamp(tx.timestamp)}</span>
-                                ${tx.transactionHash ? `
+                                ${tx.transactionHash && tx.blockExplorerUrl ? `
                                     <a href="${tx.blockExplorerUrl}" target="_blank" class="transaction-hash">
                                         View on Explorer →
                                     </a>
