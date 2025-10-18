@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal and Notification Test</title>
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/buttons.css">
+    <link rel="stylesheet" href="css/forms.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="wallet/modal.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .test-buttons {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            background-color: #4a4a4a;
+            color: white;
+        }
+        button:hover {
+            background-color: #5a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <h1>Modal and Notification Test</h1>
+    
+    <div class="test-buttons">
+        <button onclick="showGroveModal()">Open Grove Registration Modal</button>
+        <button onclick="showNotification()">Show Notification</button>
+        <button onclick="showWalletModal()">Open Wallet Modal</button>
+    </div>
+    
+    <!-- Grove Registration Modal -->
+    <div id="groveModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Register Coffee Grove</h4>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="groveName">Grove Name</label>
+                    <input class="form-input" type="text" id="groveName" name="groveName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="location">Location</label>
+                    <input class="form-input" type="text" id="location" name="location" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Register Grove</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Wallet Modal (for comparison) -->
+    <div class="wallet-modal" style="display: none;">
+        <div class="wallet-modal-overlay"></div>
+        <div class="wallet-modal-content">
+            <div class="wallet-modal-header">
+                <h2>Connect Wallet</h2>
+                <button class="wallet-modal-close">&times;</button>
+            </div>
+            <div class="wallet-modal-body">
+                <p>Wallet connection modal content</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="notification-container"></div>
+
+    <script src="js/notification-manager.js"></script>
+    <script>
+        // Setup modal close functionality
+        document.querySelectorAll('.modal-close, .modal-overlay').forEach(element => {
+            element.addEventListener('click', function() {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            });
+        });
+        
+        document.querySelectorAll('.wallet-modal-close, .wallet-modal-overlay').forEach(element => {
+            element.addEventListener('click', function() {
+                document.querySelector('.wallet-modal').style.display = 'none';
+            });
+        });
+        
+        // Test functions
+        function showGroveModal() {
+            document.getElementById('groveModal').classList.add('active');
+        }
+        
+        function showNotification() {
+            if (window.notificationManager) {
+                window.notificationManager.success('This notification should be visible even when modal is open!');
+            } else {
+                alert('Notification manager not available');
+            }
+        }
+        
+        function showWalletModal() {
+            document.querySelector('.wallet-modal').style.display = 'flex';
+        }
+        
+        // Test on load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Modal and notification test loaded');
+            console.log('Notification manager: ' + (window.notificationManager ? 'Available' : 'Not available'));
+            if (window.notificationManager) {
+                console.log('Container ID: ' + (window.notificationManager.container ? window.notificationManager.container.id : 'None'));
+            }
+        });
+    </script>
+</body>
+</html>

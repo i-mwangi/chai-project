@@ -5,6 +5,9 @@
 
 import { IncomingMessage, ServerResponse } from 'http';
 import { transactionRecorder } from './transaction-recording-service';
+import { db } from '../db';
+import { tokenHoldings, coffeeGroves } from '../db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 
 // Utility functions
 function sendResponse(res: ServerResponse, statusCode: number, data: any) {
@@ -129,11 +132,55 @@ export async function listTokensForSale(req: IncomingMessage, res: ServerRespons
             return;
         }
 
+        // Check if user has enough tokens
+        const userHolding = await db.select()
+            .from(tokenHoldings)
+            .where(
+                and(
+                    eq(tokenHoldings.groveId, groveId),
+                    eq(tokenHoldings.holderAddress, sellerAddress),
+                    eq(tokenHoldings.isActive, true)
+                )
+            )
+            .limit(1);
+
+        if (!userHolding || userHolding.length === 0) {
+            sendError(res, 404, 'No token holdings found for this grove');
+            return;
+        }
+
+        const holding = userHolding[0];
+        if (holding.tokenAmount < tokenAmount) {
+            sendError(res, 400, `Insufficient tokens. You have ${holding.tokenAmount} tokens but tried to list ${tokenAmount}`);
+            return;
+        }
+
+        // Get grove details
+        const grove = await db.select()
+            .from(coffeeGroves)
+            .where(eq(coffeeGroves.id, groveId))
+            .limit(1);
+
+        const groveName = grove && grove.length > 0 ? grove[0].groveName : `Grove ${groveId}`;
+
+        // Reduce the token amount in holdings
+        await db.update(tokenHoldings)
+            .set({
+                tokenAmount: sql`${tokenHoldings.tokenAmount} - ${tokenAmount}`,
+                updatedAt: Math.floor(Date.now() / 1000)
+            })
+            .where(
+                and(
+                    eq(tokenHoldings.groveId, groveId),
+                    eq(tokenHoldings.holderAddress, sellerAddress)
+                )
+            );
+
         // Create new listing
         const newListing = {
             id: String(mockListings.length + 1),
             listingId: mockListings.length + 1,
-            groveName: `Grove ${groveId}`,
+            groveName,
             sellerAddress,
             tokenAddress: `0xtoken${groveId}`,
             tokenAmount,
@@ -144,7 +191,8 @@ export async function listTokensForSale(req: IncomingMessage, res: ServerRespons
             coffeeVariety: 'Arabica',
             location: 'Unknown',
             healthScore: 80,
-            isActive: true
+            isActive: true,
+            groveId // Add groveId for tracking
         };
 
         mockListings.push(newListing);
@@ -152,7 +200,8 @@ export async function listTokensForSale(req: IncomingMessage, res: ServerRespons
         sendResponse(res, 200, {
             success: true,
             listing: newListing,
-            message: 'Tokens listed for sale successfully'
+            message: 'Tokens listed for sale successfully',
+            remainingTokens: holding.tokenAmount - tokenAmount
         });
     } catch (error) {
         console.error('Error listing tokens for sale:', error);
@@ -219,11 +268,53 @@ export async function purchaseFromMarketplace(req: IncomingMessage, res: ServerR
             listing.isActive = false;
         }
 
+        // Transfer tokens to buyer
+        const groveId = (listing as any).groveId || listing.groveName;
+        
+        // Check if buyer already has tokens for this grove
+        const buyerHolding = await db.select()
+            .from(tokenHoldings)
+            .where(
+                and(
+                    eq(tokenHoldings.groveId, groveId),
+                    eq(tokenHoldings.holderAddress, buyerAddress),
+                    eq(tokenHoldings.isActive, true)
+                )
+            )
+            .limit(1);
+
+        if (buyerHolding && buyerHolding.length > 0) {
+            // Update existing holding
+            await db.update(tokenHoldings)
+                .set({
+                    tokenAmount: sql`${tokenHoldings.tokenAmount} + ${tokenAmount}`,
+                    updatedAt: Math.floor(Date.now() / 1000)
+                })
+                .where(
+                    and(
+                        eq(tokenHoldings.groveId, groveId),
+                        eq(tokenHoldings.holderAddress, buyerAddress)
+                    )
+                );
+        } else {
+            // Create new holding for buyer
+            await db.insert(tokenHoldings).values({
+                groveId,
+                holderAddress: buyerAddress,
+                tokenAmount,
+                purchasePrice: totalPrice,
+                purchaseDate: Math.floor(Date.now() / 1000),
+                isActive: true,
+                createdAt: Math.floor(Date.now() / 1000),
+                updatedAt: Math.floor(Date.now() / 1000)
+            });
+        }
+
         // Record transaction in history
         await transactionRecorder.recordSale({
             sellerAddress: listing.sellerAddress,
             buyerAddress: buyerAddress,
-            groveId: listing.groveName, // Use groveName as groveId
+            groveId: groveId,
             tokenAmount: tokenAmount,
             usdcAmount: totalPrice,
             transactionHash: `0x${Date.now().toString(16)}`
@@ -267,9 +358,24 @@ export async function cancelListing(req: IncomingMessage, res: ServerResponse) {
         // Cancel listing
         listing.isActive = false;
 
+        // Restore tokens to seller
+        const groveId = (listing as any).groveId || listing.groveName;
+        await db.update(tokenHoldings)
+            .set({
+                tokenAmount: sql`${tokenHoldings.tokenAmount} + ${listing.tokenAmount}`,
+                updatedAt: Math.floor(Date.now() / 1000)
+            })
+            .where(
+                and(
+                    eq(tokenHoldings.groveId, groveId),
+                    eq(tokenHoldings.holderAddress, sellerAddress)
+                )
+            );
+
         sendResponse(res, 200, {
             success: true,
-            message: 'Listing cancelled successfully'
+            message: 'Listing cancelled successfully',
+            tokensRestored: listing.tokenAmount
         });
     } catch (error) {
         console.error('Error cancelling listing:', error);

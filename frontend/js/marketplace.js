@@ -50,6 +50,11 @@ class CoffeeTreeMarketplace {
                 const tokenAmount = parseInt(e.target.dataset.tokenAmount);
                 this.showListingModal(groveId, tokenAmount);
             }
+            
+            if (e.target.matches('[data-action="cancel-listing"]')) {
+                const listingId = e.target.dataset.listingId;
+                this.cancelListing(listingId);
+            }
         });
     }
 
@@ -83,7 +88,7 @@ class CoffeeTreeMarketplace {
             {
                 id: '1',
                 listingId: 1,
-                groveName: 'Sunrise Valley Grove',
+                groveName: 'Yirgacheffe Estate',
                 sellerAddress: '0x789abc123def456789012345678901234567890',
                 tokenAddress: '0xtoken1',
                 tokenAmount: 10,
@@ -92,14 +97,14 @@ class CoffeeTreeMarketplace {
                 listingDate: new Date('2024-12-01').toISOString(),
                 expirationDate: new Date('2024-12-31').toISOString(),
                 coffeeVariety: 'Arabica',
-                location: 'Costa Rica',
+                location: 'Ethiopia, Yirgacheffe',
                 healthScore: 85,
                 isActive: true
             },
             {
                 id: '2',
                 listingId: 2,
-                groveName: 'Mountain Peak Coffee',
+                groveName: 'Mount Elgon Grove',
                 sellerAddress: '0xabcdef123456789012345678901234567890123',
                 tokenAddress: '0xtoken2',
                 tokenAmount: 5,
@@ -108,7 +113,7 @@ class CoffeeTreeMarketplace {
                 listingDate: new Date('2024-12-05').toISOString(),
                 expirationDate: new Date('2024-12-31').toISOString(),
                 coffeeVariety: 'Bourbon',
-                location: 'Colombia',
+                location: 'Uganda, Mbale',
                 healthScore: 92,
                 isActive: true
             },
@@ -245,11 +250,29 @@ class CoffeeTreeMarketplace {
                     <button class="btn btn-secondary" data-action="view-details" data-listing-id="${listing.id}">
                         View Details
                     </button>
-                    <button class="btn btn-primary" data-action="buy-tokens" data-listing-id="${listing.id}">
-                        Buy Tokens
-                    </button>
+                    ${this.renderListingActionButton(listing)}
                 </div>
             </div>
+        `;
+    }
+
+    renderListingActionButton(listing) {
+        const currentUserAddress = window.walletManager?.getAccountId();
+        
+        // If this is the user's own listing, show cancel button
+        if (currentUserAddress && listing.sellerAddress === currentUserAddress) {
+            return `
+                <button class="btn btn-danger" data-action="cancel-listing" data-listing-id="${listing.id}">
+                    Cancel Listing
+                </button>
+            `;
+        }
+        
+        // Otherwise show buy button
+        return `
+            <button class="btn btn-primary" data-action="buy-tokens" data-listing-id="${listing.id}">
+                Buy Tokens
+            </button>
         `;
     }
 
@@ -603,6 +626,49 @@ class CoffeeTreeMarketplace {
         } catch (error) {
             console.error('Token listing failed:', error);
             window.walletManager.showToast('Failed to list tokens for sale', 'error');
+        } finally {
+            window.walletManager.hideLoading();
+        }
+    }
+
+    async cancelListing(listingId) {
+        const listing = this.listings.find(l => l.id === listingId);
+        if (!listing) {
+            window.walletManager.showToast('Listing not found', 'error');
+            return;
+        }
+
+        const sellerAddress = window.walletManager.getAccountId();
+        
+        // Confirm cancellation
+        if (!confirm(`Cancel listing of ${listing.tokenAmount} tokens from ${listing.groveName}?\n\nTokens will be returned to your portfolio.`)) {
+            return;
+        }
+
+        try {
+            window.walletManager.showLoading('Canceling listing...');
+            
+            const response = await window.coffeeAPI.cancelListing(listingId, sellerAddress);
+            
+            if (response.success) {
+                window.walletManager.showToast(
+                    `Listing cancelled! ${response.tokensRestored || listing.tokenAmount} tokens returned to your portfolio.`, 
+                    'success'
+                );
+                
+                // Refresh marketplace data
+                await this.loadMarketplaceData();
+                
+                // Refresh portfolio
+                if (window.investorPortal && window.investorPortal.currentSection === 'portfolio') {
+                    await window.investorPortal.loadPortfolio(sellerAddress);
+                }
+            } else {
+                window.walletManager.showToast(response.error || 'Failed to cancel listing', 'error');
+            }
+        } catch (error) {
+            console.error('Cancel listing failed:', error);
+            window.walletManager.showToast('Failed to cancel listing', 'error');
         } finally {
             window.walletManager.hideLoading();
         }

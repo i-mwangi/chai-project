@@ -1,10 +1,19 @@
-﻿<!DOCTYPE html>
+﻿﻿﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chai Platform - Beta</title>
     <link rel="icon" href="public/chai.png">
+    
+    <!-- Error Handling Styles -->
+    <link rel="stylesheet" href="css/wallet-errors.css">
+    <link rel="stylesheet" href="css/wallet-installation-guide.css">
+    
+    <!-- Wallet Loading Styles -->
+    <link rel="stylesheet" href="css/wallet-loading.css">
+    <link rel="stylesheet" href="css/wallet-connection-ui.css">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600;700;900&family=Playfair+Display:wght@700;900&display=swap');
     :root {
@@ -841,22 +850,22 @@
     <div class="svg-background">
         <!-- Multiple scattered SVGs with spiral effect -->
         <!-- 6 Tree SVGs -->
-        <img src="public/tree.svg" class="floating-svg tree" style="top: 10%; left: 15%; animation-duration: 25s; animation-name: float;">
-        <img src="public/tree.svg" class="floating-svg tree" style="top: 60%; left: 80%; animation-duration: 28s; animation-name: float-reverse;">
-        <img src="public/tree.svg" class="floating-svg tree" style="top: 30%; left: 50%; animation-duration: 33s; animation-name: float-spiral;">
-        <img src="public/tree.svg" class="floating-svg tree" style="top: 50%; left: 65%; animation-duration: 26s; animation-name: float;">
-        <img src="public/tree.svg" class="floating-svg tree" style="top: 20%; left: 35%; animation-duration: 30s; animation-name: float-spiral;">
-        <img src="public/tree.svg" class="floating-svg tree" style="top: 70%; left: 20%; animation-duration: 27s; animation-name: float-reverse;">
+        <img src="public/tree.svg" class="floating-svg tree" style="top: 10%; left: 15%; animation-duration: 25s; animation-name: float;" loading="lazy">
+        <img src="public/tree.svg" class="floating-svg tree" style="top: 60%; left: 80%; animation-duration: 28s; animation-name: float-reverse;" loading="lazy">
+        <img src="public/tree.svg" class="floating-svg tree" style="top: 30%; left: 50%; animation-duration: 33s; animation-name: float-spiral;" loading="lazy">
+        <img src="public/tree.svg" class="floating-svg tree" style="top: 50%; left: 65%; animation-duration: 26s; animation-name: float;" loading="lazy">
+        <img src="public/tree.svg" class="floating-svg tree" style="top: 20%; left: 35%; animation-duration: 30s; animation-name: float-spiral;" loading="lazy">
+        <img src="public/tree.svg" class="floating-svg tree" style="top: 70%; left: 20%; animation-duration: 27s; animation-name: float-reverse;" loading="lazy">
         <!-- 5 Coin SVGs -->
-        <img src="public/coin.svg" class="floating-svg coin" style="top: 20%; left: 70%; animation-duration: 30s; animation-name: float-reverse;">
-        <img src="public/coin.svg" class="floating-svg coin" style="top: 40%; left: 10%; animation-duration: 32s; animation-name: float-spiral;">
-        <img src="public/coin.svg" class="floating-svg coin" style="top: 70%; left: 40%; animation-duration: 29s; animation-name: float;">
-        <img src="public/coin.svg" class="floating-svg coin" style="top: 15%; left: 85%; animation-duration: 35s; animation-name: float-spiral;">
-        <img src="public/coin.svg" class="floating-svg coin" style="top: 80%; left: 50%; animation-duration: 31s; animation-name: float-reverse;">
+        <img src="public/coin.svg" class="floating-svg coin" style="top: 20%; left: 70%; animation-duration: 30s; animation-name: float-reverse;" loading="lazy">
+        <img src="public/coin.svg" class="floating-svg coin" style="top: 40%; left: 10%; animation-duration: 32s; animation-name: float-spiral;" loading="lazy">
+        <img src="public/coin.svg" class="floating-svg coin" style="top: 70%; left: 40%; animation-duration: 29s; animation-name: float;" loading="lazy">
+        <img src="public/coin.svg" class="floating-svg coin" style="top: 15%; left: 85%; animation-duration: 35s; animation-name: float-spiral;" loading="lazy">
+        <img src="public/coin.svg" class="floating-svg coin" style="top: 80%; left: 50%; animation-duration: 31s; animation-name: float-reverse;" loading="lazy">
         <!-- Bean SVGs -->
-        <img src="public/bean.svg" class="floating-svg bean" style="top: 75%; left: 25%; animation-duration: 35s; animation-name: float-spiral;">
-        <img src="public/bean.svg" class="floating-svg bean" style="top: 85%; left: 85%; animation-duration: 27s; animation-name: float;">
-        <img src="public/bean.svg" class="floating-svg bean" style="top: 15%; left: 30%; animation-duration: 31s; animation-name: float-reverse;">
+        <img src="public/bean.svg" class="floating-svg bean" style="top: 75%; left: 25%; animation-duration: 35s; animation-name: float-spiral;" loading="lazy">
+        <img src="public/bean.svg" class="floating-svg bean" style="top: 85%; left: 85%; animation-duration: 27s; animation-name: float;" loading="lazy">
+        <img src="public/bean.svg" class="floating-svg bean" style="top: 15%; left: 30%; animation-duration: 31s; animation-name: float-reverse;" loading="lazy">
     </div>
     
     <div class="background-glow glow-1"></div>
@@ -864,7 +873,7 @@
     <div class="background-glow glow-3"></div>
 <nav>
     <div class="brand-section">
-        <img class="brand-logo" src="public/chai.png" alt="Chai Platform Logo" width="50" height="50">
+        <img class="brand-logo" src="public/chai.png" alt="Chai Platform Logo" width="50" height="50" decoding="async">
         <div class="brand-text">
             <div class="brand-name-wrapper">
                 <h1 class="brand-name">Chai Platform</h1>
@@ -1086,7 +1095,7 @@
                             </ul>
                         </div>
                         <div class="problem-image">
-                            <img src="public/problems.png" alt="Challenges faced by smallholder coffee farmers" style="width: 100%; max-width: 500px; height: auto; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);">
+                            <img src="public/problems.png" alt="Challenges faced by smallholder coffee farmers" style="width: 100%; max-width: 500px; height: auto; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.5);" loading="lazy" decoding="async">
                         </div>
                     </div>
                 </div>
@@ -1211,17 +1220,17 @@
                 <h2>Platform Technology</h2>
                 <div class="features-grid">
                     <div class="feature-card">
-                        <img src="public/blockchain.png" alt="Hedera Hashgraph blockchain technology" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                        <img src="public/blockchain.png" alt="Hedera Hashgraph blockchain technology" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;" loading="lazy" decoding="async">
                         <h3>Hedera Hashgraph</h3>
                         <p>Lightning-fast, secure tokenization of coffee trees with minimal environmental impact and transaction costs</p>
                     </div>
                     <div class="feature-card">
-                        <img src="public/iot.png" alt="IoT sensors and data analytics" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                        <img src="public/iot.png" alt="IoT sensors and data analytics" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;" loading="lazy" decoding="async">
                         <h3>IoT & Data Analytics</h3>
                         <p>Real-time monitoring with IoT sensors tracking tree health, soil conditions, and yield predictions</p>
                     </div>
                     <div class="feature-card">
-                        <img src="public/data.png" alt="Transparent tracking and blockchain records" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                        <img src="public/data.png" alt="Transparent tracking and blockchain records" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;" loading="lazy" decoding="async">
                         <h3>Transparent Tracking</h3>
                         <p>Full supply chain visibility from farm to cup with immutable blockchain records</p>
                     </div>
@@ -1236,7 +1245,7 @@
                         <div class="feature-card">
                             <div style="text-align: center; margin-bottom: 20px;">
                                 <div style="width: 200px; height: 200px; border-radius: 50%; overflow: hidden; margin: 0 auto 20px; border: 3px solid #D4A373;">
-                                    <img src="public/solving.png" alt="Benefits for Farmers" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <img src="public/solving.png" alt="Benefits for Farmers" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy" decoding="async">
                                 </div>
                             </div>
                             <h3 style="color: #D4A373; font-size: 1.9rem; margin-bottom: 25px; text-align: center; font-weight: 600;">What Farmers Get</h3>
@@ -1258,7 +1267,7 @@
                         <div class="feature-card">
                             <div style="text-align: center; margin-bottom: 20px;">
                                 <div style="width: 200px; height: 200px; border-radius: 50%; overflow: hidden; margin: 0 auto 20px; border: 3px solid #D4A373;">
-                                    <img src="public/investor.png" alt="Benefits for Investors" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <img src="public/investor.png" alt="Benefits for Investors" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy" decoding="async">
                                 </div>
                             </div>
                             <h3 style="color: #D4A373; font-size: 1.9rem; margin-bottom: 25px; text-align: center; font-weight: 600;">What Investors Get</h3>
@@ -1284,7 +1293,7 @@
             <!-- WORLD MAP -->
             <section class="world-map-section" style="padding: 80px 20px; background-color: transparent; position: relative; text-align: center;">
                 <div style="max-width: 1200px; margin: 0 auto; position: relative;">
-                    <img src="public/world.svg" alt="World Map" style="width: 100%; max-width: 800px; height: auto; display: block; margin: 0 auto; border-radius: 12px;">
+                    <img src="public/world.svg" alt="World Map" style="width: 100%; max-width: 800px; height: auto; display: block; margin: 0 auto; border-radius: 12px;" loading="lazy">
                 </div>
             </section>
 
@@ -1338,7 +1347,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
                     <div style="text-align: left;">
                         <p style="margin-bottom: 10px;">Proudly built on:</p>
-                        <img src="public/hedera.webp" alt="Hedera Hashgraph" style="height: 30px;">
+                        <img src="public/hedera.webp" alt="Hedera Hashgraph" style="height: 30px;" loading="lazy" decoding="async">
                     </div>
                     <div>
                         <p style="text-align: center;">&copy; 2025 Chai Platform. All rights reserved.</p>
@@ -1349,6 +1358,11 @@
         </footer>
     </div>
 </div>
+
+<!-- ES Module Imports -->
+<script src="js/api.js"></script>
+<script src="js/notification-manager.js"></script>
+<script src="js/main.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {

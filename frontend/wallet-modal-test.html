@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Modal Test</title>
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="wallet/modal.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            background-color: #4a4a4a;
+            color: white;
+        }
+        button:hover {
+            background-color: #5a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <h1>Wallet Modal and Notification Test</h1>
+    
+    <div>
+        <button onclick="testModal()">Open Wallet Modal</button>
+        <button onclick="testNotification()">Show Notification</button>
+    </div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="notification-container"></div>
+
+    <script src="js/notification-manager.js"></script>
+    <script type="module">
+        import { WalletModal } from './wallet/modal.js';
+        
+        window.testModal = function() {
+            const modal = new WalletModal();
+            window.walletModal = modal; // Make it globally accessible
+            modal.createModal();
+            modal.render();
+        };
+        
+        window.testNotification = function() {
+            if (window.notificationManager) {
+                window.notificationManager.success('Notification positioned correctly at top right!');
+            } else {
+                alert('Notification manager not available');
+            }
+        };
+    </script>
+</body>
+</html>

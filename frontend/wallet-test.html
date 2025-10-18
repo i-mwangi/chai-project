@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Connection Test - Chai Platform</title>
+    <link rel="stylesheet" href="wallet/modal.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .test-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .status-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .status-value {
+            color: #333;
+            font-family: monospace;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.connected {
+            background: #00c851;
+        }
+
+        .status-indicator.disconnected {
+            background: #ff4444;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #7B3FF2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #6a2fd9;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-danger {
+            background: #ff4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #cc0000;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .transaction-form {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #7B3FF2;
+        }
+
+        .log-container {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            color: #00ff00;
+            margin-bottom: 4px;
+        }
+
+        .log-entry.error {
+            color: #ff4444;
+        }
+
+        .log-entry.info {
+            color: #4da6ff;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔗 Wallet Connection Test</h1>
+        <p class="subtitle">Test Hedera Wallet Connect integration</p>
+
+        <!-- Status Card -->
+        <div class="status-card">
+            <div class="status-row">
+                <span class="status-label">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    Status
+                </span>
+                <span class="status-value" id="statusValue">Not Connected</span>
+            </div>
+            <div class="status-row" id="accountRow" class="hidden">
+                <span class="status-label">Account ID</span>
+                <span class="status-value" id="accountValue">-</span>
+            </div>
+            <div class="status-row" id="networkRow" class="hidden">
+                <span class="status-label">Network</span>
+                <span class="status-value" id="networkValue">-</span>
+            </div>
+        </div>
+
+        <!-- Connection Buttons -->
+        <div class="button-group">
+            <button id="connectBtn" class="btn-primary" onclick="testConnect()">
+                Connect Wallet
+            </button>
+            <button id="disconnectBtn" class="btn-danger hidden" onclick="testDisconnect()">
+                Disconnect
+            </button>
+        </div>
+
+        <!-- Transaction Form -->
+        <div id="transactionForm" class="transaction-form hidden">
+            <h3 style="margin-bottom: 16px; color: #333;">Send Test Transaction</h3>
+            <div class="form-group">
+                <label for="recipientId">Recipient Account ID</label>
+                <input type="text" id="recipientId" placeholder="0.0.12345" value="0.0.12345">
+            </div>
+            <div class="form-group">
+                <label for="amount">Amount (HBAR)</label>
+                <input type="number" id="amount" placeholder="1" value="1" step="0.01">
+            </div>
+            <button class="btn-primary" onclick="testTransaction()" style="width: 100%;">
+                Send Transaction
+            </button>
+        </div>
+
+        <!-- Log -->
+        <div class="log-container" id="logContainer">
+            <div class="log-entry">Waiting for connection...</div>
+        </div>
+    </div>
+
+    <!-- Load Wallet Integration -->
+    <script type="module">
+        import { walletManager } from './wallet/index.js';
+
+        // Make available globally for onclick handlers
+        window.walletManager = walletManager;
+
+        // Subscribe to state changes
+        window.addEventListener('wallet-connected', (event) => {
+            updateUI();
+            addLog('Connected: ' + event.detail.accountId, 'info');
+        });
+
+        window.addEventListener('wallet-disconnected', () => {
+            updateUI();
+            addLog('Disconnected', 'info');
+        });
+
+        // Test functions
+        window.testConnect = async function() {
+            try {
+                addLog('Opening connection modal...', 'info');
+                await walletManager.connect();
+            } catch (error) {
+                addLog('Connection failed: ' + error.message, 'error');
+            }
+        };
+
+        window.testDisconnect = async function() {
+            try {
+                addLog('Disconnecting...', 'info');
+                await walletManager.disconnect();
+            } catch (error) {
+                addLog('Disconnect failed: ' + error.message, 'error');
+            }
+        };
+
+        window.testTransaction = async function() {
+            const recipientId = document.getElementById('recipientId').value;
+            const amount = document.getElementById('amount').value;
+
+            if (!recipientId || !amount) {
+                addLog('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                addLog(`Sending ${amount} HBAR to ${recipientId}...`, 'info');
+                const result = await walletManager.sendTransaction(recipientId, amount);
+                addLog('Transaction sent! ID: ' + result.transactionId, 'info');
+            } catch (error) {
+                addLog('Transaction failed: ' + error.message, 'error');
+            }
+        };
+
+        function updateUI() {
+            const isConnected = walletManager.isWalletConnected();
+            const accountId = walletManager.getAccountId();
+
+            // Update status indicator
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = 'status-indicator ' + (isConnected ? 'connected' : 'disconnected');
+
+            // Update status value
+            document.getElementById('statusValue').textContent = isConnected ? 'Connected' : 'Not Connected';
+
+            // Show/hide account info
+            const accountRow = document.getElementById('accountRow');
+            const networkRow = document.getElementById('networkRow');
+            
+            if (isConnected) {
+                accountRow.classList.remove('hidden');
+                networkRow.classList.remove('hidden');
+                document.getElementById('accountValue').textContent = accountId || '-';
+                document.getElementById('networkValue').textContent = 'Testnet';
+            } else {
+                accountRow.classList.add('hidden');
+                networkRow.classList.add('hidden');
+            }
+
+            // Toggle buttons
+            document.getElementById('connectBtn').classList.toggle('hidden', isConnected);
+            document.getElementById('disconnectBtn').classList.toggle('hidden', !isConnected);
+
+            // Show/hide transaction form
+            document.getElementById('transactionForm').classList.toggle('hidden', !isConnected);
+        }
+
+        function addLog(message, type = 'log') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Initialize
+        addLog('Initializing wallet manager...', 'info');
+        walletManager.init().then(() => {
+            addLog('Wallet manager ready', 'info');
+            updateUI();
+        }).catch(error => {
+            addLog('Initialization failed: ' + error.message, 'error');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Import Test</title>
+</head>
+<body>
+    <h1>Module Import Test</h1>
+    <p>Check the browser console for import results.</p>
+
+    <script type="module">
+        // Test import of wallet configuration
+        import { WALLET_CONFIG } from './js/wallet-config.js';
+        console.log('Wallet config imported successfully:', {
+            projectId: WALLET_CONFIG.PROJECT_ID ? 'Present' : 'Missing',
+            network: WALLET_CONFIG.NETWORK
+        });
+
+        // Test import of wallet provider
+        import HederaWalletProvider from './js/hedera-wallet-provider.js';
+        console.log('HederaWalletProvider class imported successfully');
+
+        // Test import of transactions
+        import { transferHbar, createToken } from './js/hedera-transactions.js';
+        console.log('Transaction functions imported successfully');
+
+        // Test import of wallet manager
+        import { initWalletManager, getWalletProvider } from './js/hedera-wallet-manager.js';
+        console.log('Wallet manager functions imported successfully');
+
+        // Test import of migration script
+        import { initializeNewWalletSystem } from './js/wallet-migration.js';
+        console.log('Migration functions imported successfully');
+
+        console.log('All wallet modules imported successfully!');
+        
+        // Display success message in the UI
+        document.body.innerHTML += '<p style="color: green; font-weight: bold;">✅ All modules imported successfully! Check console for details.</p>';
+    </script>
+</body>
+</html>

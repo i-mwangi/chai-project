@@ -6,9 +6,9 @@ const jsFiles = [
     'frontend/js/main.js',
     'frontend/js/farmer-dashboard.js',
     'frontend/js/investor-portal.js',
-    'frontend/js/wallet.js',
     'frontend/js/api.js',
-    'frontend/js/marketplace.js'
+    'frontend/js/marketplace.js',
+    'frontend/wallet/index.js'
 ];
 
 jsFiles.forEach(file => {

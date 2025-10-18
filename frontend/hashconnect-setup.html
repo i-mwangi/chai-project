@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HashConnect Setup - Chai Platform</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 30px;
+            border-radius: 10px;
+        }
+        h1 { color: #333; }
+        .status { 
+            padding: 15px; 
+            margin: 20px 0; 
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { 
+            background: #ccc; 
+            cursor: not-allowed; 
+        }
+        .code-block {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .wallet-info {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 HashConnect Integration Test</h1>
+        
+        <div id="status" class="status info">
+            Initializing HashConnect...
+        </div>
+
+        <div class="wallet-info" id="walletInfo" style="display: none;">
+            <h3>Connected Wallet</h3>
+            <p><strong>Account ID:</strong> <span id="accountId">-</span></p>
+            <p><strong>Network:</strong> <span id="network">-</span></p>
+            <p><strong>Status:</strong> <span id="connectionStatus">-</span></p>
+        </div>
+
+        <div>
+            <button id="connectBtn" onclick="testConnect()">Connect Wallet</button>
+            <button id="disconnectBtn" onclick="testDisconnect()" disabled>Disconnect</button>
+        </div>
+
+        <h2>Setup Instructions</h2>
+        <ol>
+            <li><strong>Install HashPack Extension</strong>
+                <ul>
+                    <li>Chrome/Edge/Brave: <a href="https://chrome.google.com/webstore/detail/hashpack/gjagmgiddbbciopjhllkdnddhcglnemk" target="_blank">Chrome Web Store</a></li>
+                    <li>Firefox: <a href="https://addons.mozilla.org/en-US/firefox/addon/hashpack/" target="_blank">Firefox Add-ons</a></li>
+                    <li>Or visit: <a href="https://www.hashpack.app/" target="_blank">hashpack.app</a></li>
+                </ul>
+            </li>
+            <li><strong>Create Testnet Account</strong>
+                <ul>
+                    <li>Open HashPack extension</li>
+                    <li>Create or import an account</li>
+                    <li>Switch to <strong>Testnet</strong> (important!)</li>
+                </ul>
+            </li>
+            <li><strong>Get Testnet HBAR</strong>
+                <ul>
+                    <li>Visit: <a href="https://portal.hedera.com/" target="_blank">portal.hedera.com</a></li>
+                    <li>Request free testnet HBAR</li>
+                </ul>
+            </li>
+            <li><strong>Connect</strong>
+                <ul>
+                    <li>Click "Connect Wallet" button above</li>
+                    <li>Approve the connection in HashPack</li>
+                </ul>
+            </li>
+        </ol>
+        
+        <div class="info" style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <strong>⚠️ Important:</strong> Make sure HashPack extension is installed and you're on <strong>Testnet</strong> before connecting!
+        </div>
+
+        <h2>Integration Code</h2>
+        <p>Add these script tags to your HTML before your app scripts:</p>
+        <div class="code-block">
+&lt;!-- Hedera SDK --&gt;
+&lt;script src="https://unpkg.com/@hashgraph/sdk@2.60.0/dist/index.web.js"&gt;&lt;/script&gt;
+
+&lt;!-- HashConnect v3 --&gt;
+&lt;script src="https://unpkg.com/hashconnect@3.0.14/dist/hashconnect.js"&gt;&lt;/script&gt;
+
+&lt;!-- Your HashConnect Manager --&gt;
+&lt;script src="js/hashpack-direct.js"&gt;&lt;/script&gt;
+&lt;!-- &lt;script src="js/wallet.js"&gt;&lt;/script&gt; (File does not exist) --&gt;
+&lt;!-- Use frontend/wallet/index.js instead --&gt;
+        </div>
+
+        <h2>Configuration</h2>
+        <div class="code-block">
+Project ID: 064fd491172719437f251327e1bc3ce8
+Network: TESTNET
+App Name: Chai Platform
+        </div>
+    </div>
+
+    <!-- Load Simple HashPack Manager -->
+    <script src="js/hashpack-simple.js"></script>
+
+    <script>
+        let manager = null;
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                updateStatus('Initializing...', 'info');
+                
+                // Create manager instance
+                manager = new SimpleHashPackManager();
+                
+                // Initialize
+                await manager.init();
+                
+                updateStatus('Ready! Click "Connect Wallet" to connect HashPack.', 'success');
+                document.getElementById('connectBtn').disabled = false;
+            } catch (error) {
+                console.error('Initialization error:', error);
+                updateStatus('Failed to initialize: ' + error.message, 'error');
+            }
+        });
+
+        async function testConnect() {
+            try {
+                updateStatus('Opening pairing modal...', 'info');
+                document.getElementById('connectBtn').disabled = true;
+                
+                const result = await manager.connect();
+                
+                if (result.success) {
+                    updateStatus('Successfully connected!', 'success');
+                    document.getElementById('disconnectBtn').disabled = false;
+                    
+                    // Show wallet info
+                    document.getElementById('walletInfo').style.display = 'block';
+                    document.getElementById('accountId').textContent = result.accountId;
+                    document.getElementById('network').textContent = result.network;
+                    document.getElementById('connectionStatus').textContent = manager.state;
+                }
+            } catch (error) {
+                console.error('Connection error:', error);
+                updateStatus('Connection failed: ' + error.message, 'error');
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        function testDisconnect() {
+            manager.disconnect();
+            updateStatus('Disconnected', 'info');
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            document.getElementById('walletInfo').style.display = 'none';
+        }
+
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status ' + type;
+        }
+    </script>
+</body>
+</html>

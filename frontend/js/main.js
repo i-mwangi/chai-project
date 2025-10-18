@@ -5,31 +5,96 @@
 
 class ViewManager {
     constructor() {
+        console.log('Creating ViewManager instance');
+        
         this.currentView = 'dashboard';
+        this.isInitialized = false;
+        
+        // Initialize immediately - don't wait for walletManager
+        // This makes viewManager available for button clicks right away
         this.init();
+        
+        // Wait for wallet manager in background for wallet-specific features
+        this.waitForWalletManager().then(() => {
+            console.log('WalletManager ready, enabling wallet features...');
+            // Initialize based on wallet connection
+            if (window.walletManager && typeof window.walletManager.isWalletConnected === 'function' && window.walletManager.isWalletConnected()) {
+                this.handleWalletConnected();
+            }
+        });
+    }
+
+    // Wait for wallet manager to be available (non-blocking)
+    async waitForWalletManager() {
+        console.log('Waiting for wallet manager to be available...');
+        
+        return new Promise((resolve) => {
+            if (window.walletManager) {
+                console.log('Wallet manager is already available');
+                resolve();
+            } else {
+                // Check every 100ms until walletManager is available
+                const checkInterval = setInterval(() => {
+                    if (window.walletManager) {
+                        console.log('Wallet manager is now available');
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+            }
+        });
     }
 
     init() {
+        console.log('Initializing ViewManager...');
+        
         this.setupNavigation();
         this.loadDashboardData();
+        this.isInitialized = true;
         
-        // Initialize based on wallet connection
-        if (window.walletManager.isWalletConnected()) {
-            this.handleWalletConnected();
-        }
+        console.log('✅ ViewManager initialized and ready');
     }
 
     setupNavigation() {
-        // Navigation buttons
-        document.querySelectorAll('.nav-btn').forEach(btn => {
+        console.log('Setting up navigation...');
+        
+        // Navigation buttons - attach listeners fresh on every page load
+        const navButtons = document.querySelectorAll('.nav-btn');
+        console.log('Found', navButtons.length, 'navigation buttons');
+        navButtons.forEach((btn, index) => {
+            console.log('Processing nav button', index, ':', btn.textContent.trim(), 'with view:', btn.dataset.view);
+            
+            // Always attach listener - no persistent flag check
+            console.log('Attaching event listener to nav button', index);
             btn.addEventListener('click', (e) => {
-                const view = e.target.dataset.view;
+                console.log('Nav button clicked:', e.currentTarget.textContent.trim());
+                // Get the button element (in case user clicks on text inside button)
+                const button = e.currentTarget;
+                const view = button.dataset.view;
+                console.log('View:', view);
+                
+                if (!view) {
+                    console.warn('No view specified for button:', button);
+                    return;
+                }
+                
+                // Set intended user type based on the view being navigated to
+                if (view === 'farmer') {
+                    console.log('Setting user type to farmer');
+                    window.walletManager?.setIntendedUserType('farmer');
+                } else if (view === 'investor') {
+                    console.log('Setting user type to investor');
+                    window.walletManager?.setIntendedUserType('investor');
+                }
+                
                 this.switchView(view);
             });
         });
     }
 
     switchView(view) {
+        console.log('Switching to view:', view);
+        
         // Update active navigation button
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('active');
@@ -50,25 +115,52 @@ class ViewManager {
 
         this.currentView = view;
 
+        // Set user type when switching views
+        if (view === 'farmer' && window.walletManager) {
+            window.walletManager.setIntendedUserType('farmer');
+        } else if (view === 'investor' && window.walletManager) {
+            window.walletManager.setIntendedUserType('investor');
+        }
+
         // Load view-specific data
         this.loadViewData(view);
     }
 
     async loadViewData(view) {
+        console.log('Loading view data for:', view);
+        
         try {
             switch (view) {
                 case 'dashboard':
                     await this.loadDashboardData();
                     break;
                 case 'farmer':
-                    if (window.walletManager.isWalletConnected() && window.walletManager.getUserType() === 'farmer') {
+                    // Set user type to farmer when switching to farmer view
+                    window.walletManager?.setIntendedUserType('farmer');
+                    if (window.walletManager && 
+                        typeof window.walletManager.isWalletConnected === 'function' &&
+                        window.walletManager.isWalletConnected() && 
+                        typeof window.walletManager.getUserType === 'function') {
+                        // Ensure the user type is set to farmer
+                        window.walletManager.setUserType('farmer');
                         if (window.farmerDashboard && typeof window.farmerDashboard.switchSection === 'function') {
+                            // Reinitialize event listeners when farmer view
+                            if (typeof window.farmerDashboard.setupEventListeners === 'function') {
+                                window.farmerDashboard.setupEventListeners();
+                            }
                             window.farmerDashboard.switchSection('groves');
                         }
                     }
                     break;
                 case 'investor':
-                    if (window.walletManager.isWalletConnected() && window.walletManager.getUserType() === 'investor') {
+                    // Set user type to investor when switching to investor view
+                    window.walletManager?.setIntendedUserType('investor');
+                    if (window.walletManager && 
+                        typeof window.walletManager.isWalletConnected === 'function' &&
+                        window.walletManager.isWalletConnected() && 
+                        typeof window.walletManager.getUserType === 'function') {
+                        // Ensure the user type is set to investor
+                        window.walletManager.setUserType('investor');
                         if (window.investorPortal && typeof window.investorPortal.switchSection === 'function') {
                             window.investorPortal.switchSection('browse');
                         }
@@ -77,7 +169,7 @@ class ViewManager {
                 case 'admin':
                     // Admin panel is handled by admin-panel.js
                     // Just ensure user is admin
-                    if (window.tokenAdminManager && !window.tokenAdminManager.isAdminUser()) {
+                    if (window.tokenAdminManager && typeof window.tokenAdminManager.isAdminUser === 'function' && !window.tokenAdminManager.isAdminUser()) {
                         this.showError('Admin access required');
                         this.switchView('dashboard');
                     }
@@ -89,6 +181,8 @@ class ViewManager {
     }
 
     async loadDashboardData() {
+        console.log('Loading dashboard data...');
+        
         try {
             // Load platform overview data
             const [marketOverview, pricesResponse] = await Promise.all([
@@ -104,6 +198,8 @@ class ViewManager {
     }
 
     updateDashboardStats(marketOverview, pricesResponse) {
+        console.log('Updating dashboard stats...');
+        
         // Mock data for dashboard stats
         const totalGrovesVal = marketOverview && marketOverview.success
             ? Number(marketOverview.totalGroves ?? marketOverview.data?.totalGroves ?? 0)
@@ -154,9 +250,16 @@ class ViewManager {
     }
 
     handleWalletConnected() {
+        console.log('Handling wallet connected event...');
+        
+        if (!window.walletManager || typeof window.walletManager.getUserType !== 'function') {
+            console.warn('WalletManager not fully initialized yet');
+            return;
+        }
+        
         const userType = window.walletManager.getUserType();
         
-        // Auto-switch to appropriate view
+        // Auto-switch to appropriate view based on user type
         if (userType === 'farmer') {
             this.switchView('farmer');
         } else if (userType === 'investor') {
@@ -165,14 +268,20 @@ class ViewManager {
     }
 
     showError(message) {
+        console.log('Showing error:', message);
+        
         window.walletManager.showToast(message, 'error');
     }
 
     showSuccess(message) {
+        console.log('Showing success:', message);
+        
         window.walletManager.showToast(message, 'success');
     }
 
     showWarning(message) {
+        console.log('Showing warning:', message);
+        
         window.walletManager.showToast(message, 'warning');
     }
 }
@@ -180,10 +289,14 @@ class ViewManager {
 // Application initialization
 class CoffeeTreeApp {
     constructor() {
+        console.log('Creating CoffeeTreeApp instance');
+        
         this.init();
     }
 
     async init() {
+        console.log('Initializing CoffeeTreeApp...');
+        
         try {
             // Wait for DOM to be ready
             if (document.readyState === 'loading') {
@@ -197,7 +310,12 @@ class CoffeeTreeApp {
     }
 
     async start() {
+        console.log('Starting CoffeeTreeApp...');
+        
         try {
+            // Wait for wallet manager to be ready
+            await this.waitForWalletManager();
+            
             // Initialize view manager
             window.viewManager = new ViewManager();
 
@@ -217,7 +335,30 @@ class CoffeeTreeApp {
         }
     }
 
+    // Wait for wallet manager to be available
+    async waitForWalletManager() {
+        console.log('Waiting for wallet manager to be available...');
+        
+        return new Promise((resolve) => {
+            if (window.walletManager) {
+                console.log('Wallet manager is already available');
+                resolve();
+            } else {
+                // Check every 100ms until walletManager is available
+                const checkInterval = setInterval(() => {
+                    if (window.walletManager) {
+                        console.log('Wallet manager is now available');
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+            }
+        });
+    }
+
     async testAPIConnection() {
+        console.log('Testing API connection...');
+        
         try {
             const response = await window.coffeeAPI.healthCheck();
             if (response.success) {
@@ -230,6 +371,8 @@ class CoffeeTreeApp {
     }
 
     showConnectionError() {
+        console.log('Showing connection error...');
+        
         const errorMessage = document.createElement('div');
         errorMessage.className = 'connection-error';
         errorMessage.innerHTML = `
@@ -306,6 +449,20 @@ window.utils = {
         };
     }
 };
+
+// Add this at the top of the file to ensure notification manager is available
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM content loaded, checking for notification manager...');
+    
+    // Ensure notification manager exists
+    if (!window.notificationManager) {
+        console.warn('Notification manager not found, initializing...');
+        // Create it if it doesn't exist
+        if (typeof NotificationManager !== 'undefined') {
+            window.notificationManager = new NotificationManager();
+        }
+    }
+});
 
 // Start the application
 window.coffeeTreeApp = new CoffeeTreeApp();

@@ -328,7 +328,9 @@ class MarketPricesDisplay {
      */
     async loadSeasonalMultipliers() {
         try {
-            const response = await fetch(`${this.apiClient.baseURL}/api/pricing/seasonal-multipliers`)
+            const response = await fetch(`${this.apiClient.baseURL}/api/pricing/seasonal-multipliers`, {
+                timeout: 30000 // 30 second timeout
+            })
             const data = await response.json()
 
             console.log('Seasonal multipliers response:', data)
@@ -336,9 +338,21 @@ class MarketPricesDisplay {
             if (data.success) {
                 const multipliers = data.data.seasonalMultipliers || data.data
                 this.displaySeasonalMultipliers(multipliers)
+            } else {
+                throw new Error(data.error || 'Failed to load seasonal multipliers')
             }
         } catch (error) {
             console.error('Error loading seasonal multipliers:', error)
+            // Display error message to user
+            const container = document.getElementById('seasonalMultipliersDisplay')
+            if (container) {
+                container.innerHTML = `
+                    <div class="error-message">
+                        <p>Unable to load seasonal pricing data. Please try again later.</p>
+                        <small>Error: ${error.message}</small>
+                    </div>
+                `
+            }
         }
     }
 

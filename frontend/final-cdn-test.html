@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final CDN Test</title>
+    <!-- Load required libraries via CDN -->
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
+    <script src="https://unpkg.com/@hashgraph/hedera-wallet-connect@1.5.1/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@hashgraph/sdk@2.61.0/dist/index.web.js"></script>
+</head>
+<body>
+    <h1>Final CDN Test</h1>
+    <p>Check the browser console for results.</p>
+    <p id="result">Testing...</p>
+    
+    <!-- Wallet configuration -->
+    <script>
+        // Wallet configuration as global object
+        window.WALLET_CONFIG = {
+          // Reown Project ID (from your instructions)
+          PROJECT_ID: '39948bbdaaebec2790629f3e9589793a',
+          
+          // hgraph API Keys (from your instructions)
+          HGRAPH_API_KEY_SECRET: 'sk_prod_d43d2c19c2b92d211191453c825c26f8ab3214ba',
+          HGRAPH_API_KEY_PUBLISHABLE: 'pk_prod_b22fc037d2c920e95fc37855079d0278a85bfd57',
+          
+          // RPC URLs
+          TESTNET_RPC_URL: 'https://testnet.hedera.api.hgraph.io/v1/sk_prod_d43d2c19c2b92d211191453c825c26f8ab3214ba/rpc',
+          MAINNET_RPC_URL: 'https://mainnet.hedera.api.hgraph.io/v1/sk_prod_d43d2c19c2b92d211191453c825c26f8ab3214ba/rpc',
+          
+          // App metadata
+          APP_METADATA: {
+            name: 'Chai Platform',
+            description: 'Invest in Sustainable Coffee Production',
+            url: window.location.origin,
+            icons: [`${window.location.origin}/public/chai.png`],
+          },
+          
+          // Network settings
+          NETWORK: 'testnet', // or 'mainnet' for production
+        };
+    </script>
+    
+    <script type="module">
+        // Import wallet manager at top level
+        import { initWalletManager } from './js/hedera-wallet-manager.js';
+        import { transferHbar } from './js/hedera-transactions-cdn.js';
+        
+        try {
+            // Test if libraries are loaded
+            console.log('Ethers loaded:', typeof ethers !== 'undefined');
+            console.log('Hedera Wallet Connect loaded:', typeof HashgraphHederaWalletConnect !== 'undefined');
+            console.log('Hedera SDK loaded:', typeof HashgraphSdk !== 'undefined');
+            
+            if (typeof ethers !== 'undefined' && typeof HashgraphHederaWalletConnect !== 'undefined' && typeof HashgraphSdk !== 'undefined') {
+                console.log('✅ All required libraries loaded successfully!');
+                document.getElementById('result').innerHTML = '<p style="color: green; font-weight: bold;">✅ All required libraries loaded successfully!</p>';
+                
+                console.log('Wallet manager imported successfully');
+                document.getElementById('result').innerHTML += '<p style="color: green; font-weight: bold;">✅ Wallet manager imported successfully!</p>';
+                
+                console.log('Transaction functions imported successfully');
+                document.getElementById('result').innerHTML += '<p style="color: green; font-weight: bold;">✅ Transaction functions imported successfully!</p>';
+                
+                // Test that Hedera SDK classes are accessible
+                try {
+                    const hbar = new HashgraphSdk.Hbar(1);
+                    console.log('Hedera SDK Hbar class accessible:', hbar);
+                    document.getElementById('result').innerHTML += '<p style="color: green; font-weight: bold;">✅ Hedera SDK classes accessible!</p>';
+                } catch (error) {
+                    console.error('Hedera SDK test failed:', error);
+                    document.getElementById('result').innerHTML += `<p style="color: red; font-weight: bold;">❌ Hedera SDK test failed: ${error.message}</p>`;
+                }
+            } else {
+                console.error('❌ Required libraries not loaded');
+                document.getElementById('result').innerHTML = '<p style="color: red; font-weight: bold;">❌ Required libraries not loaded</p>';
+                
+                if (typeof ethers === 'undefined') {
+                    document.getElementById('result').innerHTML += '<p style="color: red;">❌ Ethers library not loaded</p>';
+                }
+                if (typeof HashgraphHederaWalletConnect === 'undefined') {
+                    document.getElementById('result').innerHTML += '<p style="color: red;">❌ Hedera Wallet Connect library not loaded</p>';
+                }
+                if (typeof HashgraphSdk === 'undefined') {
+                    document.getElementById('result').innerHTML += '<p style="color: red;">❌ Hedera SDK library not loaded</p>';
+                }
+            }
+        } catch (error) {
+            console.error('Import error:', error);
+            document.getElementById('result').innerHTML = `<p style="color: red; font-weight: bold;">❌ Import failed: ${error.message}</p>`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duplicate Prevention Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: white;
+            color: #333;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-button {
+            padding: 15px 30px;
+            margin: 10px;
+            background: #8B4513;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .test-button:hover {
+            background: #6d3410;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .test-button:active {
+            transform: translateY(0);
+        }
+        .test-button svg {
+            vertical-align: middle;
+        }
+        .counter {
+            display: inline-block;
+            background: #ff6b6b;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-left: 10px;
+            min-width: 30px;
+            text-align: center;
+        }
+        .counter.good {
+            background: #51cf66;
+        }
+        .counter.warning {
+            background: #ffd43b;
+            color: #333;
+        }
+        .counter.bad {
+            background: #ff6b6b;
+        }
+        .log {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #4a5568;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .log-entry.success {
+            color: #68d391;
+        }
+        .log-entry.error {
+            color: #fc8181;
+        }
+        .log-entry.warning {
+            color: #f6e05e;
+        }
+        .log-entry.info {
+            color: #63b3ed;
+        }
+        .status-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .status-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .status-item.good {
+            border-left-color: #51cf66;
+        }
+        .status-item.bad {
+            border-left-color: #ff6b6b;
+        }
+        .status-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .status-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-top: 5px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .control-button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .control-button:hover {
+            background: #5568d3;
+        }
+        .control-button.danger {
+            background: #e53e3e;
+        }
+        .control-button.danger:hover {
+            background: #c53030;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Duplicate Event Listener Prevention Test</h1>
+        
+        <div class="test-section">
+            <h2>📊 Click Statistics</h2>
+            <div class="status-box">
+                <div class="status-item" id="totalClicksBox">
+                    <div class="status-label">Total Clicks</div>
+                    <div class="status-value" id="totalClicks">0</div>
+                </div>
+                <div class="status-item" id="handlerCallsBox">
+                    <div class="status-label">Handler Calls</div>
+                    <div class="status-value" id="handlerCalls">0</div>
+                </div>
+                <div class="status-item" id="duplicatesBox">
+                    <div class="status-label">Duplicates Detected</div>
+                    <div class="status-value" id="duplicates">0</div>
+                </div>
+                <div class="status-item" id="statusBox">
+                    <div class="status-label">Status</div>
+                    <div class="status-value" id="status">Ready</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Test Buttons</h2>
+            <p>Click these buttons to test duplicate prevention. Each click should trigger the handler <strong>exactly once</strong>.</p>
+            
+            <div class="button-group">
+                <button class="test-button" data-action="investor-portfolio">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
+                    <span>Browse Groves</span>
+                    <span class="counter" id="counter1">0</span>
+                </button>
+                
+                <button class="test-button" data-action="investor-marketplace">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    <span>View Marketplace</span>
+                    <span class="counter" id="counter2">0</span>
+                </button>
+                
+                <button class="test-button" data-action="farmer-portal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="8.5" cy="7" r="4"></circle>
+                        <polyline points="17 11 19 13 23 9"></polyline>
+                    </svg>
+                    <span>Register as Farmer</span>
+                    <span class="counter" id="counter3">0</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎮 Controls</h2>
+            <div class="button-group">
+                <button class="control-button" onclick="resetCounters()">🔄 Reset Counters</button>
+                <button class="control-button" onclick="clearLog()">🗑️ Clear Log</button>
+                <button class="control-button" onclick="testDuplicateSetup()">⚠️ Test Duplicate Setup</button>
+                <button class="control-button danger" onclick="forceAddListener()">💣 Force Add Listener (Test)</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Event Log</h2>
+            <div class="log" id="eventLog">
+                <div class="log-entry info">System ready. Click any button above to test.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Statistics
+        let totalClicks = 0;
+        let handlerCalls = 0;
+        let duplicates = 0;
+        let buttonCounters = { 1: 0, 2: 0, 3: 0 };
+        let lastClickTime = 0;
+        
+        const log = document.getElementById('eventLog');
+        
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById('totalClicks').textContent = totalClicks;
+            document.getElementById('handlerCalls').textContent = handlerCalls;
+            document.getElementById('duplicates').textContent = duplicates;
+            
+            // Update status
+            const statusEl = document.getElementById('status');
+            const statusBox = document.getElementById('statusBox');
+            const duplicatesBox = document.getElementById('duplicatesBox');
+            const handlerBox = document.getElementById('handlerCallsBox');
+            
+            if (duplicates > 0) {
+                statusEl.textContent = '❌ Failed';
+                statusBox.classList.add('bad');
+                duplicatesBox.classList.add('bad');
+            } else if (handlerCalls > 0) {
+                statusEl.textContent = '✅ Passing';
+                statusBox.classList.add('good');
+                duplicatesBox.classList.add('good');
+            }
+            
+            // Update handler calls box
+            if (handlerCalls === totalClicks) {
+                handlerBox.classList.add('good');
+            } else if (handlerCalls > totalClicks) {
+                handlerBox.classList.add('bad');
+            }
+        }
+
+        function updateCounter(buttonNum) {
+            buttonCounters[buttonNum]++;
+            const counter = document.getElementById(`counter${buttonNum}`);
+            counter.textContent = buttonCounters[buttonNum];
+            
+            // Color code based on count
+            if (buttonCounters[buttonNum] === 1) {
+                counter.className = 'counter good';
+            } else if (buttonCounters[buttonNum] <= 3) {
+                counter.className = 'counter warning';
+            } else {
+                counter.className = 'counter bad';
+            }
+        }
+
+        function resetCounters() {
+            totalClicks = 0;
+            handlerCalls = 0;
+            duplicates = 0;
+            buttonCounters = { 1: 0, 2: 0, 3: 0 };
+            
+            document.getElementById('counter1').textContent = '0';
+            document.getElementById('counter2').textContent = '0';
+            document.getElementById('counter3').textContent = '0';
+            
+            document.querySelectorAll('.counter').forEach(c => c.className = 'counter');
+            document.querySelectorAll('.status-item').forEach(s => {
+                s.classList.remove('good', 'bad');
+            });
+            
+            updateStats();
+            addLog('Counters reset', 'info');
+        }
+
+        function clearLog() {
+            log.innerHTML = '<div class="log-entry info">Log cleared. Ready for testing.</div>';
+        }
+
+        function testDuplicateSetup() {
+            addLog('Testing duplicate setup prevention...', 'warning');
+            setupEventListeners();
+            addLog('Setup function called again. Check if duplicate was prevented.', 'info');
+        }
+
+        function forceAddListener() {
+            addLog('⚠️ FORCING duplicate listener (for testing)', 'warning');
+            document.body.addEventListener('click', handleActionClick, true);
+            addLog('Duplicate listener added. Next click should fire twice!', 'error');
+        }
+
+        // Global flag for duplicate prevention
+        if (!window._buttonListenersInitialized) {
+            window._buttonListenersInitialized = false;
+        }
+
+        // The actual event handler
+        function handleActionClick(e) {
+            const actionBtn = e.target.closest('[data-action]');
+            if (!actionBtn) return;
+            
+            const now = Date.now();
+            const timeSinceLastClick = now - lastClickTime;
+            
+            // Detect rapid duplicate calls (within 50ms)
+            if (timeSinceLastClick < 50) {
+                duplicates++;
+                addLog(`❌ DUPLICATE DETECTED! Handler called ${timeSinceLastClick}ms after previous call`, 'error');
+            }
+            
+            lastClickTime = now;
+            handlerCalls++;
+            
+            const action = actionBtn.getAttribute('data-action');
+            addLog(`🎯 Handler called for action: ${action}`, 'success');
+            
+            // Update button-specific counter
+            const buttonNum = action === 'investor-portfolio' ? 1 : 
+                            action === 'investor-marketplace' ? 2 : 3;
+            updateCounter(buttonNum);
+            
+            updateStats();
+            
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Setup function with duplicate prevention
+        function setupEventListeners() {
+            if (window._buttonListenersInitialized) {
+                addLog('⚠️ Setup already initialized, skipping duplicate setup', 'warning');
+                return;
+            }
+
+            addLog('🔧 Setting up event listeners...', 'info');
+
+            if (!document.body.dataset.actionListenerAttached) {
+                document.body.dataset.actionListenerAttached = 'true';
+                document.body.addEventListener('click', handleActionClick, true);
+                addLog('✅ Event delegation listener attached', 'success');
+            } else {
+                addLog('⏭️ Event listener already attached', 'info');
+            }
+
+            window._buttonListenersInitialized = true;
+            addLog('✅ Setup complete', 'success');
+        }
+
+        // Track actual button clicks
+        document.querySelectorAll('.test-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                totalClicks++;
+                updateStats();
+            }, false); // Use bubble phase, different from capture
+        });
+
+        // Initialize
+        setupEventListeners();
+        addLog('🚀 Test page loaded and ready!', 'success');
+        addLog('Click any button to test duplicate prevention', 'info');
+        
+        // Test duplicate setup after 1 second (like the real app)
+        setTimeout(() => {
+            addLog('⏰ Attempting duplicate setup (1 second delay)...', 'info');
+            setupEventListeners();
+        }, 1000);
+    </script>
+</body>
+</html>

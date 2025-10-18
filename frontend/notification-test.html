@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Test</title>
+    <link rel="stylesheet" href="css/notifications.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .test-buttons {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            background-color: #4a4a4a;
+            color: white;
+        }
+        button:hover {
+            background-color: #5a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <h1>Notification System Test</h1>
+    
+    <div class="test-buttons">
+        <button onclick="testSuccess()">Test Success</button>
+        <button onclick="testError()">Test Error</button>
+        <button onclick="testWarning()">Test Warning</button>
+        <button onclick="testInfo()">Test Info</button>
+        <button onclick="testWalletConnect()">Test Wallet Connect</button>
+    </div>
+    
+    <div id="log"></div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="notification-container"></div>
+
+    <script src="js/notification-manager.js"></script>
+    <script src="wallet/manager.js"></script>
+    <script>
+        // Initialize wallet manager for testing
+        window.walletManager = new window.WalletManager();
+        
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        function testSuccess() {
+            window.notificationManager.success('This is a success message!');
+        }
+        
+        function testError() {
+            window.notificationManager.error('This is an error message!');
+        }
+        
+        function testWarning() {
+            window.notificationManager.warning('This is a warning message!');
+        }
+        
+        function testInfo() {
+            window.notificationManager.info('This is an info message!');
+        }
+        
+        function testWalletConnect() {
+            // Simulate wallet connection notification
+            window.walletManager.showToast('Connecting to wallet...', 'info');
+            setTimeout(() => {
+                window.walletManager.showToast('Wallet connected successfully!', 'success');
+            }, 2000);
+        }
+        
+        // Test on load
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Notification system test loaded');
+            log('Notification manager: ' + (window.notificationManager ? 'Available' : 'Not available'));
+            if (window.notificationManager) {
+                log('Container ID: ' + (window.notificationManager.container ? window.notificationManager.container.id : 'None'));
+            }
+        });
+    </script>
+</body>
+</html>

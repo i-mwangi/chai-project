@@ -8,10 +8,10 @@ import {
   ContractCallQuery,
   AccountCreateTransaction,
   AccountBalanceQuery,
-  TransferTransaction
+  TransferTransaction,
+  ContractFunctionParameters
 } from '@hashgraph/sdk';
 import { deployContract } from '../setup/test-helpers';
-import { AccountCreateTransaction, AccountBalanceQuery } from '@hashgraph/sdk';
 
 /**
  * Coffee Tree Platform Helper
@@ -422,5 +422,25 @@ export class CoffeeTreePlatform {
   async cleanup(): Promise<void> {
     // Cleanup resources if needed
     this.retryEnabled = false;
+  }
+  
+  async getAccountTokenBalance(accountId: string | { toString(): string }): Promise<number> {
+    try {
+      // Convert accountId to string if it's an object with toString method
+      const accountIdStr = typeof accountId === 'string' 
+        ? accountId 
+        : accountId.toString();
+        
+      const contractCallQuery = new ContractCallQuery()
+        .setContractId(this.contractId)
+        .setGas(100000)
+        .setFunction('balanceOf', new ContractFunctionParameters().addAddress(accountIdStr));
+
+      const result = await contractCallQuery.execute(this.client);
+      return result.getUint256(0).toNumber();
+    } catch (error) {
+      console.error('Error getting account token balance:', error);
+      return 0;
+    }
   }
 }

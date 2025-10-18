@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Test</title>
+</head>
+<body>
+    <h1>Module Import Test</h1>
+    <p>Check the browser console for import results.</p>
+    <p id="result">Testing imports...</p>
+
+    <script type="module">
+        // Test import of wallet configuration
+        import { WALLET_CONFIG } from './js/wallet-config.js';
+        
+        // Test import of wallet provider
+        import HederaWalletProvider from './js/hedera-wallet-provider.js';
+        
+        // Test import of transactions
+        import { transferHbar, createToken } from './js/hedera-transactions.js';
+        
+        // Test import of wallet manager
+        import { initWalletManager, getWalletProvider } from './js/hedera-wallet-manager.js';
+        
+        // Test import of migration script
+        import { initializeNewWalletSystem } from './js/wallet-migration.js';
+        
+        try {
+            console.log('Wallet config imported successfully:', {
+                projectId: WALLET_CONFIG.PROJECT_ID ? 'Present' : 'Missing',
+                network: WALLET_CONFIG.NETWORK
+            });
+
+            console.log('HederaWalletProvider class imported successfully');
+            console.log('Transaction functions imported successfully');
+            console.log('Wallet manager functions imported successfully');
+            console.log('Migration functions imported successfully');
+
+            console.log('All wallet modules imported successfully!');
+            
+            // Display success message in the UI
+            document.getElementById('result').innerHTML = '<p style="color: green; font-weight: bold;">✅ All modules imported successfully! Check console for details.</p>';
+        } catch (error) {
+            console.error('Import error:', error);
+            document.getElementById('result').innerHTML = `<p style="color: red; font-weight: bold;">❌ Import failed: ${error.message}</p>`;
+        }
+    </script>
+</body>
+</html>

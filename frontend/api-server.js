@@ -270,6 +270,51 @@ const server = http.createServer(async (req, res) => {
             });
         }
         
+        // Add a new endpoint for geocoding requests
+        else if (pathname === '/api/geocode' && method === 'GET') {
+            const { q } = parsedUrl.query;
+            if (!q) {
+                sendError(res, 400, 'Query parameter "q" is required');
+                return;
+            }
+
+            try {
+                // Proxy the request to Nominatim
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+                
+                const proxyReq = https.get(url, {
+                    headers: {
+                        'User-Agent': 'CoffeeTreePlatform/1.0 (localhost development)',
+                        'Referer': 'http://localhost:3001'
+                    }
+                }, (proxyRes) => {
+                    let data = '';
+                    proxyRes.on('data', (chunk) => {
+                        data += chunk;
+                    });
+                    
+                    proxyRes.on('end', () => {
+                        // Set CORS headers to allow frontend access
+                        res.writeHead(proxyRes.statusCode, {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*',
+                            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                        });
+                        res.end(data);
+                    });
+                });
+                
+                proxyReq.on('error', (error) => {
+                    console.error('Geocoding proxy error:', error);
+                    sendError(res, 500, 'Geocoding service unavailable');
+                });
+            } catch (error) {
+                console.error('Geocoding error:', error);
+                sendError(res, 500, 'Failed to process geocoding request');
+            }
+        }
+        
         else if (pathname === '/api/market/overview' && method === 'GET') {
             sendResponse(res, 200, {
                 success: true,
@@ -320,6 +365,9 @@ const server = http.createServer(async (req, res) => {
         }
         
         else if (pathname === '/api/groves/register' && method === 'POST') {
+            console.log('[MOCK API] Received request for /api/groves/register');
+            console.log('[MOCK API] Request body:', JSON.stringify(body, null, 2));
+            
             const newGrove = {
                 id: (mockData.groves.length + 1).toString(),
                 ...body,
@@ -330,6 +378,8 @@ const server = http.createServer(async (req, res) => {
             
             mockData.groves.push(newGrove);
             
+            console.log('[MOCK API] Grove registered successfully:', newGrove);
+            
             sendResponse(res, 200, {
                 success: true,
                 message: 'Grove registered successfully',
@@ -338,6 +388,22 @@ const server = http.createServer(async (req, res) => {
         }
         // Backwards-compatible endpoint used by older UI code
         else if (pathname === '/api/farmer-verification/register-grove' && method === 'POST') {
+            // First check if grove already exists
+            const { groveName, farmerAddress } = body;
+            const existingGroveIndex = mockData.groves.findIndex(g => 
+                g.groveName === groveName && g.farmerAddress === farmerAddress
+            );
+            
+            // If grove already exists, return success (idempotent behavior)
+            if (existingGroveIndex >= 0) {
+                sendResponse(res, 200, {
+                    success: true,
+                    message: 'Grove already registered',
+                    groveId: mockData.groves[existingGroveIndex].id
+                });
+                return;
+            }
+            
             // Proxy to real backend API
             const backendPort = process.env.BACKEND_PORT || '3001';
             const backendUrl = `http://localhost:${backendPort}/api/farmer-verification/register-grove`;
@@ -726,12 +792,15 @@ const server = http.createServer(async (req, res) => {
             } catch (error) {
                 console.error('[PROXY] Error proxying available-groves to backend:', error.message);
                 // Fallback to mock implementation
-                const availableGroves = mockData.groves.map(grove => ({
-                    ...grove,
-                    tokensAvailable: Math.floor(grove.treeCount * 0.5),
-                    pricePerToken: 25 + Math.random() * 10,
-                    projectedAnnualReturn: 10 + Math.random() * 8
-                }));
+                // Transform all groves in mockData to available groves format
+                const availableGroves = mockData.groves
+                    .filter(grove => grove.verificationStatus === 'verified') // Only show verified groves
+                    .map(grove => ({
+                        ...grove,
+                        tokensAvailable: Math.floor(grove.treeCount * 0.5),
+                        pricePerToken: 25 + Math.random() * 10,
+                        projectedAnnualReturn: 10 + Math.random() * 8
+                    }));
                 
                 sendResponse(res, 200, {
                     success: true,
@@ -782,6 +851,13 @@ const server = http.createServer(async (req, res) => {
                     }
                 });
             }
+        }
+        
+        else if (pathname === '/api/investment/invest' && method === 'POST') {
+            sendResponse(res, 200, {
+                success: true,
+                message: 'Investment successful'
+            });
         }
         
         else if (pathname === '/api/investment/purchase-tokens' && method === 'POST') {
@@ -1889,6 +1965,7 @@ server.listen(PORT, () => {
     console.log('  GET  /health');
     console.log('  GET  /api/market/prices');
     console.log('  GET  /api/market/overview');
+    console.log('  GET  /api/geocode?q=...');  // Add the new geocoding endpoint
     console.log('  GET  /api/groves?farmerAddress=...');
     console.log('  POST /api/groves/register');
     console.log('  GET  /api/harvest/history?farmerAddress=...');

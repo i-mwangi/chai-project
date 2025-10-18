@@ -162,14 +162,14 @@ describe('Smoke Tests - Critical Features', () => {
     it('should have all required JavaScript modules', () => {
       const requiredModules = [
         'frontend/js/api.js',
-        'frontend/js/wallet.js',
         'frontend/js/main.js',
         'frontend/js/farmer-dashboard.js',
         'frontend/js/investor-portal.js',
         'frontend/js/revenue-distribution.js',
         'frontend/js/lending-liquidity.js',
         'frontend/js/price-oracle.js',
-        'frontend/js/token-admin.js'
+        'frontend/js/token-admin.js',
+        'frontend/wallet/index.js'
       ];
 
       expect(requiredModules.length).toBeGreaterThan(0);

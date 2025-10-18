@@ -1,4 +1,0 @@
-## Run script
-```shell
-parrall
-```

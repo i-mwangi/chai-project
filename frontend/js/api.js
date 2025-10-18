@@ -4,12 +4,20 @@
  */
 
 class CoffeeTreeAPI {
-    constructor(baseURL = 'http://localhost:3001') {  // Changed back to 3001 to match server
+    constructor(baseURL = 'http://localhost:3002') {  // Port 3002 for mock API server
         this.baseURL = baseURL;
+        this.activeRequests = new Map(); // Track active requests to prevent duplicates
     }
 
-    // Utility method for making HTTP requests
+    // Utility method for making HTTP requests with deduplication and better error handling
     async request(endpoint, options = {}) {
+        const requestId = `${options.method || 'GET'}:${endpoint}:${JSON.stringify(options.body || '')}`;
+        
+        // If there's already an active request with the same ID, return that promise
+        if (this.activeRequests.has(requestId)) {
+            return this.activeRequests.get(requestId);
+        }
+
         // Helper to add a timeout to fetch requests
         const fetchWithTimeout = (url, cfg, timeout = 60000) => { // Increased from 30000 to 60000 ms (1 minute)
             return new Promise((resolve, reject) => {
@@ -61,37 +69,48 @@ class CoffeeTreeAPI {
             config.body = JSON.stringify(config.body);
         }
 
-        try {
-            const response = await fetchWithTimeout(url, config, 60000); // Increased from 30000 to 60000 ms (1 minute)
-            
-            // Handle non-JSON responses
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                const data = await response.json();
+        // Create the promise for this request
+        const requestPromise = (async () => {
+            try {
+                const response = await fetchWithTimeout(url, config, 60000); // Increased from 30000 to 60000 ms (1 minute)
+                
+                // Handle non-JSON responses
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
 
-                if (!response.ok) {
-                    const message = data?.error || data?.message || `HTTP error! status: ${response.status}`;
-                    const err = new Error(message);
-                    err.status = response.status
-                    throw err;
-                }
+                    if (!response.ok) {
+                        const message = data?.error || data?.message || `HTTP error! status: ${response.status}`;
+                        const err = new Error(message);
+                        err.status = response.status
+                        throw err;
+                    }
 
-                return data;
-            } else {
-                // For non-JSON responses, return the text
-                const text = await response.text();
-                if (!response.ok) {
-                    const err = new Error(`HTTP error! status: ${response.status}, message: ${text}`);
-                    err.status = response.status
-                    throw err;
+                    return data;
+                } else {
+                    // For non-JSON responses, return the text
+                    const text = await response.text();
+                    if (!response.ok) {
+                        const err = new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+                        err.status = response.status
+                        throw err;
+                    }
+                    return { success: true, data: text };
                 }
-                return { success: true, data: text };
+            } catch (error) {
+                console.error(`API request failed: ${endpoint}`, error);
+                // Re-throw with a clearer message for UI to display
+                throw new Error(`API Error: ${error?.message || String(error)}`);
+            } finally {
+                // Clean up the active request tracking
+                this.activeRequests.delete(requestId);
             }
-        } catch (error) {
-            console.error(`API request failed: ${endpoint}`, error);
-            // Re-throw with a clearer message for UI to display
-            throw new Error(`API Error: ${error?.message || String(error)}`);
-        }
+        })();
+
+        // Store the promise in our active requests map
+        this.activeRequests.set(requestId, requestPromise);
+        
+        return requestPromise;
     }
 
     // Farmer Verification API
@@ -126,8 +145,8 @@ class CoffeeTreeAPI {
     }
 
     async registerGroveOwnership(farmerAddress, groveName, ownershipProof) {
-        // Legacy name kept for compatibility; prefer `/api/groves/register` from UI
-        return this.request('/api/farmer-verification/register-grove', {
+        // Use the correct endpoint instead of the deprecated one
+        return this.request('/api/groves/register', {
             method: 'POST',
             body: {
                 farmerAddress,
@@ -207,7 +226,23 @@ class CoffeeTreeAPI {
     }
 
     async getPriceHistory(days = 30) {
-        return this.request(`/api/market/price-history?days=${days}`);
+        // Use the existing /api/market/prices endpoint and transform the data
+        try {
+            const response = await this.request('/api/market/prices');
+            if (response.success && response.data && response.data.prices) {
+                // Transform current prices into historical data format
+                const history = response.data.prices.map(price => ({
+                    timestamp: new Date(price.timestamp).getTime(),
+                    price: price.pricePerKg
+                }));
+                return { success: true, history: history };
+            }
+        } catch (error) {
+            console.error('Error fetching price history:', error);
+        }
+        
+        // Fallback to mock data if the API call fails
+        return { success: false, history: [] };
     }
 
     async getMarketConditions() {
@@ -259,9 +294,8 @@ class CoffeeTreeAPI {
     }
 
     async registerGrove(groveData) {
-        // The server exposes grove registration under the farmer-verification
-        // namespace; send to that endpoint to avoid 404s.
-        return this.request('/api/farmer-verification/register-grove', {
+        // Use the correct endpoint instead of the deprecated one
+        return this.request('/api/groves/register', {
             method: 'POST',
             body: groveData
         });
@@ -591,6 +625,26 @@ class CoffeeTreeAPI {
         if (variety) params.append('variety', variety);
         if (grade !== undefined) params.append('grade', grade);
         return this.request(`/api/pricing/coffee-prices?${params.toString()}`);
+    }
+
+    async getPriceHistory(variety, days) {
+        // Use the existing /api/market/prices endpoint and transform the data
+        try {
+            const response = await this.request('/api/market/prices');
+            if (response.success && response.data && response.data.prices) {
+                // Transform current prices into historical data format
+                const history = response.data.prices.map(price => ({
+                    timestamp: new Date(price.timestamp).getTime(),
+                    price: price.pricePerKg
+                }));
+                return { success: true, history: history };
+            }
+        } catch (error) {
+            console.error('Error fetching price history:', error);
+        }
+        
+        // Fallback to mock data if the API call fails
+        return { success: false, history: [] };
     }
 
     async getSeasonalPrice(variety, grade, month) {

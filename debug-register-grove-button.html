@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Register Grove Button</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .log {
+            background: #000;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .log-error {
+            color: #ff6b6b;
+        }
+        .log-success {
+            color: #51cf66;
+        }
+        .log-info {
+            color: #74c0fc;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Register Grove Button Diagnostic</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Button Exists in DOM</h2>
+        <button class="btn btn-primary" onclick="testButtonExists()">Check Button</button>
+        <div id="test1Result" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Event Listener Attached</h2>
+        <button class="btn btn-primary" onclick="testEventListener()">Check Event Listener</button>
+        <div id="test2Result" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: FarmerDashboard Instance</h2>
+        <button class="btn btn-primary" onclick="testFarmerDashboard()">Check FarmerDashboard</button>
+        <div id="test3Result" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Manual Button Click</h2>
+        <button class="btn btn-primary" onclick="manualClickTest()">Simulate Click</button>
+        <div id="test4Result" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Check Console Errors</h2>
+        <button class="btn btn-primary" onclick="checkConsoleErrors()">Check Errors</button>
+        <div id="test5Result" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Live Console Log</h2>
+        <div id="consoleLog" class="log"></div>
+    </div>
+
+    <script>
+        // Capture console logs
+        const consoleLog = document.getElementById('consoleLog');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        function addLogEntry(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleLog.appendChild(entry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLogEntry(args.join(' '), 'info');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLogEntry('ERROR: ' + args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLogEntry('WARN: ' + args.join(' '), 'info');
+        };
+
+        function testButtonExists() {
+            const result = document.getElementById('test1Result');
+            result.innerHTML = '';
+            
+            const button = document.getElementById('addGroveBtn');
+            
+            if (button) {
+                result.innerHTML = `
+                    <div class="log-entry log-success">✅ Button found in DOM</div>
+                    <div class="log-entry log-info">ID: ${button.id}</div>
+                    <div class="log-entry log-info">Class: ${button.className}</div>
+                    <div class="log-entry log-info">Text: ${button.textContent}</div>
+                    <div class="log-entry log-info">Visible: ${button.offsetParent !== null}</div>
+                    <div class="log-entry log-info">Disabled: ${button.disabled}</div>
+                `;
+            } else {
+                result.innerHTML = `<div class="log-entry log-error">❌ Button NOT found in DOM</div>`;
+            }
+        }
+
+        function testEventListener() {
+            const result = document.getElementById('test2Result');
+            result.innerHTML = '';
+            
+            const button = document.getElementById('addGroveBtn');
+            
+            if (!button) {
+                result.innerHTML = `<div class="log-entry log-error">❌ Button not found</div>`;
+                return;
+            }
+
+            // Check if event listeners are attached (this is tricky in vanilla JS)
+            const listeners = getEventListeners ? getEventListeners(button) : null;
+            
+            if (listeners && listeners.click) {
+                result.innerHTML = `
+                    <div class="log-entry log-success">✅ Event listeners found: ${listeners.click.length}</div>
+                `;
+            } else {
+                result.innerHTML = `
+                    <div class="log-entry log-info">ℹ️ Cannot directly check event listeners (use Chrome DevTools)</div>
+                    <div class="log-entry log-info">Try: getEventListeners(document.getElementById('addGroveBtn'))</div>
+                `;
+            }
+        }
+
+        function testFarmerDashboard() {
+            const result = document.getElementById('test3Result');
+            result.innerHTML = '';
+            
+            if (typeof window.farmerDashboard !== 'undefined') {
+                result.innerHTML = `
+                    <div class="log-entry log-success">✅ farmerDashboard exists</div>
+                    <div class="log-entry log-info">Type: ${typeof window.farmerDashboard}</div>
+                    <div class="log-entry log-info">Has showGroveModal: ${typeof window.farmerDashboard.showGroveModal === 'function'}</div>
+                `;
+            } else {
+                result.innerHTML = `<div class="log-entry log-error">❌ farmerDashboard NOT found on window</div>`;
+            }
+        }
+
+        function manualClickTest() {
+            const result = document.getElementById('test4Result');
+            result.innerHTML = '';
+            
+            const button = document.getElementById('addGroveBtn');
+            
+            if (!button) {
+                result.innerHTML = `<div class="log-entry log-error">❌ Button not found</div>`;
+                return;
+            }
+
+            try {
+                result.innerHTML = `<div class="log-entry log-info">Attempting to click button...</div>`;
+                button.click();
+                result.innerHTML += `<div class="log-entry log-success">✅ Click executed (check console for response)</div>`;
+            } catch (error) {
+                result.innerHTML += `<div class="log-entry log-error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function checkConsoleErrors() {
+            const result = document.getElementById('test5Result');
+            result.innerHTML = `
+                <div class="log-entry log-info">Check browser console (F12) for:</div>
+                <div class="log-entry log-info">1. JavaScript errors</div>
+                <div class="log-entry log-info">2. Failed network requests</div>
+                <div class="log-entry log-info">3. Uncaught exceptions</div>
+                <div class="log-entry log-info">4. Event listener warnings</div>
+            `;
+        }
+
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            console.log('Diagnostic page loaded');
+            console.log('Run tests to check Register Grove button');
+        });
+    </script>
+
+    <hr style="margin: 40px 0;">
+    
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Open your main app (app.html) in another tab</li>
+        <li>Navigate to the Farmer Portal</li>
+        <li>Open browser console (F12)</li>
+        <li>Run these commands in console:
+            <pre style="background: #000; padding: 10px; border-radius: 4px;">
+// Check if button exists
+document.getElementById('addGroveBtn')
+
+// Check if farmerDashboard exists
+window.farmerDashboard
+
+// Check event listeners (Chrome only)
+getEventListeners(document.getElementById('addGroveBtn'))
+
+// Try to manually trigger the function
+window.farmerDashboard.showGroveModal()
+            </pre>
+        </li>
+    </ol>
+</body>
+</html>

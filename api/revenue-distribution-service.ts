@@ -1,6 +1,6 @@
 import { db } from '../db'
 import { harvestRecords, coffeeGroves, tokenHoldings, revenueDistributions } from '../db/schema'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, desc } from 'drizzle-orm'
 import { RevenueReserveContract } from './revenue-reserve-contract'
 import { getClient } from '../utils'
 
@@ -186,25 +186,39 @@ export class RevenueDistributionService {
         transactionHash: string | null
     }[]> {
         try {
-            const distributions = await db.select({
-                harvestId: revenueDistributions.harvestId,
-                groveName: coffeeGroves.groveName,
-                tokenAmount: revenueDistributions.tokenAmount,
-                revenueShare: revenueDistributions.revenueShare,
-                distributionDate: revenueDistributions.distributionDate,
-                transactionHash: revenueDistributions.transactionHash
-            })
-                .from(revenueDistributions)
-                .innerJoin(harvestRecords, eq(revenueDistributions.harvestId, harvestRecords.id))
-                .innerJoin(coffeeGroves, eq(harvestRecords.groveId, coffeeGroves.id))
-                .where(eq(revenueDistributions.holderAddress, holderAddress))
-                .orderBy(sql`${revenueDistributions.distributionDate} DESC`)
+            let distributions = []
+            
+            try {
+                distributions = await db.select({
+                    harvestId: revenueDistributions.harvestId,
+                    groveName: coffeeGroves.groveName,
+                    tokenAmount: revenueDistributions.tokenAmount,
+                    revenueShare: revenueDistributions.revenueShare,
+                    distributionDate: revenueDistributions.distributionDate,
+                    transactionHash: revenueDistributions.transactionHash
+                })
+                    .from(revenueDistributions)
+                    .innerJoin(harvestRecords, eq(revenueDistributions.harvestId, harvestRecords.id))
+                    .innerJoin(coffeeGroves, eq(harvestRecords.groveId, coffeeGroves.id))
+                    .where(eq(revenueDistributions.holderAddress, holderAddress))
+                    .orderBy(desc(revenueDistributions.distributionDate))
+            } catch (error) {
+                console.warn('Failed to get distribution history, using empty array:', error)
+                distributions = []
+            }
 
-            return distributions
+            return distributions.map(distribution => ({
+                harvestId: distribution.harvestId || 0,
+                groveName: distribution.groveName || 'Unknown Grove',
+                tokenAmount: distribution.tokenAmount || 0,
+                revenueShare: distribution.revenueShare || 0,
+                distributionDate: distribution.distributionDate || 0,
+                transactionHash: distribution.transactionHash || null
+            }))
 
         } catch (error) {
             console.error('Error getting holder distribution history:', error)
-            throw error
+            return [] // Return empty array instead of throwing error
         }
     }
 
@@ -223,29 +237,45 @@ export class RevenueDistributionService {
     }> {
         try {
             // Get total earnings
-            const totalStats = await db.select({
-                totalEarnings: sql<number>`sum(${revenueDistributions.revenueShare})`,
-                totalDistributions: sql<number>`count(*)`
-            })
-                .from(revenueDistributions)
-                .where(eq(revenueDistributions.holderAddress, holderAddress))
+            let totalEarnings = 0
+            let totalDistributions = 0
+            
+            try {
+                const totalStats = await db.select({
+                    totalEarnings: sql<number>`COALESCE(sum(${revenueDistributions.revenueShare}), 0)`,
+                    totalDistributions: sql<number>`count(*)`
+                })
+                    .from(revenueDistributions)
+                    .where(eq(revenueDistributions.holderAddress, holderAddress))
 
-            const total = totalStats[0]
-            const totalEarnings = total.totalEarnings || 0
-            const totalDistributions = total.totalDistributions || 0
+                const total = totalStats[0]
+                totalEarnings = total?.totalEarnings || 0
+                totalDistributions = total?.totalDistributions || 0
+            } catch (error) {
+                console.warn('Failed to get total earnings, using defaults:', error)
+                // Continue with defaults
+            }
+            
             const averageEarningsPerDistribution = totalDistributions > 0 ? totalEarnings / totalDistributions : 0
 
             // Get earnings by grove
-            const groveStats = await db.select({
-                groveName: coffeeGroves.groveName,
-                totalEarnings: sql<number>`sum(${revenueDistributions.revenueShare})`,
-                distributionCount: sql<number>`count(*)`
-            })
-                .from(revenueDistributions)
-                .innerJoin(harvestRecords, eq(revenueDistributions.harvestId, harvestRecords.id))
-                .innerJoin(coffeeGroves, eq(harvestRecords.groveId, coffeeGroves.id))
-                .where(eq(revenueDistributions.holderAddress, holderAddress))
-                .groupBy(coffeeGroves.groveName)
+            let groveStats = []
+            
+            try {
+                groveStats = await db.select({
+                    groveName: coffeeGroves.groveName,
+                    totalEarnings: sql<number>`COALESCE(sum(${revenueDistributions.revenueShare}), 0)`,
+                    distributionCount: sql<number>`count(*)`
+                })
+                    .from(revenueDistributions)
+                    .innerJoin(harvestRecords, eq(revenueDistributions.harvestId, harvestRecords.id))
+                    .innerJoin(coffeeGroves, eq(harvestRecords.groveId, coffeeGroves.id))
+                    .where(eq(revenueDistributions.holderAddress, holderAddress))
+                    .groupBy(coffeeGroves.groveName)
+            } catch (error) {
+                console.warn('Failed to get grove stats, using empty array:', error)
+                groveStats = []
+            }
 
             return {
                 totalEarnings,

@@ -1,213 +1,310 @@
-# Coffee Tree Platform - Troubleshooting Guide
+# Troubleshooting Guide
 
-## Issue: Not Seeing Investor Portal or Farmer Onboarding
+## Common Issues and Solutions
 
-### Quick Fix Steps:
+### Issue 1: "Outdated Optimize Dep" Error
 
-1. **Make sure both servers are running:**
-   ```bash
-   # Terminal 1 - API Server
-   npm run api:mock
-   
-   # Terminal 2 - Frontend Server  
-   npm run frontend
-   ```
-
-2. **Open the application:**
-   - Go to: http://localhost:3000
-   - You should see the main dashboard
-
-3. **Connect a wallet to see all features:**
-   - Click "Connect Wallet" button in the top right
-   - Wait for the simulated connection (1-2 seconds)
-   - You'll be randomly assigned as either a "farmer" or "investor"
-   - The navigation will update to show your role-specific features
-
-4. **Navigate between sections:**
-   - **Dashboard**: Platform overview and statistics
-   - **Farmer Portal**: Grove management, harvest reporting, revenue tracking
-   - **Investor Portal**: Browse groves, manage portfolio, marketplace trading
-
-### What You Should See After Connecting:
-
-#### If assigned as FARMER:
-- "Farmer Portal" button appears in navigation
-- Access to:
-  - Grove registration and management
-  - Harvest reporting forms
-  - Revenue tracking dashboard
-  - Tree health monitoring
-  - Farmer verification system
-
-#### If assigned as INVESTOR:
-- "Investor Portal" button appears in navigation  
-- Access to:
-  - Browse available groves
-  - Purchase tree tokens
-  - Portfolio management
-  - Secondary marketplace
-  - Earnings history
-
-### Common Issues:
-
-1. **"Connect Wallet" button not working:**
-   - Check browser console for JavaScript errors
-   - Refresh the page and try again
-
-2. **Navigation buttons not appearing:**
-   - Make sure wallet is connected first
-   - Check that both servers are running
-   - Clear browser cache and refresh
-
-3. **Empty data/no groves showing:**
-   - This is normal - the app uses mock data
-   - Try connecting as different user types
-   - Check browser network tab for API calls
-
-4. **Want to test both user types:**
-   - Disconnect wallet and reconnect to get a different role
-   - Or clear localStorage and refresh page
-
-### Manual Testing:
-
-1. **Test Farmer Flow:**
-   - Connect wallet → Get assigned as farmer
-   - Click "Farmer Portal" 
-   - Try "Register New Grove"
-   - Fill out the form with sample data
-   - Submit and see it appear in grove list
-
-2. **Test Investor Flow:**
-   - Connect wallet → Get assigned as investor  
-   - Click "Investor Portal"
-   - Browse available groves
-   - Click "Invest Now" on a grove
-   - Try purchasing tokens
-
-### If Still Not Working:
-
-1. **Check browser console for errors**
-2. **Verify both servers are running on correct ports**
-3. **Try in incognito/private browsing mode**
-4. **Clear all browser data for localhost**
-5. **Restart the servers using the restart script:**
-   ```bash
-   # Windows
-   restart-demo.bat
-   
-   # Or manually restart
-   npm run api:mock
-   npm run frontend
-   ```
-
-### Recent Fixes Applied:
-
-✅ **Fixed JavaScript syntax errors** - removed extra closing brace causing parse errors
-✅ **Fixed JavaScript errors** in marketplace and investor portal
-✅ **Added proper null checks** for undefined data
-✅ **Enhanced mock API data** with all required properties
-✅ **Added demo helper** for easy testing of both user types
-✅ **Improved wallet connection UI** with clear instructions
-✅ **Fixed View Details and Report Harvest buttons** with proper functionality
-✅ **Added comprehensive grove details modal** with maps and full information
-✅ **Enhanced harvest reporting** with pre-populated grove selection
-✅ **Added safety checks** for undefined objects in main.js
-
-### Testing the Fixed Buttons:
-
-#### **View Details Button:**
-1. Connect as farmer using demo helper
-2. Go to Farmer Portal → My Groves
-3. Click "View Details" on any grove
-4. Should open detailed modal with:
-   - Complete grove information
-   - Mini map with location
-   - Health score and status
-   - Action buttons for harvest reporting
-
-#### **Report Harvest Button:**
-1. Connect as farmer using demo helper
-2. Go to Farmer Portal → My Groves  
-3. Click "Report Harvest" on any grove
-4. Should:
-   - Navigate to "Harvest Reports" section
-   - Show a banner with selected grove info
-   - Auto-open harvest form after 0.8 seconds
-   - Pre-select the grove in the form
-   - Fill in today's date
-
-#### **Debug Console:**
-- Open browser console (F12)
-- Look for log messages when clicking buttons
-- Should see: "viewGroveDetails called with groveId: X"
-- Should see: "reportHarvestForGrove called with groveId: X"
-
-### Farmer Verification/KYC Onboarding Flow:
-
-#### **When Verification is Required:**
-1. **Upon First Connection**: New farmers see onboarding modal after 2 seconds
-2. **Accessing Restricted Features**: Unverified farmers see "Verification Required" screens
-3. **After Rejection**: Rejected farmers get onboarding modal to resubmit documents
-
-#### **Verification Statuses (Based on Account ID):**
-- **Accounts ending 0-2**: Automatically verified ✅
-- **Accounts ending 3-6**: Pending verification ⏳  
-- **Accounts ending 7-9**: Rejected (need resubmission) ❌
-
-#### **Onboarding Triggers:**
-- **Wallet Connection**: Automatic check and modal for unverified farmers
-- **Feature Access**: Blocked sections show verification requirement
-- **Manual**: "Learn More" buttons trigger onboarding modal
-
-#### **Test Different Verification States:**
-
-**Farmer Verification (Based on Account ID ending):**
-1. **Verified Farmer**: Account ending 0-2 ✅
-2. **Pending Farmer**: Account ending 3-6 ⏳
-3. **Rejected Farmer**: Account ending 7-9 ❌
-
-**Investor Verification (Based on Account ID ending):**
-1. **Verified Investor**: Account ending 0-3 ✅
-2. **Pending Investor**: Account ending 4-7 ⏳
-3. **Rejected Investor**: Account ending 8-9 ❌
-
-### Investor KYC/Verification System:
-
-#### **Required Documents for Investors:**
-1. **🆔 Government-Issued ID**: National ID, passport, driver's license, or state ID
-2. **🏠 Proof of Address**: Utility bill, bank statement, or lease agreement (last 3 months)
-3. **💼 Financial Information**: Bank statement, income verification, or investment account statement
-
-#### **When Investor Verification is Required:**
-- **Upon Wallet Connection**: Automatic check and onboarding modal for unverified investors
-- **Accessing Investment Features**: Blocked sections show verification requirement
-- **Before First Investment**: Must be verified to purchase grove tokens
-
-#### **Investor Verification Features:**
-- **Onboarding modal** with investment-specific requirements
-- **Verification section** in investor portal
-- **Progressive restrictions** for unverified investors
-- **Different verification tiers** with investment limits
-
-### API Endpoint Issues (404 Errors):
-
-If you see "Endpoint not found" errors for investor verification:
-
-#### **Quick Fix:**
-```bash
-# Run the restart script
-restart-with-investor-fix.bat
+**Error:**
+```
+GET http://localhost:3000/@fs/.../node_modules/.vite/deps/@hashgraph_sdk.js?v=80882335 
+net::ERR_ABORTED 504 (Outdated Optimize Dep)
 ```
 
-#### **Manual Fix:**
-1. **Stop all servers**: Close all Node.js command windows
-2. **Restart API server**: `npm run api:mock`
-3. **Restart frontend**: `npm run frontend`
-4. **Test endpoint**: Visit `http://localhost:3001/api/investor-verification/status/0.0.123456`
+**Solution:**
+```bash
+# Run the fix script
+fix-vite-cache.bat
 
-#### **Verify Fix:**
-- API server should show: "🔍 Investor verification request" in console
-- Endpoint should return JSON response (not 404)
-- Investor onboarding modal should appear when connecting as investor
+# Or manually:
+# 1. Delete Vite cache
+rmdir /s /q node_modules\.vite
 
-The application is fully functional - both farmers and investors must complete verification to access all features!
+# 2. Restart dev server
+pnpm run dev:vite
+```
+
+**Why this happens:** Vite caches dependencies, and when you update packages, the cache becomes outdated.
+
+---
+
+### Issue 2: "Cannot read properties of undefined (reading 'connectWallet')"
+
+**Error:**
+```
+Uncaught TypeError: Cannot read properties of undefined (reading 'connectWallet')
+```
+
+**Solution:** ✅ Already fixed! The buttons now use event listeners instead of inline onclick handlers.
+
+**What was changed:**
+- Removed inline `onclick="window.walletManager.connectWallet()"`
+- Added proper event listeners that wait for walletManager to load
+- Used `data-action` attributes for better organization
+
+---
+
+### Issue 3: "wallet-loading.js 404 Not Found"
+
+**Error:**
+```
+GET http://localhost:3000/js/wallet-loading.js net::ERR_ABORTED 404 (Not Found)
+```
+
+**Solution:** ✅ Already fixed! Removed the reference to the non-existent file.
+
+---
+
+### Issue 4: npm install fails
+
+**Error:**
+```
+npm ERR! Cannot read properties of null (reading 'matches')
+```
+
+**Solution:** Use `pnpm` instead of `npm`:
+```bash
+# Install pnpm if you don't have it
+npm install -g pnpm
+
+# Then install dependencies
+pnpm install
+```
+
+---
+
+### Issue 5: Wallet not connecting
+
+**Symptoms:**
+- Modal opens but nothing happens
+- Extension doesn't respond
+- QR code doesn't work
+
+**Solutions:**
+
+1. **Check if wallet extension is installed:**
+   - [HashPack](https://www.hashpack.app/)
+   - [Blade](https://bladewallet.io/)
+   - [Kabila](https://kabila.app/)
+
+2. **Refresh the page after installing extension**
+
+3. **Check browser console for errors:**
+   - Press F12
+   - Look for red errors
+   - Share them if you need help
+
+4. **Clear browser cache:**
+   - Ctrl+Shift+Delete
+   - Clear cached images and files
+
+5. **Try a different browser:**
+   - Chrome/Edge work best
+   - Firefox may have issues
+
+---
+
+### Issue 6: Module import errors
+
+**Error:**
+```
+Failed to resolve module specifier "@hashgraph/sdk"
+```
+
+**Solution:**
+```bash
+# Clear everything and reinstall
+fix-vite-cache.bat
+```
+
+---
+
+### Issue 7: Port already in use
+
+**Error:**
+```
+Port 3000 is already in use
+```
+
+**Solution:**
+```bash
+# Find and kill the process using port 3000
+netstat -ano | findstr :3000
+taskkill /PID <PID_NUMBER> /F
+
+# Or use a different port
+vite --port 3001
+```
+
+---
+
+### Issue 8: Transaction fails
+
+**Symptoms:**
+- Transaction doesn't go through
+- Wallet shows error
+- Console shows transaction error
+
+**Solutions:**
+
+1. **Check HBAR balance:**
+   - Need enough HBAR for transaction + fees
+   - Minimum ~0.1 HBAR for fees
+
+2. **Verify recipient account ID:**
+   - Format: `0.0.12345`
+   - Must be a valid Hedera account
+
+3. **Check network:**
+   - Make sure you're on Testnet
+   - Wallet and app must use same network
+
+4. **Get testnet HBAR:**
+   - [Hedera Faucet](https://portal.hedera.com/faucet)
+
+---
+
+### Issue 9: Session not persisting
+
+**Symptoms:**
+- Have to reconnect every page reload
+- Session lost after refresh
+
+**Solutions:**
+
+1. **Check sessionStorage:**
+   - Open DevTools (F12)
+   - Go to Application tab
+   - Check Session Storage
+   - Look for `hwcV1Session`
+
+2. **Don't use incognito mode:**
+   - Session storage doesn't persist in incognito
+
+3. **Check browser settings:**
+   - Make sure cookies/storage is enabled
+
+---
+
+### Issue 10: Vite dev server won't start
+
+**Error:**
+```
+Error: Cannot find module 'vite'
+```
+
+**Solution:**
+```bash
+# Reinstall dependencies
+pnpm install
+
+# If that doesn't work, clear everything
+rmdir /s /q node_modules
+del pnpm-lock.yaml
+pnpm install
+```
+
+---
+
+## Quick Fixes Checklist
+
+When something goes wrong, try these in order:
+
+1. ✅ **Refresh the page** (Ctrl+R)
+2. ✅ **Hard refresh** (Ctrl+Shift+R)
+3. ✅ **Clear Vite cache** (`fix-vite-cache.bat`)
+4. ✅ **Restart dev server** (Ctrl+C, then `pnpm run dev:vite`)
+5. ✅ **Check browser console** (F12)
+6. ✅ **Clear browser cache** (Ctrl+Shift+Delete)
+7. ✅ **Reinstall dependencies** (`pnpm install`)
+8. ✅ **Try different browser**
+
+---
+
+## Getting Help
+
+If none of these solutions work:
+
+1. **Check browser console:**
+   - Press F12
+   - Copy any error messages
+
+2. **Check terminal output:**
+   - Look for errors in the terminal where dev server is running
+
+3. **Provide details:**
+   - What were you trying to do?
+   - What error did you see?
+   - What have you tried?
+   - Browser and version?
+   - Operating system?
+
+4. **Resources:**
+   - [Hedera Discord](https://hedera.com/discord)
+   - [Hedera Docs](https://docs.hedera.com/)
+   - [WalletConnect Docs](https://docs.walletconnect.com/)
+
+---
+
+## Prevention Tips
+
+To avoid issues:
+
+1. **Always use pnpm** (not npm or yarn)
+2. **Keep dependencies updated** (but test after updating)
+3. **Clear cache after updating packages**
+4. **Use supported browsers** (Chrome, Edge, Brave)
+5. **Keep wallet extensions updated**
+6. **Don't modify node_modules** (changes will be lost)
+7. **Use version control** (git) to track changes
+
+---
+
+## Development Workflow
+
+Recommended workflow to minimize issues:
+
+```bash
+# 1. Start fresh each day
+pnpm install
+
+# 2. Clear cache if you updated packages
+rmdir /s /q node_modules\.vite
+
+# 3. Start dev server
+pnpm run dev:vite
+
+# 4. Open browser
+# http://localhost:3000/wallet-test.html
+
+# 5. Test wallet connection
+
+# 6. If issues, check console (F12)
+
+# 7. If still issues, run fix script
+fix-vite-cache.bat
+```
+
+---
+
+## Testing Checklist
+
+Before considering the integration "working":
+
+- [ ] Dev server starts without errors
+- [ ] Page loads without 404 errors
+- [ ] No console errors on page load
+- [ ] Connect button appears
+- [ ] Modal opens when clicking connect
+- [ ] Extensions are detected (if installed)
+- [ ] Can connect via extension
+- [ ] Account ID displays after connection
+- [ ] Can send test transaction
+- [ ] Can disconnect
+- [ ] Session persists after page refresh
+- [ ] QR code modal opens
+- [ ] No errors in browser console
+- [ ] No errors in terminal
+
+---
+
+**Last Updated:** January 2025

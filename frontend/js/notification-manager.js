@@ -19,10 +19,19 @@ class NotificationManager {
         // Create notification container if it doesn't exist
         this.container = document.getElementById('notification-container');
         if (!this.container) {
+            // Check for alternative container ID used in app.html
+            this.container = document.getElementById('toastContainer');
+        }
+        if (!this.container) {
             this.container = document.createElement('div');
             this.container.id = 'notification-container';
             this.container.className = 'notification-container';
             document.body.appendChild(this.container);
+        }
+        
+        // Debug logging
+        if (window.location.hostname === 'localhost') {
+            console.log('NotificationManager initialized with container:', this.container.id);
         }
     }
 
@@ -33,6 +42,9 @@ class NotificationManager {
      * @returns {number} Notification ID
      */
     success(message, options = {}) {
+        if (window.location.hostname === 'localhost') {
+            console.log('Showing success notification:', message);
+        }
         return this.show({
             type: 'success',
             message,
@@ -47,6 +59,9 @@ class NotificationManager {
      * @returns {number} Notification ID
      */
     error(message, options = {}) {
+        if (window.location.hostname === 'localhost') {
+            console.log('Showing error notification:', message);
+        }
         return this.show({
             type: 'error',
             message,
@@ -62,6 +77,9 @@ class NotificationManager {
      * @returns {number} Notification ID
      */
     warning(message, options = {}) {
+        if (window.location.hostname === 'localhost') {
+            console.log('Showing warning notification:', message);
+        }
         return this.show({
             type: 'warning',
             message,
@@ -76,6 +94,9 @@ class NotificationManager {
      * @returns {number} Notification ID
      */
     info(message, options = {}) {
+        if (window.location.hostname === 'localhost') {
+            console.log('Showing info notification:', message);
+        }
         return this.show({
             type: 'info',
             message,

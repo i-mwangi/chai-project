@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notifications Console</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        #log {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Notification System Test</h1>
+    <div id="log">Testing notification system...</div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="notification-container"></div>
+
+    <script src="js/notification-manager.js"></script>
+    <script>
+        const logElement = document.getElementById('log');
+        
+        function log(message) {
+            logElement.textContent += '\n' + message;
+            console.log(message);
+        }
+        
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            log('DOM loaded');
+            
+            // Check if notification manager exists
+            if (window.notificationManager) {
+                log('Notification manager initialized successfully');
+                log('Container element: ' + (window.notificationManager.container ? 'Found' : 'Not found'));
+                if (window.notificationManager.container) {
+                    log('Container ID: ' + window.notificationManager.container.id);
+                    log('Container class: ' + window.notificationManager.container.className);
+                }
+                
+                // Test showing a notification
+                try {
+                    const id = window.notificationManager.info('Test notification - if you see this message, notifications are working!');
+                    log('Notification shown with ID: ' + id);
+                } catch (error) {
+                    log('Error showing notification: ' + error.message);
+                }
+            } else {
+                log('Notification manager NOT found');
+            }
+        });
+    </script>
+</body>
+</body>
+</html>

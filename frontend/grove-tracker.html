@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,7 +27,8 @@
             box-sizing: border-box;
         }
 
-        html, body {
+        html,
+        body {
             height: 100%;
             width: 100%;
             margin: 0;
@@ -222,9 +224,17 @@
             flex-shrink: 0;
         }
 
-        .country-kenya { background: #ef4444; }
-        .country-uganda { background: #3b82f6; }
-        .country-ethiopia { background: #10b981; }
+        .country-kenya {
+            background: #ef4444;
+        }
+
+        .country-uganda {
+            background: #3b82f6;
+        }
+
+        .country-ethiopia {
+            background: #10b981;
+        }
 
         .grove-info {
             flex: 1;
@@ -303,7 +313,7 @@
             background: rgba(212, 163, 115, 0.2);
         }
 
-        .sidebar.collapsed + .toggle-sidebar-btn {
+        .sidebar.collapsed+.toggle-sidebar-btn {
             left: 0;
         }
 
@@ -357,6 +367,7 @@
                 opacity: 0;
                 transform: translateX(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -439,7 +450,7 @@
                 left: 320px;
             }
 
-            .sidebar.collapsed + .toggle-sidebar-btn {
+            .sidebar.collapsed+.toggle-sidebar-btn {
                 left: 0;
             }
 
@@ -451,6 +462,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="tracker-container">
         <!-- Sidebar -->
@@ -463,7 +475,8 @@
             <div class="search-container">
                 <div class="search-wrapper">
                     <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                     <input type="text" class="search-input" id="searchInput" placeholder="Search groves..." />
                 </div>
@@ -521,7 +534,7 @@
         <!-- Map Container -->
         <div class="map-container">
             <div id="map"></div>
-            
+
             <!-- Info Card -->
             <div class="info-card" id="infoCard">
                 <div class="info-card-header">
@@ -539,4 +552,5 @@
     <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
     <script src="js/grove-tracker.js"></script>
 </body>
+
 </html>

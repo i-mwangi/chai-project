@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Wallet Connection Test</title>
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/wallet-connection-ui.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            background-color: #4a4a4a;
+            color: white;
+        }
+        button:hover {
+            background-color: #5a5a5a;
+        }
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Wallet Connection Test</h1>
+    
+    <div class="test-section">
+        <h2>Navigation</h2>
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="farmer">Farmer Portal</button>
+        <button class="nav-btn" data-view="investor">Investor Portal</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Views</h2>
+        
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="view active">
+            <h3>Dashboard</h3>
+            <button id="dashboardConnectBtn">Connect Wallet (Dashboard)</button>
+            <button data-action="farmer-portal">Register as Farmer</button>
+        </div>
+        
+        <!-- Farmer View -->
+        <div id="farmerView" class="view">
+            <h3>Farmer Portal</h3>
+            <button id="farmerConnectBtn">Connect Wallet (Farmer)</button>
+            <p>After connecting as farmer, you should stay in the farmer view.</p>
+        </div>
+        
+        <!-- Investor View -->
+        <div id="investorView" class="view">
+            <h3>Investor Portal</h3>
+            <button id="investorConnectBtn">Connect Wallet (Investor)</button>
+            <p>After connecting as investor, you should stay in the investor view.</p>
+        </div>
+    </div>
+    
+    <!-- Wallet Connection UI -->
+    <div class="wallet-connection">
+        <button id="connect-wallet-btn" class="btn btn-primary">Connect Wallet</button>
+        <div id="walletInfo" class="wallet-info hidden">
+            <span id="walletAddress"></span>
+            <button id="disconnectWallet" class="btn btn-danger btn-sm">Disconnect</button>
+        </div>
+    </div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="notification-container"></div>
+
+    <script src="js/notification-manager.js"></script>
+    <script>
+        // Mock wallet manager for testing
+        window.walletManager = {
+            userType: 'investor',
+            isWalletConnected: function() {
+                return !!this.accountId;
+            },
+            getAccountId: function() {
+                return this.accountId;
+            },
+            getUserType: function() {
+                return this.userType;
+            },
+            setIntendedUserType: function(type) {
+                this.userType = type;
+                console.log('User type set to:', type);
+            },
+            connect: function() {
+                // Simulate wallet connection
+                this.accountId = '0.0.123456';
+                window.notificationManager.success('Wallet connected as ' + this.userType);
+                this.updateUI();
+            },
+            disconnect: function() {
+                this.accountId = null;
+                window.notificationManager.info('Wallet disconnected');
+                this.updateUI();
+            },
+            updateUI: function() {
+                const connectBtn = document.getElementById('connect-wallet-btn');
+                const walletInfo = document.getElementById('walletInfo');
+                const walletAddress = document.getElementById('walletAddress');
+                const disconnectBtn = document.getElementById('disconnectWallet');
+                
+                if (this.isWalletConnected() && connectBtn && walletInfo && walletAddress && disconnectBtn) {
+                    connectBtn.classList.add('hidden');
+                    walletInfo.classList.remove('hidden');
+                    walletAddress.textContent = this.getAccountId();
+                    disconnectBtn.onclick = () => this.disconnect();
+                } else if (connectBtn && walletInfo) {
+                    connectBtn.classList.remove('hidden');
+                    walletInfo.classList.add('hidden');
+                    connectBtn.onclick = () => this.connect();
+                }
+            }
+        };
+        
+        // Mock view manager
+        window.viewManager = {
+            currentView: 'dashboard',
+            switchView: function(view) {
+                // Hide all views
+                document.querySelectorAll('.view').forEach(v => {
+                    v.classList.remove('active');
+                });
+                
+                // Show target view
+                const targetView = document.getElementById(`${view}View`);
+                if (targetView) {
+                    targetView.classList.add('active');
+                }
+                
+                this.currentView = view;
+                console.log('Switched to view:', view);
+                
+                // Update navigation buttons
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.view === view) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+        };
+        
+        // Setup navigation buttons
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const view = btn.dataset.view;
+                if (view) {
+                    // Set intended user type based on view
+                    if (view === 'farmer') {
+                        window.walletManager.setIntendedUserType('farmer');
+                    } else if (view === 'investor') {
+                        window.walletManager.setIntendedUserType('investor');
+                    }
+                    window.viewManager.switchView(view);
+                }
+            });
+        });
+        
+        // Setup connect buttons
+        document.getElementById('dashboardConnectBtn').addEventListener('click', () => {
+            // Set user type based on current view
+            const currentView = window.viewManager.currentView;
+            if (currentView === 'farmer') {
+                window.walletManager.setIntendedUserType('farmer');
+            } else {
+                window.walletManager.setIntendedUserType('investor');
+            }
+            window.walletManager.connect();
+        });
+        
+        document.getElementById('farmerConnectBtn').addEventListener('click', () => {
+            window.walletManager.setIntendedUserType('farmer');
+            window.walletManager.connect();
+        });
+        
+        document.getElementById('investorConnectBtn').addEventListener('click', () => {
+            window.walletManager.setIntendedUserType('investor');
+            window.walletManager.connect();
+        });
+        
+        // Setup action buttons
+        document.querySelectorAll('[data-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.getAttribute('data-action');
+                if (action === 'farmer-portal') {
+                    window.walletManager.setIntendedUserType('farmer');
+                    window.viewManager.switchView('farmer');
+                }
+            });
+        });
+        
+        // Initialize UI
+        window.walletManager.updateUI();
+    </script>
+</body>
+</html>
