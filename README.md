@@ -47,7 +47,7 @@ The Chai Platform connects coffee farmers with investors through blockchain tech
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/chai-platform.git
+git clone https://github.com/i-mwangi/chai-project.git
 cd chai-platform
 
 # Install dependencies
