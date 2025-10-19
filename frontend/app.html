@@ -1743,34 +1743,34 @@
     </div>
 
     <!-- Utility Scripts -->
-    <script src="js/errors.js"></script>
-    <script src="js/error-handler.js"></script>
-    <script src="js/notification-manager.js"></script>
+    <script src="js/errors.js" type="module"></script>
+    <script src="js/error-handler.js" type="module"></script>
+    <script src="js/notification-manager.js" type="module"></script>
 
     <!-- Design System Scripts -->
-    <script src="js/keyboard-navigation.js"></script>
-    <script src="js/aria-semantic-enhancements.js"></script>
-    <script src="js/screen-reader-announcer.js"></script>
-    <script src="js/loading-states.js"></script>
+    <script src="js/keyboard-navigation.js" type="module"></script>
+    <script src="js/aria-semantic-enhancements.js" type="module"></script>
+    <script src="js/screen-reader-announcer.js" type="module"></script>
+    <script src="js/loading-states.js" type="module"></script>
 
     <!-- Navigation -->
-    <script src="js/api.js"></script>
-    <script src="js/balance-poller.js"></script>
-    <script src="js/marketplace.js"></script>
-    <script src="js/price-oracle.js"></script>
-    <script src="js/market-prices-display.js"></script>
-    <script src="js/token-admin.js"></script>
-    <script src="js/admin-panel.js"></script>
-    <script src="js/farmer-dashboard.js"></script>
-    <script src="js/investor-portal.js"></script>
-    <script src="js/dashboard-enhanced.js"></script>
-    <script src="js/navigation.js"></script>
+    <script src="js/api.js" type="module"></script>
+    <script src="js/balance-poller.js" type="module"></script>
+    <script src="js/marketplace.js" type="module"></script>
+    <script src="js/price-oracle.js" type="module"></script>
+    <script src="js/market-prices-display.js" type="module"></script>
+    <script src="js/token-admin.js" type="module"></script>
+    <script src="js/admin-panel.js" type="module"></script>
+    <script src="js/farmer-dashboard.js" type="module"></script>
+    <script src="js/investor-portal.js" type="module"></script>
+    <script src="js/dashboard-enhanced.js" type="module"></script>
+    <script src="js/navigation.js" type="module"></script>
 
     <!-- Wallet Management - Hedera Wallet Connect v1 -->
     <script type="module" src="wallet/index.js"></script>
 
     <!-- Main App Controller (view management, navigation, dashboard) -->
-    <script src="js/main.js"></script>
+    <script src="js/main.js" type="module"></script>
     <script>
         // FRESH START on every page load - no persistent flags
         (function() {
@@ -1796,26 +1796,42 @@
 
                 // Setup button handlers - FRESH on every page load
                 function setupWalletButtons() {
+                    // THREE-LAYER DUPLICATE PREVENTION SYSTEM
+                    // Layer 1: Global flag to prevent re-initialization
+                    if (window._buttonListenersInitialized) {
+                        console.log('⚠️ Button listeners already initialized, skipping duplicate setup');
+                        return;
+                    }
+                    
                     console.log('🔧 Setting up button event listeners...');
+
+                    // Layer 2: Set global initialization flag immediately
+                    window._buttonListenersInitialized = true;
 
                     // Dashboard connect button - attach listener directly
                     const dashboardConnectBtn = document.getElementById('dashboardConnectBtn');
                     if (dashboardConnectBtn) {
-                        dashboardConnectBtn.addEventListener('click', function() {
-                            console.log('📱 Dashboard connect button clicked');
-                            if (window.walletManager) {
-                                const currentView = document.querySelector('.view.active')?.id?.replace('View', '') || 'dashboard';
-                                if (currentView === 'farmer') {
-                                    window.walletManager.setIntendedUserType('farmer');
+                        // Layer 3: Element-level flag to prevent duplicate listeners
+                        if (!dashboardConnectBtn.dataset.listenerAttached) {
+                            dashboardConnectBtn.addEventListener('click', function() {
+                                console.log('📱 Dashboard connect button clicked');
+                                if (window.walletManager) {
+                                    const currentView = document.querySelector('.view.active')?.id?.replace('View', '') || 'dashboard';
+                                    if (currentView === 'farmer') {
+                                        window.walletManager.setIntendedUserType('farmer');
+                                    } else {
+                                        window.walletManager.setIntendedUserType('investor');
+                                    }
+                                    window.walletManager.connect();
                                 } else {
-                                    window.walletManager.setIntendedUserType('investor');
+                                    console.error('❌ WalletManager not available');
                                 }
-                                window.walletManager.connect();
-                            } else {
-                                console.error('❌ WalletManager not available');
-                            }
-                        });
-                        console.log('   ✅ Dashboard connect button listener attached');
+                            });
+                            dashboardConnectBtn.dataset.listenerAttached = 'true';
+                            console.log('   ✅ Dashboard connect button listener attached');
+                        } else {
+                            console.log('   ℹ️ Dashboard connect button listener already attached');
+                        }
                     }
 
                     // Event delegation for action buttons - attach directly
@@ -1907,9 +1923,16 @@
                         }
                     };
 
-                    // Attach the event listener to document body
-                    document.body.addEventListener('click', handleActionClick, true);
-                    console.log('   ✅ Event delegation listener attached to document.body');
+                    // Attach the event listener to document body with duplicate prevention
+                    // Use bubbling phase (false) instead of capture phase (true) to avoid conflicts
+                    // Layer 3: Element-level flag to prevent duplicate listeners
+                    if (!document.body.dataset.actionListenerAttached) {
+                        document.body.addEventListener('click', handleActionClick, false);
+                        document.body.dataset.actionListenerAttached = 'true';
+                        console.log('   ✅ Event delegation listener attached to document.body');
+                    } else {
+                        console.log('   ℹ️ Event delegation listener already attached to document.body');
+                    }
 
                     console.log('✅ All button event listeners setup complete');
                 }

@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chai Platform - Beta</title>
     <link rel="icon" href="public/chai.png">
+    <!-- Add this to suppress Lit dev mode warning -->
+    <script>
+      // Suppress Lit dev mode warning in production
+      if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        window.litDevMode = false;
+      }
+    </script>
     
     <!-- Error Handling Styles -->
     <link rel="stylesheet" href="css/wallet-errors.css">
@@ -1360,9 +1367,9 @@
 </div>
 
 <!-- ES Module Imports -->
-<script src="js/api.js"></script>
-<script src="js/notification-manager.js"></script>
-<script src="js/main.js"></script>
+<script src="js/api.js" type="module"></script>
+<script src="js/notification-manager.js" type="module"></script>
+<script src="js/main.js" type="module"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {

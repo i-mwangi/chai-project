@@ -12,6 +12,38 @@ export default defineConfig(({ mode }) => {
   return {
     root: 'frontend',
     publicDir: 'public',
+    define: {
+      global: 'globalThis',
+      'process.env.VITE_WALLETCONNECT_PROJECT_ID': JSON.stringify(env.VITE_WALLETCONNECT_PROJECT_ID),
+      'process.env.VITE_HEDERA_NETWORK': JSON.stringify(env.VITE_HEDERA_NETWORK),
+      'process.env': '{}',
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'frontend/src'),
+        '@reown/appkit/adapters': path.resolve(__dirname, 'frontend/mock/adapters.js'),
+        buffer: 'buffer',
+      },
+    },
+    optimizeDeps: {
+      include: [
+        '@hashgraph/sdk',
+        '@hashgraph/hedera-wallet-connect',
+        '@walletconnect/sign-client',
+        '@walletconnect/universal-provider',
+        '@walletconnect/utils',
+        '@reown/appkit',
+        '@reown/appkit-core',
+        'buffer',
+      ],
+      esbuildOptions: {
+        target: 'es2020',
+        define: {
+          global: 'globalThis',
+        },
+      },
+      force: true,
+    },
     build: {
       outDir: 'dist',
       emptyOutDir: true,
@@ -51,32 +83,6 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       open: true,
-    },
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, 'frontend/src'),
-        '@reown/appkit/adapters': path.resolve(__dirname, 'frontend/mock/adapters.js'),
-      },
-    },
-    optimizeDeps: {
-      include: [
-        '@hashgraph/sdk',
-        '@hashgraph/hedera-wallet-connect',
-        '@walletconnect/sign-client',
-        '@walletconnect/universal-provider',
-        '@walletconnect/utils',
-        '@reown/appkit',
-        '@reown/appkit-core',
-      ],
-      esbuildOptions: {
-        target: 'es2020',
-      },
-      force: true,
-    },
-    define: {
-      'process.env.VITE_WALLETCONNECT_PROJECT_ID': JSON.stringify(env.VITE_WALLETCONNECT_PROJECT_ID),
-      'process.env.VITE_HEDERA_NETWORK': JSON.stringify(env.VITE_HEDERA_NETWORK),
-      'process.env': '{}',
     },
   };
 });
