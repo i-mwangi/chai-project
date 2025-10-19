@@ -39,32 +39,22 @@ export function getShared(): SHARED_KEYS {
 }
 
 export function getEnv(){
-    const network = process.env.NETWORK
-    if(!network){
-        throw new Error("NETWORK ENV VAR NOT SET")
-    }
-    const PRIVATE_KEY = process.env.PRIVATE_KEY
-    const ACCOUNT_ID= process.env.ACCOUNT_ID
-    const ADDRESS= process.env.ADDRESS
-
-    const TPRIVATE_KEY = process.env.TPRIVATE_KEY
-    const TACCOUNT_ID= process.env.TACCOUNT_ID
-    const TADDRESS= process.env.TADDRESS
+    const network = process.env.NETWORK ?? 'localnet';
 
     if (network == 'localnet'){
         return {
-            PRIVATE_KEY: PrivateKey.fromStringECDSA(PRIVATE_KEY!),
-            ACCOUNT_ID: AccountId.fromString(ACCOUNT_ID!),
-            ADDRESS: EvmAddress.fromString(ADDRESS!),
+            PRIVATE_KEY: PrivateKey.fromStringECDSA(process.env.PRIVATE_KEY!),
+            ACCOUNT_ID: AccountId.fromString(process.env.ACCOUNT_ID!),
+            ADDRESS: EvmAddress.fromString(process.env.ADDRESS!),
             NETWORK: network
         }
     }
     else 
     {
         return {
-            PRIVATE_KEY: PrivateKey.fromStringECDSA(TPRIVATE_KEY!),
-            ACCOUNT_ID: AccountId.fromString(TACCOUNT_ID!),
-            ADDRESS: EvmAddress.fromString(TADDRESS!),
+            PRIVATE_KEY: PrivateKey.fromStringECDSA(process.env.TPRIVATE_KEY!),
+            ACCOUNT_ID: AccountId.fromString(process.env.TACCOUNT_ID!),
+            ADDRESS: EvmAddress.fromString(process.env.TADDRESS!),
             NETWORK: network
         }
     }
