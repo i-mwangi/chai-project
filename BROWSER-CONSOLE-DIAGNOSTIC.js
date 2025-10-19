@@ -58,7 +58,7 @@ if (window.walletManager?.setIntendedUserType) {
     try {
         window.walletManager.setIntendedUserType('farmer');
         console.log('✅ Successfully set intended user type to "farmer"');
-        
+
         window.walletManager.setIntendedUserType('investor');
         console.log('✅ Successfully set intended user type to "investor"');
     } catch (error) {
@@ -71,9 +71,9 @@ if (window.walletManager?.setIntendedUserType) {
 // Check 7: Script loading
 console.log('\n7️⃣ Checking loaded scripts...');
 const scripts = Array.from(document.querySelectorAll('script[src]'));
-const relevantScripts = scripts.filter(s => 
-    s.src.includes('wallet') || 
-    s.src.includes('main.js') || 
+const relevantScripts = scripts.filter(s =>
+    s.src.includes('wallet') ||
+    s.src.includes('main.js') ||
     s.src.includes('view')
 );
 console.log('Relevant scripts loaded:');

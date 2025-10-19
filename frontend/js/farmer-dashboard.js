@@ -84,6 +84,16 @@ class FarmerDashboard {
         console.log('Removing existing event listeners (simplified approach)');
     }
 
+// Initialize FarmerDashboard when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.farmerDashboard = new FarmerDashboard();
+        console.log('✅ FarmerDashboard initialized');
+    });
+} else {
+    window.farmerDashboard = new FarmerDashboard();
+    console.log('✅ FarmerDashboard initialized');
+}
 
     init() {
         this.setupEventListeners();

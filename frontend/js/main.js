@@ -6,20 +6,20 @@
 class ViewManager {
     constructor() {
         console.log('Creating ViewManager instance');
-        
+
         this.currentView = 'dashboard';
         this.isInitialized = false;
-        
+
         // Initialize immediately - don't wait for walletManager
         // This makes viewManager available for button clicks right away
         this.init();
-        
+
         // Wait for wallet manager in background for wallet-specific features
         this.waitForWalletManager().then(() => {
             console.log('WalletManager ready, enabling wallet features...');
             // Initialize based on wallet connection
             if (window.walletManager && typeof window.walletManager.isWalletConnected === 'function' && window.walletManager.isWalletConnected()) {
-                this.handleWalletConnected();
+                this.handleWalletConnected(window.walletManager.getUserType());
             }
         });
     }
@@ -27,7 +27,7 @@ class ViewManager {
     // Wait for wallet manager to be available (non-blocking)
     async waitForWalletManager() {
         console.log('Waiting for wallet manager to be available...');
-        
+
         return new Promise((resolve) => {
             if (window.walletManager) {
                 console.log('Wallet manager is already available');
@@ -47,23 +47,23 @@ class ViewManager {
 
     init() {
         console.log('Initializing ViewManager...');
-        
+
         this.setupNavigation();
         this.loadDashboardData();
         this.isInitialized = true;
-        
+
         console.log('✅ ViewManager initialized and ready');
     }
 
     setupNavigation() {
         console.log('Setting up navigation...');
-        
+
         // Navigation buttons - attach listeners fresh on every page load
         const navButtons = document.querySelectorAll('.nav-btn');
         console.log('Found', navButtons.length, 'navigation buttons');
         navButtons.forEach((btn, index) => {
             console.log('Processing nav button', index, ':', btn.textContent.trim(), 'with view:', btn.dataset.view);
-            
+
             // Always attach listener - no persistent flag check
             console.log('Attaching event listener to nav button', index);
             btn.addEventListener('click', (e) => {
@@ -72,12 +72,12 @@ class ViewManager {
                 const button = e.currentTarget;
                 const view = button.dataset.view;
                 console.log('View:', view);
-                
+
                 if (!view) {
                     console.warn('No view specified for button:', button);
                     return;
                 }
-                
+
                 // Set intended user type based on the view being navigated to
                 if (view === 'farmer') {
                     console.log('Setting user type to farmer');
@@ -86,12 +86,11 @@ class ViewManager {
                     console.log('Setting user type to investor');
                     window.walletManager?.setIntendedUserType('investor');
                 }
-                
+
                 this.switchView(view);
             });
         });
     }
-
     switchView(view) {
         console.log('Switching to view:', view);
         
@@ -107,7 +106,7 @@ class ViewManager {
         document.querySelectorAll('.view').forEach(v => {
             v.classList.remove('active');
         });
-        
+
         const targetView = document.getElementById(`${view}View`);
         if (targetView) {
             targetView.classList.add('active');
@@ -128,7 +127,7 @@ class ViewManager {
 
     async loadViewData(view) {
         console.log('Loading view data for:', view);
-        
+
         try {
             switch (view) {
                 case 'dashboard':
@@ -137,33 +136,21 @@ class ViewManager {
                 case 'farmer':
                     // Set user type to farmer when switching to farmer view
                     window.walletManager?.setIntendedUserType('farmer');
-                    if (window.walletManager && 
-                        typeof window.walletManager.isWalletConnected === 'function' &&
-                        window.walletManager.isWalletConnected() && 
-                        typeof window.walletManager.getUserType === 'function') {
-                        // Ensure the user type is set to farmer
-                        window.walletManager.setUserType('farmer');
-                        if (window.farmerDashboard && typeof window.farmerDashboard.switchSection === 'function') {
-                            // Reinitialize event listeners when farmer view
-                            if (typeof window.farmerDashboard.setupEventListeners === 'function') {
-                                window.farmerDashboard.setupEventListeners();
-                            }
-                            window.farmerDashboard.switchSection('groves');
-                        }
+                    // Switch to the default section if the user is connected.
+                    if (window.walletManager?.isWalletConnected()) {
+                        // The FarmerDashboard is now created on DOMContentLoaded.
+                        // We just need to call its method to switch to the correct section.
+                        // The optional chaining (?.) ensures this runs safely.
+                        window.farmerDashboard?.switchSection('groves');
                     }
                     break;
                 case 'investor':
                     // Set user type to investor when switching to investor view
                     window.walletManager?.setIntendedUserType('investor');
-                    if (window.walletManager && 
-                        typeof window.walletManager.isWalletConnected === 'function' &&
-                        window.walletManager.isWalletConnected() && 
-                        typeof window.walletManager.getUserType === 'function') {
-                        // Ensure the user type is set to investor
-                        window.walletManager.setUserType('investor');
-                        if (window.investorPortal && typeof window.investorPortal.switchSection === 'function') {
-                            window.investorPortal.switchSection('browse');
-                        }
+                    // Switch to the default section if the user is connected.
+                    if (window.walletManager?.isWalletConnected()) {
+                        // The InvestorPortal is now created on DOMContentLoaded.
+                        window.investorPortal?.switchSection('browse');
                     }
                     break;
                 case 'admin':
@@ -182,7 +169,7 @@ class ViewManager {
 
     async loadDashboardData() {
         console.log('Loading dashboard data...');
-        
+
         try {
             // Load platform overview data
             const [marketOverview, pricesResponse] = await Promise.all([
@@ -199,7 +186,7 @@ class ViewManager {
 
     updateDashboardStats(marketOverview, pricesResponse) {
         console.log('Updating dashboard stats...');
-        
+
         // Mock data for dashboard stats
         const totalGrovesVal = marketOverview && marketOverview.success
             ? Number(marketOverview.totalGroves ?? marketOverview.data?.totalGroves ?? 0)
@@ -249,16 +236,15 @@ class ViewManager {
         if (coffeePriceEl) coffeePriceEl.textContent = `$${stats.coffeePrice}/kg`;
     }
 
-    handleWalletConnected() {
+    handleWalletConnected(userType) {
         console.log('Handling wallet connected event...');
-        
+
         if (!window.walletManager || typeof window.walletManager.getUserType !== 'function') {
             console.warn('WalletManager not fully initialized yet');
             return;
         }
-        
-        const userType = window.walletManager.getUserType();
-        
+
+        // const userType = window.walletManager.getUserType();
         // Auto-switch to appropriate view based on user type
         if (userType === 'farmer') {
             this.switchView('farmer');
@@ -269,19 +255,19 @@ class ViewManager {
 
     showError(message) {
         console.log('Showing error:', message);
-        
+
         window.walletManager.showToast(message, 'error');
     }
 
     showSuccess(message) {
         console.log('Showing success:', message);
-        
+
         window.walletManager.showToast(message, 'success');
     }
 
     showWarning(message) {
         console.log('Showing warning:', message);
-        
+
         window.walletManager.showToast(message, 'warning');
     }
 }
@@ -290,14 +276,17 @@ class ViewManager {
 class CoffeeTreeApp {
     constructor() {
         console.log('Creating CoffeeTreeApp instance');
-        
+
         this.init();
     }
 
     async init() {
         console.log('Initializing CoffeeTreeApp...');
-        
+
         try {
+            // Initialize ViewManager immediately. It does not depend on anything.
+            window.viewManager = new ViewManager();
+
             // Wait for DOM to be ready
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => this.start());
@@ -311,13 +300,9 @@ class CoffeeTreeApp {
 
     async start() {
         console.log('Starting CoffeeTreeApp...');
-        
+
         try {
             // Wait for wallet manager to be ready
-            await this.waitForWalletManager();
-            
-            // Initialize view manager
-            window.viewManager = new ViewManager();
 
             // Initialize balance poller
             if (typeof BalancePoller !== 'undefined') {
@@ -338,7 +323,7 @@ class CoffeeTreeApp {
     // Wait for wallet manager to be available
     async waitForWalletManager() {
         console.log('Waiting for wallet manager to be available...');
-        
+
         return new Promise((resolve) => {
             if (window.walletManager) {
                 console.log('Wallet manager is already available');
@@ -358,7 +343,7 @@ class CoffeeTreeApp {
 
     async testAPIConnection() {
         console.log('Testing API connection...');
-        
+
         try {
             const response = await window.coffeeAPI.healthCheck();
             if (response.success) {
@@ -372,7 +357,7 @@ class CoffeeTreeApp {
 
     showConnectionError() {
         console.log('Showing connection error...');
-        
+
         const errorMessage = document.createElement('div');
         errorMessage.className = 'connection-error';
         errorMessage.innerHTML = `
@@ -383,7 +368,7 @@ class CoffeeTreeApp {
                 <button class="btn btn-primary" onclick="location.reload()">Retry</button>
             </div>
         `;
-        
+
         errorMessage.style.cssText = `
             position: fixed;
             top: 0;
@@ -453,7 +438,7 @@ window.utils = {
 // Add this at the top of the file to ensure notification manager is available
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM content loaded, checking for notification manager...');
-    
+
     // Ensure notification manager exists
     if (!window.notificationManager) {
         console.warn('Notification manager not found, initializing...');

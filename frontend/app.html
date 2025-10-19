@@ -5,41 +5,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chai Platform</title>
-    <link rel="icon" href="public/chai.png">
+    <link rel="icon" href="/public/chai.png">
 
     <!-- Design System Core -->
-    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="/css/design-system.css">
 
     <!-- Design System Components (in cascade order) -->
-    <link rel="stylesheet" href="css/spacing.css">
-    <link rel="stylesheet" href="css/cards.css">
-    <link rel="stylesheet" href="css/buttons.css">
-    <link rel="stylesheet" href="css/forms.css">
-    <link rel="stylesheet" href="css/navigation.css">
-    <link rel="stylesheet" href="css/notifications.css">
-    <link rel="stylesheet" href="css/data-visualization.css">
-    <link rel="stylesheet" href="css/loading-states.css">
-    <link rel="stylesheet" href="css/wallet-loading.css">
-    <link rel="stylesheet" href="css/wallet-connection-ui.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/responsive.css">
-    <link rel="stylesheet" href="css/accessibility.css">
+    <link rel="stylesheet" href="/css/spacing.css">
+    <link rel="stylesheet" href="/css/cards.css">
+    <link rel="stylesheet" href="/css/buttons.css">
+    <link rel="stylesheet" href="/css/forms.css">
+    <link rel="stylesheet" href="/css/navigation.css">
+    <link rel="stylesheet" href="/css/notifications.css">
+    <link rel="stylesheet" href="/css/data-visualization.css">
+    <link rel="stylesheet" href="/css/loading-states.css">
+    <link rel="stylesheet" href="/css/wallet-loading.css">
+    <link rel="stylesheet" href="/css/wallet-connection-ui.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
 
     <!-- Theme & Page-Specific Styles -->
-    <link rel="stylesheet" href="css/dark-theme.css">
-    <link rel="stylesheet" href="css/dashboard-enhanced.css">
-    <link rel="stylesheet" href="css/purchase-modal.css">
-    <link rel="stylesheet" href="styles/marketplace.css">
+    <link rel="stylesheet" href="/css/dark-theme.css">
+    <link rel="stylesheet" href="/css/dashboard-enhanced.css">
+    <link rel="stylesheet" href="/css/purchase-modal.css">
+    <link rel="stylesheet" href="/styles/marketplace.css">
 
     <!-- Wallet Connection Styles -->
-    <link rel="stylesheet" href="wallet/modal.css">
+    <link rel="stylesheet" href="/wallet/modal.css">
 
     <!-- External Libraries -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="js/buffer.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
@@ -841,7 +840,7 @@
                                     </div>
 
                                     <div class="form-requirements">
-                                        <h5>Document Requirements:</h5>
+                                        <h6>Document Requirements:</h6>
                                         <ul>
                                             <li>✅ Accepted formats: PDF, JPG, PNG</li>
                                             <li>✅ Maximum file size: 10MB per document</li>
@@ -1259,7 +1258,7 @@
                                         </div>
 
                                         <div class="loan-terms-info">
-                                            <h5>Loan Terms</h5>
+                                            <h6>Loan Terms</h6>
                                             <ul class="terms-list">
                                                 <li><strong>Collateral Required:</strong> 125% of loan value</li>
                                                 <li><strong>Liquidation Threshold:</strong> 90% of collateral value</li>
@@ -1376,7 +1375,7 @@
                                                 </div>
 
                                                 <div class="loan-calculation">
-                                                    <h5>Loan Details</h5>
+                                                    <h6>Loan Details</h6>
                                                     <div class="calc-row">
                                                         <span>Collateral Required:</span>
                                                         <span id="collateralRequired">0 tokens</span>
@@ -1509,7 +1508,7 @@
                                 </div>
 
                                 <div class="form-requirements">
-                                    <h5>Document Requirements:</h5>
+                                    <h6>Document Requirements:</h6>
                                     <ul>
                                         <li>✅ Accepted formats: PDF, JPG, PNG</li>
                                         <li>✅ Maximum file size: 10MB per document</li>
@@ -1743,34 +1742,34 @@
     </div>
 
     <!-- Utility Scripts -->
-    <script src="js/errors.js" type="module"></script>
-    <script src="js/error-handler.js" type="module"></script>
-    <script src="js/notification-manager.js" type="module"></script>
+    <script src="/js/errors.js"></script>
+    <script src="/js/error-handler.js"></script>
+    <script src="/js/notification-manager.js"></script>
 
     <!-- Design System Scripts -->
-    <script src="js/keyboard-navigation.js" type="module"></script>
-    <script src="js/aria-semantic-enhancements.js" type="module"></script>
-    <script src="js/screen-reader-announcer.js" type="module"></script>
-    <script src="js/loading-states.js" type="module"></script>
+    <script src="/js/keyboard-navigation.js"></script>
+    <script src="/js/aria-semantic-enhancements.js"></script>
+    <script src="/js/screen-reader-announcer.js"></script>
+    <script src="/js/loading-states.js"></script>
 
     <!-- Navigation -->
-    <script src="js/api.js" type="module"></script>
-    <script src="js/balance-poller.js" type="module"></script>
-    <script src="js/marketplace.js" type="module"></script>
-    <script src="js/price-oracle.js" type="module"></script>
-    <script src="js/market-prices-display.js" type="module"></script>
-    <script src="js/token-admin.js" type="module"></script>
-    <script src="js/admin-panel.js" type="module"></script>
-    <script src="js/farmer-dashboard.js" type="module"></script>
-    <script src="js/investor-portal.js" type="module"></script>
-    <script src="js/dashboard-enhanced.js" type="module"></script>
-    <script src="js/navigation.js" type="module"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/balance-poller.js"></script>
+    <script src="/js/marketplace.js"></script>
+    <script src="/js/price-oracle.js"></script>
+    <script src="/js/market-prices-display.js"></script>
+    <script src="/js/token-admin.js"></script>
+    <script src="/js/admin-panel.js"></script>
+    <script src="/js/farmer-dashboard.js"></script>
+    <script src="/js/investor-portal.js"></script>
+    <script src="/js/dashboard-enhanced.js"></script>
+    <script src="/js/navigation.js"></script>
 
     <!-- Wallet Management - Hedera Wallet Connect v1 -->
-    <script type="module" src="wallet/index.js"></script>
+    <script type="module" src="/wallet/index.js"></script>
 
     <!-- Main App Controller (view management, navigation, dashboard) -->
-    <script src="js/main.js" type="module"></script>
+    <script src="/js/main.js"></script>
     <script>
         // FRESH START on every page load - no persistent flags
         (function() {
@@ -1796,42 +1795,26 @@
 
                 // Setup button handlers - FRESH on every page load
                 function setupWalletButtons() {
-                    // THREE-LAYER DUPLICATE PREVENTION SYSTEM
-                    // Layer 1: Global flag to prevent re-initialization
-                    if (window._buttonListenersInitialized) {
-                        console.log('⚠️ Button listeners already initialized, skipping duplicate setup');
-                        return;
-                    }
-                    
                     console.log('🔧 Setting up button event listeners...');
-
-                    // Layer 2: Set global initialization flag immediately
-                    window._buttonListenersInitialized = true;
 
                     // Dashboard connect button - attach listener directly
                     const dashboardConnectBtn = document.getElementById('dashboardConnectBtn');
                     if (dashboardConnectBtn) {
-                        // Layer 3: Element-level flag to prevent duplicate listeners
-                        if (!dashboardConnectBtn.dataset.listenerAttached) {
-                            dashboardConnectBtn.addEventListener('click', function() {
-                                console.log('📱 Dashboard connect button clicked');
-                                if (window.walletManager) {
-                                    const currentView = document.querySelector('.view.active')?.id?.replace('View', '') || 'dashboard';
-                                    if (currentView === 'farmer') {
-                                        window.walletManager.setIntendedUserType('farmer');
-                                    } else {
-                                        window.walletManager.setIntendedUserType('investor');
-                                    }
-                                    window.walletManager.connect();
+                        dashboardConnectBtn.addEventListener('click', function() {
+                            console.log('📱 Dashboard connect button clicked');
+                            if (window.walletManager) {
+                                const currentView = document.querySelector('.view.active')?.id?.replace('View', '') || 'dashboard';
+                                if (currentView === 'farmer') {
+                                    window.walletManager.setIntendedUserType('farmer');
                                 } else {
-                                    console.error('❌ WalletManager not available');
+                                    window.walletManager.setIntendedUserType('investor');
                                 }
-                            });
-                            dashboardConnectBtn.dataset.listenerAttached = 'true';
-                            console.log('   ✅ Dashboard connect button listener attached');
-                        } else {
-                            console.log('   ℹ️ Dashboard connect button listener already attached');
-                        }
+                                window.walletManager.connect();
+                            } else {
+                                console.error('❌ WalletManager not available');
+                            }
+                        });
+                        console.log('   ✅ Dashboard connect button listener attached');
                     }
 
                     // Event delegation for action buttons - attach directly
@@ -1923,16 +1906,9 @@
                         }
                     };
 
-                    // Attach the event listener to document body with duplicate prevention
-                    // Use bubbling phase (false) instead of capture phase (true) to avoid conflicts
-                    // Layer 3: Element-level flag to prevent duplicate listeners
-                    if (!document.body.dataset.actionListenerAttached) {
-                        document.body.addEventListener('click', handleActionClick, false);
-                        document.body.dataset.actionListenerAttached = 'true';
-                        console.log('   ✅ Event delegation listener attached to document.body');
-                    } else {
-                        console.log('   ℹ️ Event delegation listener already attached to document.body');
-                    }
+                    // Attach the event listener to document body
+                    document.body.addEventListener('click', handleActionClick, true);
+                    console.log('   ✅ Event delegation listener attached to document.body');
 
                     console.log('✅ All button event listeners setup complete');
                 }

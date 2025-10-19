@@ -2792,14 +2792,7 @@ async handleTokenPurchase(groveId, tokenAmount) {
             });
         }
 
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                const timestamp = new Date().toISOString().split('T')[0];
-                window.transactionHistoryManager.downloadCSV(`transactions-${timestamp}.csv`);
-                window.walletManager.showToast('Transaction history exported successfully', 'success');
-            });
-        }
-    }
+}
 }
 
 // Create global investor portal instance
