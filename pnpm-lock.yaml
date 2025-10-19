@@ -21,16 +21,16 @@ importers:
         specifier: ^0.15.1
         version: 0.15.1
       '@openzeppelin/contracts':
-        specifier: ^5.2.0
+        specifier: ^5.0.2
         version: 5.2.0
       '@reown/appkit':
-        specifier: ^1.8.10
+        specifier: ^1.7.16
         version: 1.8.10(@types/react@19.2.2)(react@19.0.0)(typescript@5.8.2)(zod@3.22.4)
       '@reown/appkit-adapter-ethers':
-        specifier: ^1.8.10
+        specifier: ^1.7.16
         version: 1.8.10(@ethersproject/sha2@5.8.0)(@types/react@19.2.2)(ethers@6.13.5)(react@19.0.0)(typescript@5.8.2)(zod@3.22.4)
       '@reown/appkit-core':
-        specifier: ^1.8.10
+        specifier: ^1.7.16
         version: 1.8.10(@types/react@19.2.2)(react@19.0.0)(typescript@5.8.2)(zod@3.22.4)
       '@types/better-sqlite3':
         specifier: ^7.6.12
@@ -42,8 +42,8 @@ importers:
         specifier: 2.22.3
         version: 2.22.3(typescript@5.8.2)(zod@3.22.4)
       '@walletconnect/types':
-        specifier: ^2.17.2
-        version: 2.22.4
+        specifier: 2.22.3
+        version: 2.22.3
       '@walletconnect/universal-provider':
         specifier: 2.22.3
         version: 2.22.3(typescript@5.8.2)(zod@3.22.4)
@@ -82,10 +82,10 @@ importers:
         version: 8.4.0(postcss@8.5.6)(tsx@4.19.3)(typescript@5.8.2)
     devDependencies:
       '@reown/appkit-common':
-        specifier: ^1.8.4
+        specifier: ^1.7.16
         version: 1.8.10(typescript@5.8.2)(zod@3.22.4)
       '@reown/appkit-utils':
-        specifier: ^1.8.4
+        specifier: ^1.7.16
         version: 1.8.10(@types/react@19.2.2)(react@19.0.0)(typescript@5.8.2)(valtio@2.1.7(@types/react@19.2.2)(react@19.0.0))(zod@3.22.4)
       '@types/node':
         specifier: ^22.13.10
@@ -1574,7 +1574,7 @@ packages:
     engines: {node: ^14.21.3 || >=16}
 
   '@openzeppelin/contracts@5.2.0':
-    resolution: {integrity: sha512-bxjNie5z89W1Ea0NZLZluFh8PrFNn9DH8DQlujEok2yjsOlraUPKID5p1Wk3qdNbf6XkQ1Os2RvfiHrrXLHWKA==}
+    resolution: {integrity: sha512-bxjNie5z89W1Ea0NZLZluFh8PrFNn9DH8DQlujEok2yjsOlraUPKID5p1Wk3qdNbf6XkQ1Os2RvfiHrrXLHWKA==, tarball: https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-5.2.0.tgz}
 
   '@petamoriken/float16@3.9.2':
     resolution: {integrity: sha512-VgffxawQde93xKxT3qap3OH+meZf7VaSB5Sqd4Rqc+FP5alWbpOyan/7tRbOAvynjpG3GpdtAuGU/NdhQpmrog==}
@@ -6403,7 +6403,7 @@ snapshots:
     dependencies:
       '@hashgraph/sdk': 2.74.0(bn.js@5.2.1)(react-native@0.78.0(@babel/core@7.28.4)(@babel/preset-env@7.26.9(@babel/core@7.28.4))(@types/react@19.2.2)(react@19.0.0))
       '@walletconnect/qrcode-modal': 1.8.0
-      '@walletconnect/types': 2.22.4
+      '@walletconnect/types': 2.22.3
       '@walletconnect/utils': 2.22.3(typescript@5.8.2)(zod@3.22.4)
       '@walletconnect/web3wallet': 1.16.1(typescript@5.8.2)(zod@3.22.4)
     transitivePeerDependencies:
