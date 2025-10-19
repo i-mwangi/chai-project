@@ -1,5 +1,4 @@
 import "../loadIntoEnv"
-import { testStore } from "../lib/test-store"
 import lenderContract from "../abi/Lender.json"
 import { lenderFireStore } from "../lib/stores"
 import { eventReader } from "./utils"
