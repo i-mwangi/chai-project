@@ -21,4 +21,5 @@ debug-*
 check-*
 fix-*
 .DS_Store
+loadIntoEnv.ts
 lib/test-store.ts
