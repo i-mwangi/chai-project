@@ -3,67 +3,25 @@
   "builds": [
     {
       "src": "api/server.ts",
-      "use": "@vercel/node",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
       "config": {
-        "maxDuration": 30
+        "distDir": "."
       }
-    },
-    {
-      "src": "frontend/**",
-      "use": "@vercel/static"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/server.ts"
+      "src": "/api/(.*)",
+      "dest": "/api/server.ts"
     },
     {
-      "source": "/public/(.*)",
-      "destination": "/frontend/public/$1"
-    },
-    {
-      "source": "/js/(.*)",
-      "destination": "/frontend/js/$1"
-    },
-    {
-      "source": "/styles/(.*)",
-      "destination": "/frontend/styles/$1"
-    },
-    {
-      "source": "/app.html",
-      "destination": "/frontend/app.html"
-    },
-    {
-      "source": "/grove-tracker.html",
-      "destination": "/frontend/grove-tracker.html"
-    },
-    {
-      "source": "/tree-health-dashboard.html",
-      "destination": "/frontend/tree-health-dashboard.html"
-    },
-    {
-      "source": "/",
-      "destination": "/frontend/index.html"
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
     }
   ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
-        }
-      ]
-    }
-  ]
+  "outputDirectory": "frontend"
 }
