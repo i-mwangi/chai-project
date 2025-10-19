@@ -16,10 +16,10 @@ test-*.ts
 test-*.js
 test-*.html
 test-*.cjs
+*.log*
 debug-*
 check-*
 fix-*
-*.log
 .DS_Store
 loadIntoEnv.ts
 lib/test-store.ts
