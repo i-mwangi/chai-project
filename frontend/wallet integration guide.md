@@ -1,5 +1,5 @@
 Step-by-Step Hedera Wallet Connection Integration for Vanilla JavaScript
-Here's a comprehensive integration plan for adding Hedera wallet connection functionality to your coffee tree tokenization dApp using vanilla JavaScript, adapted from this repository's code.
+Here's a comprehensive integration plan for adding Hedera wallet connection functionality to this coffee tree tokenization dApp using vanilla JavaScript, 
 
 Step 1: Install Required Dependencies
 First, install the necessary packages via npm:
