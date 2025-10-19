@@ -8,9 +8,6 @@
     {
       "src": "frontend/**",
       "use": "@vercel/static",
-      "config": {
-        "zeroConfig": true
-      }
     }
   ],
   "routes": [

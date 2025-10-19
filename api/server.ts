@@ -10,7 +10,13 @@
  */
 
 // Load Node 18 polyfill first
-import "./node18-polyfill"
+if (typeof window !== 'undefined') {
+    // Frontend-specific polyfills
+    (window as any).global = window;
+    const global = window;
+    const Buffer = require('buffer/').Buffer;
+}
+
 import "dotenv/config"
 import "../loadIntoEnv"
 import { createServer, IncomingMessage, ServerResponse } from 'http'
