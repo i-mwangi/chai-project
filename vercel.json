@@ -3,13 +3,13 @@
   "builds": [
     {
       "src": "api/server.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node-server"
     },
     {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
+      "src": "frontend/**",
+      "use": "@vercel/static",
       "config": {
-        "distDir": "."
+        "zeroConfig": true
       }
     }
   ],
@@ -22,6 +22,5 @@
       "src": "/(.*)",
       "dest": "/frontend/$1"
     }
-  ],
-  "outputDirectory": "frontend"
+  ]
 }
