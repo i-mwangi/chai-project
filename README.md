@@ -61,8 +61,13 @@ cp .env.example .env
 ### Development
 
 ```bash
-# Start development server
+# Start development server with Vite
 pnpm run dev:vite
+
+# Start frontend with custom Node.js server (serving on port 3000)
+npm run frontend
+# or directly:
+# node frontend/server.js
 
 # Build for production
 pnpm run frontend:build
@@ -70,6 +75,15 @@ pnpm run frontend:build
 # Preview production build
 pnpm run frontend:preview
 ```
+
+### Frontend Access
+
+The frontend can be accessed at:
+- `http://localhost:3000` - Landing page
+- `http://localhost:3000/app.html` - Main application
+- `http://localhost:3000/app.html#marketplace` - Marketplace section
+
+The custom Node.js server (`npm run frontend`) serves static files and handles SPA routing, with special support for the app.html entry point.
 
 ## 📁 Project Structure
 
