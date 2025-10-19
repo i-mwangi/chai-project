@@ -53,10 +53,10 @@
     "@hashgraph/hedera-wallet-connect": "^2.0.4-canary.3ca04e9.0",
     "@hashgraph/sdk": "^2.72.0",
     "@libsql/client": "^0.15.1",
-    "@openzeppelin/contracts": "^5.0.2",
-    "@reown/appkit": "^1.7.16",
-    "@reown/appkit-adapter-ethers": "^1.7.16",
-    "@reown/appkit-core": "^1.7.16",
+    "@openzeppelin/contracts": "5.0.2",
+    "@reown/appkit": "1.7.16",
+    "@reown/appkit-adapter-ethers": "1.7.16",
+    "@reown/appkit-core": "1.7.16",
     "@types/better-sqlite3": "^7.6.12",
     "@walletconnect/modal": "^2.7.0",
     "@walletconnect/sign-client": "2.22.3",
@@ -75,13 +75,13 @@
     "tsup": "^8.4.0"
   },
   "devDependencies": {
-    "@reown/appkit-common": "^1.7.16",
-    "@reown/appkit-utils": "^1.7.16",
+    "@reown/appkit-common": "1.7.16",
+    "@reown/appkit-utils": "1.7.16",
     "@types/node": "^22.13.10",
     "drizzle-kit": "^0.30.5",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
-    "vite": "^6.0.11",
+    "vite": "^6.4.0",
     "vitest": "^3.2.4"
   },
   "pnpm": {
