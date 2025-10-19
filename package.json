@@ -24,7 +24,7 @@
     "migration:run": "tsx db/migration-cli.ts run",
     "clean-db": "rm -rf ./local-store/sqlite/sqlite.db && tsx ./events/clean.ts && rm -rf ./db/migrations && pnpm run generate && pnpm run migrate",
     "studio": "drizzle-kit studio",
-    "build": "rm -rf ./dist && tsup",
+    "build": "pnpm run frontend:build && tsup",
     "start": "pnpm run index & pnpm run providers",
     "token-prep": "tsx ./tests/Issuer/setup-token.ts",
     "deploy": "tsx deploy.ts",
