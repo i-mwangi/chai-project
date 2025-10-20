@@ -415,11 +415,69 @@ class DashboardEnhanced {
     }
 }
 
+// Add this function to handle quick actions
+function initializeQuickActions() {
+    const quickActionButtons = document.querySelectorAll('.action-btn[data-action]');
+    
+    quickActionButtons.forEach(button => {
+        // Remove existing listeners by cloning
+        const newButton = button.cloneNode(true);
+        button.parentNode.replaceChild(newButton, button);
+        
+        newButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const action = newButton.dataset.action;
+            console.log('Quick action clicked:', action);
+            
+            switch(action) {
+                case 'investor-portfolio':
+                    if (window.viewManager) {
+                        window.viewManager.switchView('investor');
+                        setTimeout(() => {
+                            if (window.investorPortal && window.investorPortal.switchSection) {
+                                window.investorPortal.switchSection('browse');
+                            }
+                        }, 100);
+                    }
+                    break;
+                    
+                case 'investor-marketplace':
+                    if (window.viewManager) {
+                        window.viewManager.switchView('investor');
+                        setTimeout(() => {
+                            if (window.investorPortal && window.investorPortal.switchSection) {
+                                window.investorPortal.switchSection('marketplace');
+                            }
+                        }, 100);
+                    }
+                    break;
+                    
+                case 'farmer-portal':
+                    if (window.viewManager) {
+                        window.viewManager.switchView('farmer');
+                    }
+                    break;
+                    
+                default:
+                    console.warn('Unknown action:', action);
+            }
+        });
+    });
+    
+    console.log('✅ Quick action buttons initialized:', quickActionButtons.length);
+}
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.dashboardEnhanced = new DashboardEnhanced();
+        // Initialize quick actions
+        initializeQuickActions();
     });
 } else {
     window.dashboardEnhanced = new DashboardEnhanced();
+    // Initialize quick actions
+    initializeQuickActions();
 }

@@ -58,23 +58,50 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-### Development
+### Starting the Project
 
+There are several ways to start the project depending on your needs:
+
+#### Option 1: Start the Frontend Server (Recommended for Development)
+```bash
+# Start the frontend server on port 3000
+node frontend/server.js
+
+# The application will be available at:
+# http://localhost:3000 - Landing page
+# http://localhost:3000/app.html - Main application
+```
+
+#### Option 2: Start with Vite (Alternative Development Server)
 ```bash
 # Start development server with Vite
 pnpm run dev:vite
 
-# Start frontend with custom Node.js server (serving on port 3000)
-npm run frontend
-# or directly:
-# node frontend/server.js
+# The application will be available at:
+# http://localhost:5173 - Main application
+```
 
+#### Option 3: Build and Preview Production Version
+```bash
 # Build for production
 pnpm run frontend:build
 
 # Preview production build
 pnpm run frontend:preview
 ```
+
+### Development Workflow
+
+1. Start the frontend server:
+   ```bash
+   node frontend/server.js
+   ```
+
+2. Access the application in your browser:
+   - `http://localhost:3000` - Landing page
+   - `http://localhost:3000/app.html` - Main application
+
+3. Make changes to the code and refresh the browser to see updates
 
 ### Frontend Access
 
@@ -83,7 +110,7 @@ The frontend can be accessed at:
 - `http://localhost:3000/app.html` - Main application
 - `http://localhost:3000/app.html#marketplace` - Marketplace section
 
-The custom Node.js server (`npm run frontend`) serves static files and handles SPA routing, with special support for the app.html entry point.
+The custom Node.js server (`node frontend/server.js`) serves static files and handles SPA routing, with special support for the app.html entry point.
 
 ## 📁 Project Structure
 

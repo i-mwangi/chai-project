@@ -451,3 +451,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Start the application
 window.coffeeTreeApp = new CoffeeTreeApp();
+
+// Ensure all buttons are initialized after views are loaded
+window.addEventListener('load', function() {
+    console.log('🚀 Initializing all interactive elements...');
+    
+    // Reinitialize quick actions
+    if (typeof initializeQuickActions === 'function') {
+        setTimeout(initializeQuickActions, 200);
+    }
+    
+    // Reinitialize farmer dashboard if visible
+    if (window.farmerDashboard) {
+        const farmerView = document.getElementById('farmerView');
+        if (farmerView && farmerView.classList.contains('active')) {
+            console.log('🌾 Reinitializing farmer dashboard...');
+            window.farmerDashboard.setupEventListeners();
+        }
+    }
+    
+    console.log('✅ All interactive elements initialized');
+});

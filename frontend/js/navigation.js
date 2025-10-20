@@ -199,6 +199,15 @@ class NavigationManager {
                 
                 // Add active class to clicked item
                 item.classList.add('active');
+                
+                // Get the section from the data attribute
+                const section = item.dataset.section;
+                if (section) {
+                    // Check if we're in the farmer dashboard and call the switchSection method
+                    if (window.farmerDashboard && typeof window.farmerDashboard.switchSection === 'function') {
+                        window.farmerDashboard.switchSection(section);
+                    }
+                }
             });
         });
     }
