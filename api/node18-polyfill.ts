@@ -9,14 +9,10 @@ if (typeof globalThis.File === 'undefined') {
   class FilePolyfill {
     name: string
     type: string
-    size: number
-    lastModified: number
     
     constructor(bits: any[], name: string, options: any = {}) {
       this.name = name
       this.type = options.type || ''
-      this.size = 0
-      this.lastModified = options.lastModified || Date.now()
     }
   }
   

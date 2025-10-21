@@ -14,8 +14,12 @@ async function deploy(contractName: string, byteCode: string) {
 
     const contractReceipt = await contractDeployTx.getReceipt(client)
 
-    console.log(`Contract ID: ${contractReceipt.contractId}`)
-    testStore.set(contractName, contractReceipt.contractId?.toString() ?? "")
+    const contractId = contractReceipt.contractId?.toString() ?? ""
+    console.log(`✅ Contract ID: ${contractId}`)
+    console.log(`📋 Add to .env: ${contractName.toUpperCase()}_CONTRACT_ID=${contractId}`)
+    console.log(`🔍 View on HashScan: https://hashscan.io/testnet/contract/${contractId}`)
+    
+    testStore.set(contractName, contractId)
 }
 
 async function main() {

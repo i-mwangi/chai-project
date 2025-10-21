@@ -10,15 +10,11 @@
  */
 
 // Load Node 18 polyfill first
-if (typeof window !== 'undefined') {
-    // Frontend-specific polyfills
-    (window as any).global = window;
-    const global = window;
-    const Buffer = require('buffer/').Buffer;
-}
+import './node18-polyfill';
 
-import "dotenv/config"
-import "../loadIntoEnv"
+// Load and configure environment variables
+import './env-setup';
+
 import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { parse } from 'url'
 import { FarmerVerificationAPI } from './farmer-verification'
@@ -110,6 +106,11 @@ interface EnhancedRequest extends IncomingMessage {
     body?: any
     params?: { [key: string]: string }
     query?: { [key: string]: string | string[] | undefined }
+}
+
+// Ensure HEDERA_NETWORK is respected if NETWORK is not set
+if (process.env.HEDERA_NETWORK && !process.env.NETWORK) {
+    process.env.NETWORK = process.env.HEDERA_NETWORK;
 }
 
 // Create combined server

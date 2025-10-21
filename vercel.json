@@ -23,5 +23,7 @@
       "src": "/(.*)",
       "dest": "/frontend/dist/$1"
     }
-  ]
+  ],
+  "devCommand": "node frontend/server.js",
+  "installCommand": "pnpm install"
 }

@@ -39,6 +39,7 @@ The Chai Platform connects coffee farmers with investors through blockchain tech
 ### Prerequisites
 
 - Node.js 18+ or 20+
+- [Docker](https://www.docker.com/products/docker-desktop/) and Docker Compose
 - pnpm package manager
 - Hedera Testnet account (get free HBAR from [portal.hedera.com](https://portal.hedera.com))
 - WalletConnect Project ID (get from [cloud.reown.com](https://cloud.reown.com))
@@ -60,16 +61,15 @@ cp .env.example .env
 
 ### Starting the Project
 
-There are several ways to start the project depending on your needs:
+The recommended way to run the project for development is to use the mock API server and the Vite frontend server together.
 
-#### Option 1: Start the Frontend Server (Recommended for Development)
+#### Running the Development Servers
+
+This single command will start both the mock API on port `3002` and the Vite frontend server on port `3000`.
+
 ```bash
-# Start the frontend server on port 3000
-node frontend/server.js
-
-# The application will be available at:
-# http://localhost:3000 - Landing page
-# http://localhost:3000/app.html - Main application
+# Start both mock API and Vite frontend
+pnpm run dev:vite
 ```
 
 #### Option 2: Start with Vite (Alternative Development Server)

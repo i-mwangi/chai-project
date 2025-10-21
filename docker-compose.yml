@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # Service for the frontend static server
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chai_frontend_vite
+    # Use the Vite development server, which is better for bundling wallet dependencies
+    command: pnpm run frontend:vite -- --host
+    ports:
+      # The frontend Vite server runs on port 3000 inside the container.
+      - "3000:3000"
+    env_file:
+      - ./.env
+    environment:
+      - VITE_FRONTEND_PORT=3000
+    volumes:
+      - ./frontend:/app/frontend # Mount local code for live-reloading
+
+  # Service for the mock API server
+  api_mock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chai_api_mock_server
+    command: pnpm run api:mock # Runs 'node frontend/api-server.js'
+    ports:
+      - "3002:3002" # Map host port 3002 to container port 3002
+    env_file:
+      - ./.env

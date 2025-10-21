@@ -364,7 +364,7 @@ const server = http.createServer(async (req, res) => {
             });
         }
         
-        else if (pathname === '/api/groves/register' && method === 'POST') {
+        else if (pathname === '/api/groves/register' && method === 'POST') { // This is the correct endpoint
             console.log('[MOCK API] Received request for /api/groves/register');
             console.log('[MOCK API] Request body:', JSON.stringify(body, null, 2));
             
@@ -382,7 +382,7 @@ const server = http.createServer(async (req, res) => {
             
             sendResponse(res, 200, {
                 success: true,
-                message: 'Grove registered successfully',
+                message: 'Grove registered successfully (Mock API)',
                 groveId: newGrove.id
             });
         }

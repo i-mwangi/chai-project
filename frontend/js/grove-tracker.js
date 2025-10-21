@@ -1,103 +1,18 @@
 // Grove Tracker - Satellite Imagery and Environmental Data
 // Mapbox Configuration
+import { CoffeeTreeAPI } from './api.js';
+
 mapboxgl.accessToken = 'pk.eyJ1IjoiaGVucnlidXRub3RkYW5nZXIiLCJhIjoiY21ncHVmeGx1MjJvdzJrcXc4cXE2YTZpdyJ9.dwV49MrvgHcN9KGbFShVeg';
 
 // Grove Data - Coffee farms across East Africa
-const groves = [
-    { id: 1, title: "Bensa", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [38.8333, 6.5] },
-    { id: 2, title: "Dale", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [38.3333, 6.75] },
-    { id: 3, title: "Aleta Wendo", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [38.4167, 6.6] },
-    { id: 4, title: "Chire", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [39.0919, 6.5334] },
-    { id: 5, title: "Hula", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [38.5833, 6.5833] },
-    { id: 6, title: "Kochere", description: "Yirgacheffe region sublocation", country: "Ethiopia", coordinates: [38.25, 6.0] },
-    { id: 7, title: "Wenago", description: "Yirgacheffe region sublocation", country: "Ethiopia", coordinates: [38.3333, 6.3333] },
-    { id: 8, title: "Gedeb", description: "Yirgacheffe region sublocation", country: "Ethiopia", coordinates: [39.1667, 7.1667] },
-    { id: 9, title: "Dilla", description: "Yirgacheffe region sublocation", country: "Ethiopia", coordinates: [38.30833, 6.40833] },
-    { id: 10, title: "Shakiso", description: "Guji region sublocation", country: "Ethiopia", coordinates: [38.9167, 5.75] },
-    { id: 11, title: "Hambela Wamena", description: "Guji region sublocation", country: "Ethiopia", coordinates: [38.42, 6.0167] },
-    { id: 12, title: "Uraga", description: "Guji region sublocation", country: "Ethiopia", coordinates: [38.5833, 6.1667] },
-    { id: 13, title: "Babile", description: "Harrar region sublocation", country: "Ethiopia", coordinates: [42.333, 9.217] },
-    { id: 14, title: "Deder", description: "Harrar region sublocation", country: "Ethiopia", coordinates: [41.446256, 9.321887] },
-    { id: 15, title: "Gursum", description: "Harrar region sublocation", country: "Ethiopia", coordinates: [42.398986, 9.352358] },
-    { id: 16, title: "Bedeno", description: "Harrar region sublocation", country: "Ethiopia", coordinates: [41.633611, 9.114345] },
-    { id: 17, title: "Gomma", description: "Jimma region sublocation", country: "Ethiopia", coordinates: [36.66667, 7.83333] },
-    { id: 18, title: "Mana", description: "Jimma region sublocation", country: "Ethiopia", coordinates: [36.75, 7.75] },
-    { id: 19, title: "Limu Kosa", description: "Jimma region sublocation", country: "Ethiopia", coordinates: [37.1667, 8.1667] },
-    { id: 20, title: "Agaro", description: "Jimma region sublocation", country: "Ethiopia", coordinates: [36.65, 7.85] },
-    { id: 21, title: "Limu Seka", description: "Limu region sublocation", country: "Ethiopia", coordinates: [36.7254, 7.6016] },
-    { id: 22, title: "Mizan Teferi", description: "Bench Maji region sublocation", country: "Ethiopia", coordinates: [35.5895, 6.9967] },
-    { id: 23, title: "Wanale Ridge", description: "Mbale, Uganda", country: "Uganda", coordinates: [34.2, 1.0833] },
-    { id: 24, title: "Bushika", description: "Mbale, Uganda", country: "Uganda", coordinates: [34.35, 1.0] },
-    { id: 25, title: "Budadiri", description: "Mbale, Uganda", country: "Uganda", coordinates: [34.3333, 1.0833] },
-    { id: 26, title: "Bufumbo", description: "Mbale, Uganda", country: "Uganda", coordinates: [34.2833, 1.0667] },
-    { id: 27, title: "Sipi", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.3833, 1.3667] },
-    { id: 28, title: "Kapchorwa", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.45, 1.3833] },
-    { id: 29, title: "Buginyanya", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.4, 1.3667] },
-    { id: 30, title: "Chema", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.4667, 1.3667] },
-    { id: 31, title: "Teryet", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.4333, 1.4] },
-    { id: 32, title: "Kasese", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [30.0833, 0.1833] },
-    { id: 33, title: "Bundibugyo", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [30.0667, 0.7167] },
-    { id: 34, title: "Kyarumba", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [30.0333, 0.2333] },
-    { id: 35, title: "Bwera", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [29.9833, 0.0333] },
-    { id: 36, title: "Nyamwamba", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [30.0833, 0.2] },
-    { id: 37, title: "Okoro", description: "West Nile, Uganda", country: "Uganda", coordinates: [30.9, 2.55] },
-    { id: 38, title: "Nebbi", description: "West Nile, Uganda", country: "Uganda", coordinates: [31.09, 2.48] },
-    { id: 39, title: "Paidha", description: "West Nile, Uganda", country: "Uganda", coordinates: [30.9833, 2.4167] },
-    { id: 40, title: "Zombo", description: "West Nile, Uganda", country: "Uganda", coordinates: [30.9, 2.5167] },
-    { id: 41, title: "Mukono", description: "Central, Uganda", country: "Uganda", coordinates: [32.7667, 0.35] },
-    { id: 42, title: "Masaka", description: "Central, Uganda", country: "Uganda", coordinates: [31.7341, -0.3337] },
-    { id: 43, title: "Jinja", description: "Central, Uganda", country: "Uganda", coordinates: [33.2034, 0.4344] },
-    { id: 44, title: "Kangema", description: "Murang'a, Kenya", country: "Kenya", coordinates: [36.9667, 0.6833] },
-    { id: 45, title: "Mathioya", description: "Murang'a, Kenya", country: "Kenya", coordinates: [37.25, -0.7167] },
-    { id: 46, title: "Kigumo", description: "Murang'a, Kenya", country: "Kenya", coordinates: [36.962066, -0.801968] },
-    { id: 47, title: "Kanyenyaini", description: "Murang'a, Kenya", country: "Kenya", coordinates: [36.892285, -0.688109] },
-    { id: 48, title: "Gacharage", description: "Murang'a, Kenya", country: "Kenya", coordinates: [36.76054, -0.93141] },
-    { id: 49, title: "Kianyaga", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.35027, -0.49546] },
-    { id: 50, title: "Kabare", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.316666, -0.516667] },
-    { id: 51, title: "Ngariama", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.4167, -0.5333] },
-    { id: 52, title: "Baragwi", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.3333, -0.5] },
-    { id: 53, title: "Karumandi", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.35, -0.45] },
-    { id: 54, title: "Othaya", description: "Nyeri, Kenya", country: "Kenya", coordinates: [36.9609, 0.56515] },
-    { id: 55, title: "Tetu", description: "Nyeri, Kenya", country: "Kenya", coordinates: [36.91681, -0.43419] },
-    { id: 56, title: "Mukurwe-ini", description: "Nyeri, Kenya", country: "Kenya", coordinates: [37.04876, -0.56094] },
-    { id: 57, title: "Karatina", description: "Nyeri, Kenya", country: "Kenya", coordinates: [37.1251, 0.4828] },
-    { id: 58, title: "Githunguri", description: "Kiambu, Kenya", country: "Kenya", coordinates: [36.77485, -1.04458] },
-    { id: 59, title: "Ruiru", description: "Kiambu, Kenya", country: "Kenya", coordinates: [36.9542, -1.1427] },
-    { id: 60, title: "Thika", description: "Kiambu, Kenya", country: "Kenya", coordinates: [37.0693, -1.0333] },
-    { id: 61, title: "Limuru", description: "Kiambu, Kenya", country: "Kenya", coordinates: [36.65, -1.1] },
-    { id: 62, title: "Kabete", description: "Kiambu, Kenya", country: "Kenya", coordinates: [36.7167, -1.2667] },
-    { id: 63, title: "Manyatta", description: "Embu, Kenya", country: "Kenya", coordinates: [37.47795, -0.43146] },
-    { id: 64, title: "Runyenjes", description: "Embu, Kenya", country: "Kenya", coordinates: [37.57051, -0.42204] },
-    { id: 65, title: "Igembe", description: "Meru, Kenya", country: "Kenya", coordinates: [37.96101, 0.18661] },
-    { id: 66, title: "Tigania", description: "Meru, Kenya", country: "Kenya", coordinates: [37.79039, 0.19765] },
-    { id: 67, title: "Buuri", description: "Meru, Kenya", country: "Kenya", coordinates: [37.645604, 0.051472] },
-    { id: 68, title: "Nkubu", description: "Meru, Kenya", country: "Kenya", coordinates: [37.66618, -0.06929] },
-    { id: 69, title: "Kangundo", description: "Machakos, Kenya", country: "Kenya", coordinates: [37.3471, -1.2979] },
-    { id: 70, title: "Kathiani", description: "Machakos, Kenya", country: "Kenya", coordinates: [37.3323, -1.4121] },
-    { id: 71, title: "Mwala", description: "Machakos, Kenya", country: "Kenya", coordinates: [37.45482, -1.35255] },
-    { id: 72, title: "Nyamache", description: "Kisii, Kenya", country: "Kenya", coordinates: [34.82852, -0.85508] },
-    { id: 73, title: "Masimba", description: "Kisii, Kenya", country: "Kenya", coordinates: [34.94006, -0.86079] },
-    { id: 74, title: "Sameta", description: "Kisii, Kenya", country: "Kenya", coordinates: [34.75728, -0.78175] },
-    { id: 75, title: "Gucha", description: "Kisii, Kenya", country: "Kenya", coordinates: [34.753, -0.845] },
-    { id: 76, title: "Chepkube", description: "Bungoma, Kenya", country: "Kenya", coordinates: [34.43333, 0.85] },
-    { id: 77, title: "Mt Elgon slopes", description: "Bungoma, Kenya", country: "Kenya", coordinates: [34.56028, 1.13778] },
-    { id: 78, title: "Likuyani", description: "Kakamega, Kenya", country: "Kenya", coordinates: [35.13539, 0.75669] },
-    { id: 79, title: "Malava", description: "Kakamega, Kenya", country: "Kenya", coordinates: [34.85414, 0.44504] },
-    { id: 80, title: "Shinyalu", description: "Kakamega, Kenya", country: "Kenya", coordinates: [34.80807, 0.22396] },
-    { id: 81, title: "Kongoni", description: "Kakamega, Kenya", country: "Kenya", coordinates: [35.10929, 0.75288] },
-    { id: 82, title: "Solai", description: "Nakuru, Kenya", country: "Kenya", coordinates: [36.15291, 0.01698] },
-    { id: 83, title: "Bahati", description: "Nakuru, Kenya", country: "Kenya", coordinates: [36.14634, -0.15407] },
-    { id: 84, title: "Rongai", description: "Nakuru, Kenya", country: "Kenya", coordinates: [35.86382, 0.17333] },
-    { id: 85, title: "Njoro", description: "Nakuru, Kenya", country: "Kenya", coordinates: [35.94445, -0.33024] },
-    { id: 86, title: "Eldama Ravine", description: "Baringo, Kenya", country: "Kenya", coordinates: [35.717, 0.05] },
-    { id: 87, title: "Mogotio", description: "Baringo, Kenya", country: "Kenya", coordinates: [35.97, -0.02] }
-];
+// This will be populated from the API
+let groves = [];
 
 // State
 let map = null;
 let markers = [];
 let selectedGrove = null;
-let filteredGroves = groves;
+let filteredGroves = [];
 let selectedCountry = 'all';
 let selectedLayer = 'satellite';
 
@@ -113,9 +28,158 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing Grove Tracker...');
     console.log('Mapbox GL JS loaded:', typeof mapboxgl !== 'undefined');
     initializeMap();
-    renderGroveList();
+    fetchGroves(); // Fetch groves from API
     setupEventListeners();
 });
+
+// Fetch groves from API
+async function fetchGroves() {
+    try {
+        console.log('Fetching groves from API...');
+        // Use the API client instead of direct fetch to ensure correct port
+        const api = new CoffeeTreeAPI();
+        const data = await api.request('/api/groves');
+        
+        if (data.success) {
+            // Transform API data to match expected format
+            groves = data.groves.map(grove => {
+                // Handle different coordinate formats
+                let coordinates = [0, 0];
+                if (grove.coordinates) {
+                    // Format from mock data: { lat: ..., lng: ... }
+                    if (typeof grove.coordinates === 'object' && grove.coordinates.lat !== undefined) {
+                        coordinates = [grove.coordinates.lng || 0, grove.coordinates.lat || 0];
+                    }
+                    // Format from some other sources: [lng, lat]
+                    else if (Array.isArray(grove.coordinates)) {
+                        coordinates = grove.coordinates;
+                    }
+                } else if (grove.latitude !== undefined && grove.longitude !== undefined) {
+                    // Format from registration: latitude and longitude as separate fields
+                    coordinates = [grove.longitude || 0, grove.latitude || 0];
+                }
+                
+                return {
+                    id: grove.id,
+                    title: grove.groveName || grove.grove_name || 'Unnamed Grove',
+                    description: grove.location || 'Unknown location',
+                    country: grove.country || getCountryFromLocation(grove.location) || 'Unknown',
+                    coordinates: coordinates
+                };
+            });
+            
+            console.log('Fetched', groves.length, 'groves from API');
+            filteredGroves = [...groves];
+            renderGroveList();
+            addMarkers();
+        } else {
+            console.error('Failed to fetch groves:', data.error);
+            // Fallback to hardcoded data if API fails
+            useFallbackData();
+        }
+    } catch (error) {
+        console.error('Error fetching groves from API:', error);
+        // Fallback to hardcoded data if API fails
+        useFallbackData();
+    }
+}
+
+// Fallback data for when API is not available
+function useFallbackData() {
+    console.log('Using fallback grove data');
+    groves = [
+        { id: 1, title: "Bensa", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [38.8333, 6.5] },
+        { id: 2, title: "Dale", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [38.3333, 6.75] },
+        { id: 3, title: "Aleta Wendo", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [38.4167, 6.6] },
+        { id: 4, title: "Chire", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [39.0919, 6.5334] },
+        { id: 5, title: "Hula", description: "Sidamo region sublocation", country: "Ethiopia", coordinates: [38.5833, 6.5833] },
+        { id: 6, title: "Kochere", description: "Yirgacheffe region sublocation", country: "Ethiopia", coordinates: [38.25, 6.0] },
+        { id: 7, title: "Wenago", description: "Yirgacheffe region sublocation", country: "Ethiopia", coordinates: [38.3333, 6.3333] },
+        { id: 8, title: "Gedeb", description: "Yirgacheffe region sublocation", country: "Ethiopia", coordinates: [39.1667, 7.1667] },
+        { id: 9, title: "Dilla", description: "Yirgacheffe region sublocation", country: "Ethiopia", coordinates: [38.30833, 6.40833] },
+        { id: 10, title: "Shakiso", description: "Guji region sublocation", country: "Ethiopia", coordinates: [38.9167, 5.75] },
+        { id: 11, title: "Hambela Wamena", description: "Guji region sublocation", country: "Ethiopia", coordinates: [38.42, 6.0167] },
+        { id: 12, title: "Uraga", description: "Guji region sublocation", country: "Ethiopia", coordinates: [38.5833, 6.1667] },
+        { id: 13, title: "Babile", description: "Harrar region sublocation", country: "Ethiopia", coordinates: [42.333, 9.217] },
+        { id: 14, title: "Deder", description: "Harrar region sublocation", country: "Ethiopia", coordinates: [41.446256, 9.321887] },
+        { id: 15, title: "Gursum", description: "Harrar region sublocation", country: "Ethiopia", coordinates: [42.398986, 9.352358] },
+        { id: 16, title: "Bedeno", description: "Harrar region sublocation", country: "Ethiopia", coordinates: [41.633611, 9.114345] },
+        { id: 17, title: "Gomma", description: "Jimma region sublocation", country: "Ethiopia", coordinates: [36.66667, 7.83333] },
+        { id: 18, title: "Mana", description: "Jimma region sublocation", country: "Ethiopia", coordinates: [36.75, 7.75] },
+        { id: 19, title: "Limu Kosa", description: "Jimma region sublocation", country: "Ethiopia", coordinates: [37.1667, 8.1667] },
+        { id: 20, title: "Agaro", description: "Jimma region sublocation", country: "Ethiopia", coordinates: [36.65, 7.85] },
+        { id: 21, title: "Limu Seka", description: "Limu region sublocation", country: "Ethiopia", coordinates: [36.7254, 7.6016] },
+        { id: 22, title: "Mizan Teferi", description: "Bench Maji region sublocation", country: "Ethiopia", coordinates: [35.5895, 6.9967] },
+        { id: 23, title: "Wanale Ridge", description: "Mbale, Uganda", country: "Uganda", coordinates: [34.2, 1.0833] },
+        { id: 24, title: "Bushika", description: "Mbale, Uganda", country: "Uganda", coordinates: [34.35, 1.0] },
+        { id: 25, title: "Budadiri", description: "Mbale, Uganda", country: "Uganda", coordinates: [34.3333, 1.0833] },
+        { id: 26, title: "Bufumbo", description: "Mbale, Uganda", country: "Uganda", coordinates: [34.2833, 1.0667] },
+        { id: 27, title: "Sipi", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.3833, 1.3667] },
+        { id: 28, title: "Kapchorwa", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.45, 1.3833] },
+        { id: 29, title: "Buginyanya", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.4, 1.3667] },
+        { id: 30, title: "Chema", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.4667, 1.3667] },
+        { id: 31, title: "Teryet", description: "Bugisu, Uganda", country: "Uganda", coordinates: [34.4333, 1.4] },
+        { id: 32, title: "Kasese", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [30.0833, 0.1833] },
+        { id: 33, title: "Bundibugyo", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [30.0667, 0.7167] },
+        { id: 34, title: "Kyarumba", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [30.0333, 0.2333] },
+        { id: 35, title: "Bwera", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [29.9833, 0.0333] },
+        { id: 36, title: "Nyamwamba", description: "Rwenzori, Uganda", country: "Uganda", coordinates: [30.0833, 0.2] },
+        { id: 37, title: "Okoro", description: "West Nile, Uganda", country: "Uganda", coordinates: [30.9, 2.55] },
+        { id: 38, title: "Nebbi", description: "West Nile, Uganda", country: "Uganda", coordinates: [31.09, 2.48] },
+        { id: 39, title: "Paidha", description: "West Nile, Uganda", country: "Uganda", coordinates: [30.9833, 2.4167] },
+        { id: 40, title: "Zombo", description: "West Nile, Uganda", country: "Uganda", coordinates: [30.9, 2.5167] },
+        { id: 41, title: "Mukono", description: "Central, Uganda", country: "Uganda", coordinates: [32.7667, 0.35] },
+        { id: 42, title: "Masaka", description: "Central, Uganda", country: "Uganda", coordinates: [31.7341, -0.3337] },
+        { id: 43, title: "Jinja", description: "Central, Uganda", country: "Uganda", coordinates: [33.2034, 0.4344] },
+        { id: 44, title: "Kangema", description: "Murang'a, Kenya", country: "Kenya", coordinates: [36.9667, 0.6833] },
+        { id: 45, title: "Mathioya", description: "Murang'a, Kenya", country: "Kenya", coordinates: [37.25, -0.7167] },
+        { id: 46, title: "Kigumo", description: "Murang'a, Kenya", country: "Kenya", coordinates: [36.962066, -0.801968] },
+        { id: 47, title: "Kanyenyaini", description: "Murang'a, Kenya", country: "Kenya", coordinates: [36.892285, -0.688109] },
+        { id: 48, title: "Gacharage", description: "Murang'a, Kenya", country: "Kenya", coordinates: [36.76054, -0.93141] },
+        { id: 49, title: "Kianyaga", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.35027, -0.49546] },
+        { id: 50, title: "Kabare", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.316666, -0.516667] },
+        { id: 51, title: "Ngariama", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.4167, -0.5333] },
+        { id: 52, title: "Baragwi", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.3333, -0.5] },
+        { id: 53, title: "Karumandi", description: "Kirinyaga, Kenya", country: "Kenya", coordinates: [37.35, -0.45] },
+        { id: 54, title: "Othaya", description: "Nyeri, Kenya", country: "Kenya", coordinates: [36.9609, 0.56515] },
+        { id: 55, title: "Tetu", description: "Nyeri, Kenya", country: "Kenya", coordinates: [36.91681, -0.43419] },
+        { id: 56, title: "Mukurwe-ini", description: "Nyeri, Kenya", country: "Kenya", coordinates: [37.04876, -0.56094] },
+        { id: 57, title: "Karatina", description: "Nyeri, Kenya", country: "Kenya", coordinates: [37.1251, 0.4828] },
+        { id: 58, title: "Githunguri", description: "Kiambu, Kenya", country: "Kenya", coordinates: [36.77485, -1.04458] },
+        { id: 59, title: "Ruiru", description: "Kiambu, Kenya", country: "Kenya", coordinates: [36.9542, -1.1427] },
+        { id: 60, title: "Thika", description: "Kiambu, Kenya", country: "Kenya", coordinates: [37.0693, -1.0333] },
+        { id: 61, title: "Limuru", description: "Kiambu, Kenya", country: "Kenya", coordinates: [36.65, -1.1] },
+        { id: 62, title: "Kabete", description: "Kiambu, Kenya", country: "Kenya", coordinates: [36.7167, -1.2667] },
+        { id: 63, title: "Manyatta", description: "Embu, Kenya", country: "Kenya", coordinates: [37.47795, -0.43146] },
+        { id: 64, title: "Runyenjes", description: "Embu, Kenya", country: "Kenya", coordinates: [37.57051, -0.42204] },
+        { id: 65, title: "Igembe", description: "Meru, Kenya", country: "Kenya", coordinates: [37.96101, 0.18661] },
+        { id: 66, title: "Tigania", description: "Meru, Kenya", country: "Kenya", coordinates: [37.79039, 0.19765] },
+        { id: 67, title: "Buuri", description: "Meru, Kenya", country: "Kenya", coordinates: [37.645604, 0.051472] },
+        { id: 68, title: "Nkubu", description: "Meru, Kenya", country: "Kenya", coordinates: [37.66618, -0.06929] },
+        { id: 69, title: "Kangundo", description: "Machakos, Kenya", country: "Kenya", coordinates: [37.3471, -1.2979] },
+        { id: 70, title: "Kathiani", description: "Machakos, Kenya", country: "Kenya", coordinates: [37.3323, -1.4121] },
+        { id: 71, title: "Mwala", description: "Machakos, Kenya", country: "Kenya", coordinates: [37.45482, -1.35255] },
+        { id: 72, title: "Nyamache", description: "Kisii, Kenya", country: "Kenya", coordinates: [34.82852, -0.85508] },
+        { id: 73, title: "Masimba", description: "Kisii, Kenya", country: "Kenya", coordinates: [34.94006, -0.86079] },
+        { id: 74, title: "Sameta", description: "Kisii, Kenya", country: "Kenya", coordinates: [34.75728, -0.78175] },
+        { id: 75, title: "Gucha", description: "Kisii, Kenya", country: "Kenya", coordinates: [34.753, -0.845] },
+        { id: 76, title: "Chepkube", description: "Bungoma, Kenya", country: "Kenya", coordinates: [34.43333, 0.85] },
+        { id: 77, title: "Mt Elgon slopes", description: "Bungoma, Kenya", country: "Kenya", coordinates: [34.56028, 1.13778] },
+        { id: 78, title: "Likuyani", description: "Kakamega, Kenya", country: "Kenya", coordinates: [35.13539, 0.75669] },
+        { id: 79, title: "Malava", description: "Kakamega, Kenya", country: "Kenya", coordinates: [34.85414, 0.44504] },
+        { id: 80, title: "Shinyalu", description: "Kakamega, Kenya", country: "Kenya", coordinates: [34.80807, 0.22396] },
+        { id: 81, title: "Kongoni", description: "Kakamega, Kenya", country: "Kenya", coordinates: [35.10929, 0.75288] },
+        { id: 82, title: "Solai", description: "Nakuru, Kenya", country: "Kenya", coordinates: [36.15291, 0.01698] },
+        { id: 83, title: "Bahati", description: "Nakuru, Kenya", country: "Kenya", coordinates: [36.14634, -0.15407] },
+        { id: 84, title: "Rongai", description: "Nakuru, Kenya", country: "Kenya", coordinates: [35.86382, 0.17333] },
+        { id: 85, title: "Njoro", description: "Nakuru, Kenya", country: "Kenya", coordinates: [35.94445, -0.33024] },
+        { id: 86, title: "Eldama Ravine", description: "Baringo, Kenya", country: "Kenya", coordinates: [35.717, 0.05] },
+        { id: 87, title: "Mogotio", description: "Baringo, Kenya", country: "Kenya", coordinates: [35.97, -0.02] }
+    ];
+    filteredGroves = [...groves];
+    renderGroveList();
+    addMarkers();
+}
 
 // Initialize Mapbox
 function initializeMap() {
@@ -148,10 +212,6 @@ function initializeMap() {
                 'space-color': 'rgb(11, 11, 25)', // Space color
                 'star-intensity': 0.6 // Star brightness
             });
-            
-            // Add markers
-            addMarkers();
-            console.log('Markers added with globe view');
         });
 
         map.on('error', (e) => {
@@ -180,7 +240,6 @@ function initializeMap() {
                     'space-color': 'rgb(11, 11, 25)',
                     'star-intensity': 0.6
                 });
-                addMarkers();
             });
         });
 
@@ -207,7 +266,6 @@ function initializeMap() {
                     'space-color': 'rgb(11, 11, 25)',
                     'star-intensity': 0.6
                 });
-                addMarkers();
             });
         } catch (fallbackError) {
             console.error('Failed to load map even with fallback:', fallbackError);
@@ -222,9 +280,15 @@ function addMarkers() {
     markers = [];
 
     filteredGroves.forEach(grove => {
+        // Skip groves without valid coordinates
+        if (!grove.coordinates || grove.coordinates.length !== 2 || 
+            (grove.coordinates[0] === 0 && grove.coordinates[1] === 0)) {
+            return;
+        }
+        
         const el = document.createElement('div');
         el.className = 'custom-marker';
-        el.style.backgroundColor = countryColors[grove.country];
+        el.style.backgroundColor = countryColors[grove.country] || '#888888';
 
         const marker = new mapboxgl.Marker(el)
             .setLngLat(grove.coordinates)
@@ -248,8 +312,8 @@ function renderGroveList() {
         <div class="grove-item ${selectedGrove?.id === grove.id ? 'selected' : ''}" 
              data-grove-id="${grove.id}">
             <div class="grove-header">
-                <div class="country-badge country-${grove.country.toLowerCase()}">
-                    ${grove.country[0]}
+                <div class="country-badge country-${(grove.country || 'unknown').toLowerCase()}">
+                    ${(grove.country || 'U')[0]}
                 </div>
                 <div class="grove-info">
                     <div class="grove-title">${grove.title}</div>
@@ -264,7 +328,9 @@ function renderGroveList() {
         item.addEventListener('click', () => {
             const groveId = parseInt(item.dataset.groveId);
             const grove = groves.find(g => g.id === groveId);
-            selectGrove(grove);
+            if (grove) {
+                selectGrove(grove);
+            }
         });
     });
 }
@@ -276,12 +342,15 @@ function selectGrove(grove) {
     // Update UI
     renderGroveList();
     
-    // Fly to location
-    map.flyTo({
-        center: grove.coordinates,
-        zoom: 12,
-        duration: 2000
-    });
+    // Fly to location if coordinates are valid
+    if (grove.coordinates && grove.coordinates.length === 2 && 
+        !(grove.coordinates[0] === 0 && grove.coordinates[1] === 0)) {
+        map.flyTo({
+            center: grove.coordinates,
+            zoom: 12,
+            duration: 2000
+        });
+    }
 
     // Show info card
     showInfoCard(grove);
@@ -295,11 +364,11 @@ function showInfoCard(grove) {
     const country = document.getElementById('infoCountry');
     const description = document.getElementById('infoDescription');
 
-    badge.className = `country-badge country-${grove.country.toLowerCase()}`;
-    badge.textContent = grove.country[0];
+    badge.className = `country-badge country-${(grove.country || 'unknown').toLowerCase()}`;
+    badge.textContent = (grove.country || 'U')[0];
     title.textContent = grove.title;
-    country.textContent = grove.country;
-    description.textContent = grove.description;
+    country.textContent = grove.country || 'Unknown';
+    description.textContent = grove.description || 'No description available';
 
     infoCard.classList.add('visible');
 }
@@ -309,9 +378,9 @@ function filterGroves() {
     const searchQuery = document.getElementById('searchInput').value.toLowerCase();
     
     filteredGroves = groves.filter(grove => {
-        const matchesSearch = grove.title.toLowerCase().includes(searchQuery) ||
-                            grove.description.toLowerCase().includes(searchQuery) ||
-                            grove.country.toLowerCase().includes(searchQuery);
+        const matchesSearch = (grove.title || '').toLowerCase().includes(searchQuery) ||
+                            (grove.description || '').toLowerCase().includes(searchQuery) ||
+                            (grove.country || '').toLowerCase().includes(searchQuery);
         
         const matchesCountry = selectedCountry === 'all' || grove.country === selectedCountry;
         
@@ -379,4 +448,17 @@ function setupEventListeners() {
             toggleIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>';
         }
     });
+}
+
+// Helper function to extract country from location string
+function getCountryFromLocation(location) {
+    if (!location) return 'Unknown';
+    
+    const locationStr = location.toLowerCase();
+    if (locationStr.includes('kenya')) return 'Kenya';
+    if (locationStr.includes('uganda')) return 'Uganda';
+    if (locationStr.includes('ethiopia')) return 'Ethiopia';
+    if (locationStr.includes('mukurweini')) return 'Kenya'; // Mukurweini is in Kenya
+    
+    return 'Unknown';
 }

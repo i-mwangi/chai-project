@@ -4,8 +4,17 @@
  */
 
 class CoffeeTreeAPI {
-    constructor(baseURL = 'http://localhost:3002') {  // Port 3002 for mock API server
-        this.baseURL = baseURL;
+    constructor(baseURL) {
+        if (!baseURL) {
+            // When running in Docker, the frontend needs to call the API via its service name.
+            // Otherwise, it defaults to localhost. The VITE_API_URL can be set in .env for overrides.
+            const isDocker = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+            const apiHost = isDocker ? 'api_mock' : 'localhost';
+            const apiPort = process.env.VITE_API_PORT || '3002';
+            this.baseURL = `http://${apiHost}:${apiPort}`;
+        } else {
+            this.baseURL = baseURL;
+        }
         this.activeRequests = new Map(); // Track active requests to prevent duplicates
     }
 
@@ -90,9 +99,10 @@ class CoffeeTreeAPI {
                 } else {
                     // For non-JSON responses, return the text
                     const text = await response.text();
+                    const message = `HTTP error! status: ${response.status}, message: ${text}`;
                     if (!response.ok) {
-                        const err = new Error(`HTTP error! status: ${response.status}, message: ${text}`);
-                        err.status = response.status
+                        const err = new Error(message);
+                        err.status = response.status;
                         throw err;
                     }
                     return { success: true, data: text };

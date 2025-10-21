@@ -45,6 +45,51 @@
         body {
             font-family: 'Comic Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
+
+        .verification-skip-banner {
+            background-color: #3e2723; /* A dark brown color from the palette */
+            color: #f5efe6; /* Light text color */
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid #5d4037; /* A slightly lighter brown for the border */
+        }
+
+        .verification-skip-banner .banner-inner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+
+        .verification-skip-banner .btn {
+            margin-left: 10px;
+        }
+
+        /* === Modal & Notification Z-Index Fix === */
+        /* Ensure notifications are always on top */
+        .toast-container {
+            z-index: 10002 !important;
+        }
+
+        /* Style the modal overlay without blurring */
+        .modal.active .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            /* backdrop-filter: blur(4px); */ /* REMOVED: This was blurring notifications */
+        }
+
+        /* Ensure modal content is above its overlay */
+        .modal.active .modal-content {
+            z-index: 10001;
+        }
+        /* === End Fix === */
+
     </style>
 </head>
 
@@ -1804,18 +1849,28 @@
                         const newBtn = dashboardConnectBtn.cloneNode(true);
                         dashboardConnectBtn.parentNode.replaceChild(newBtn, dashboardConnectBtn);
                         
-                        newBtn.addEventListener('click', function() {
-                            console.log('???? Dashboard connect button clicked');
-                            if (window.walletManager) {
-                                const currentView = document.querySelector('.view.active')?.id?.replace('View', '') || 'dashboard';
-                                if (currentView === 'farmer') {
-                                    window.walletManager.setIntendedUserType('farmer');
-                                } else {
-                                    window.walletManager.setIntendedUserType('investor');
-                                }
-                                window.walletManager.connect();
-                            } else {
-                                console.error('??? WalletManager not available');
+                        newBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            console.log('???? Dashboard connect button clicked, scrolling to navbar connect button...');
+                            
+                            const navbarConnectBtn = document.getElementById('connect-wallet-btn');
+                            if (navbarConnectBtn) {
+                                // Scroll to the button
+                                navbarConnectBtn.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center'
+                                });
+
+                                // Add a temporary highlight effect
+                                navbarConnectBtn.style.transition = 'all 0.2s ease-in-out';
+                                navbarConnectBtn.style.transform = 'scale(1.1)';
+                                navbarConnectBtn.style.boxShadow = '0 0 15px rgba(255, 255, 255, 0.7)';
+
+                                // Remove the effect after a short delay
+                                setTimeout(() => {
+                                    navbarConnectBtn.style.transform = 'scale(1)';
+                                    navbarConnectBtn.style.boxShadow = '';
+                                }, 1500);
                             }
                         });
                         console.log('   ??? Dashboard connect button listener attached');
@@ -1843,4 +1898,3 @@
         });
     </script>
 </body>
-

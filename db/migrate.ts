@@ -143,7 +143,8 @@ export class MigrationRunner {
    * Execute a single migration file with retry logic
    */
   private async executeMigration(filename: string): Promise<void> {
-    const filePath = join(this.migrationsDir, filename)
+    const filePath = join(this.migrationsDir, filename);
+    // Clean SQL: remove backticks for SQLite compatibility
     const sql = readFileSync(filePath, 'utf-8')
 
     // Split by semicolon to handle multiple statements
@@ -157,11 +158,11 @@ export class MigrationRunner {
         // Execute the SQL statement with retry logic
         await withRetry(
           async () => {
-            if (db.execute) {
-              await db.execute(statement)
+            if ((db as any).run) { // For better-sqlite3
+              await (db as any).run(statement)
             } else {
               // Fallback for databases without execute method
-              console.warn(`⚠️  Database doesn't support execute(), skipping: ${statement.substring(0, 50)}...`)
+              console.warn(`⚠️  Database doesn't support run(), skipping: ${statement.substring(0, 50)}...`)
             }
           },
           {
@@ -224,8 +225,8 @@ export class MigrationRunner {
 
     try {
       // Try to query the table
-      if (db.execute) {
-        await db.execute('SELECT 1 FROM migration_history LIMIT 1')
+      if ((db as any).run) {
+        await (db as any).run('SELECT 1 FROM migration_history LIMIT 1')
       }
     } catch (error) {
       // Table doesn't exist, create it
@@ -247,8 +248,8 @@ export class MigrationRunner {
         .filter(s => s.length > 0)
 
       for (const statement of statements) {
-        if (db.execute) {
-          await db.execute(statement)
+        if ((db as any).run) {
+          await (db as any).run(statement)
         }
       }
       
@@ -265,8 +266,8 @@ export class MigrationRunner {
     }
 
     try {
-      if (db.execute) {
-        await db.execute(
+      if ((db as any).run) {
+        await (db as any).run(
           `INSERT OR IGNORE INTO migration_history (migration_name, applied_at) 
            VALUES (?, strftime('%s', 'now'))`,
           [migrationName]
@@ -288,12 +289,12 @@ export class MigrationRunner {
     try {
       await this.ensureMigrationHistoryTable()
       
-      if (db.execute) {
-        const result = await db.execute(
+      if ((db as any).run) {
+        const result = await (db as any).all(
           'SELECT COUNT(*) as count FROM migration_history WHERE migration_name = ? AND rolled_back_at IS NULL',
           [migrationName]
         )
-        return result && (result as any).count > 0
+        return result && result[0] && (result[0] as any).count > 0
       }
     } catch (error) {
       // If we can't check, assume not applied
@@ -314,11 +315,11 @@ export class MigrationRunner {
     try {
       await this.ensureMigrationHistoryTable()
       
-      if (db.execute) {
-        const result = await db.execute(
+      if ((db as any).run) {
+        const result = await (db as any).all(
           'SELECT id, migration_name, applied_at, rolled_back_at FROM migration_history WHERE rolled_back_at IS NULL ORDER BY applied_at DESC'
         )
-        return (result as any) || []
+        return result || []
       }
     } catch (error) {
       console.error('❌ Error fetching applied migrations:', error)
@@ -397,8 +398,8 @@ export class MigrationRunner {
       await this.executeRollback(rollbackFile)
       
       // Mark migration as rolled back
-      if (db.execute) {
-        await db.execute(
+      if ((db as any).run) {
+        await (db as any).run(
           `UPDATE migration_history SET rolled_back_at = strftime('%s', 'now') WHERE migration_name = ?`,
           [migrationName]
         )
@@ -431,8 +432,8 @@ export class MigrationRunner {
 
     for (const statement of statements) {
       try {
-        if (db.execute) {
-          await db.execute(statement)
+        if ((db as any).run) {
+          await (db as any).run(statement)
         }
       } catch (error) {
         // Log but continue - some rollback statements might fail if objects don't exist
@@ -493,7 +494,7 @@ export class MigrationRunner {
         try {
           // Try to query the table
           if (db.execute) {
-            await db.execute(`SELECT 1 FROM ${table} LIMIT 1`)
+          await (db as any).run(`SELECT 1 FROM ${table} LIMIT 1`)
           } else {
             // Fallback: try to select from the table
             await db.select().from(table).limit(1)

@@ -39,23 +39,26 @@ export function getShared(): SHARED_KEYS {
 }
 
 export function getEnv(){
-    const network = process.env.NETWORK
-    if(!network){
-        throw new Error("NETWORK ENV VAR NOT SET")
-    }
-    const PRIVATE_KEY = process.env.PRIVATE_KEY
-    const ACCOUNT_ID= process.env.ACCOUNT_ID
-    const ADDRESS= process.env.ADDRESS
+    // Support both old and new environment variable names
+    const network = process.env.NETWORK || process.env.HEDERA_NETWORK || 'testnet'
+    
+    const PRIVATE_KEY = process.env.PRIVATE_KEY || process.env.HEDERA_OPERATOR_KEY
+    const ACCOUNT_ID = process.env.ACCOUNT_ID || process.env.HEDERA_OPERATOR_ID
+    const ADDRESS = process.env.ADDRESS
 
-    const TPRIVATE_KEY = process.env.TPRIVATE_KEY
-    const TACCOUNT_ID= process.env.TACCOUNT_ID
-    const TADDRESS= process.env.TADDRESS
+    const TPRIVATE_KEY = process.env.TPRIVATE_KEY || process.env.HEDERA_OPERATOR_KEY
+    const TACCOUNT_ID = process.env.TACCOUNT_ID || process.env.HEDERA_OPERATOR_ID
+    const TADDRESS = process.env.TADDRESS
+
+    if(!PRIVATE_KEY || !ACCOUNT_ID){
+        throw new Error("HEDERA_OPERATOR_KEY and HEDERA_OPERATOR_ID must be set in .env file")
+    }
 
     if (network == 'localnet'){
         return {
             PRIVATE_KEY: PrivateKey.fromStringECDSA(PRIVATE_KEY!),
             ACCOUNT_ID: AccountId.fromString(ACCOUNT_ID!),
-            ADDRESS: EvmAddress.fromString(ADDRESS!),
+            ADDRESS: ADDRESS ? EvmAddress.fromString(ADDRESS!) : undefined,
             NETWORK: network
         }
     }
@@ -64,7 +67,7 @@ export function getEnv(){
         return {
             PRIVATE_KEY: PrivateKey.fromStringECDSA(TPRIVATE_KEY!),
             ACCOUNT_ID: AccountId.fromString(TACCOUNT_ID!),
-            ADDRESS: EvmAddress.fromString(TADDRESS!),
+            ADDRESS: TADDRESS ? EvmAddress.fromString(TADDRESS!) : undefined,
             NETWORK: network
         }
     }
