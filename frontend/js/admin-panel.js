@@ -41,6 +41,16 @@ class AdminPanelUI {
         // Set up event listeners
         this.setupEventListeners();
         
+        // Listen for wallet connection to re-validate admin status
+        window.addEventListener('wallet-connected', async (event) => {
+            console.log('🔑 AdminPanelUI detected wallet connection, re-validating admin status...');
+            const accountId = event.detail.accountId;
+            if (this.tokenAdminManager && accountId) {
+                await this.tokenAdminManager.validateAdminRole(accountId);
+                this.initialize(this.tokenAdminManager); // Re-initialize to show/hide panel
+            }
+        });
+
         // Load groves for selection
         await this.loadGroves();
     }

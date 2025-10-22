@@ -199,6 +199,12 @@ export class WalletModal {
     this.isConnecting = true;
     this.render();
 
+    // Ensure the connector is initialized before attempting to connect
+    if (!walletState.getState().connector) {
+      console.log('Connector not initialized, initializing now...');
+      await hederaWallet.init();
+    }
+
     try {
       const result = await hederaWallet.connectExtension(extensionId);
       // Safety check for resolve function
@@ -207,9 +213,14 @@ export class WalletModal {
       } else {
         console.warn('Modal resolve function not available, using direct callback');
         // If called directly (not through show()), we need to handle the result differently
-        window.dispatchEvent(new CustomEvent('wallet-connected', {
-          detail: result
-        }));
+        // Use the wallet manager's notifyWalletConnected method to ensure proper state synchronization
+        if (window.walletManager && typeof window.walletManager.notifyWalletConnected === 'function') {
+          window.walletManager.notifyWalletConnected();
+        } else {
+          window.dispatchEvent(new CustomEvent('wallet-connected', {
+            detail: result
+          }));
+        }
       }
       this.close();
     } catch (error) {

@@ -88,6 +88,128 @@
         .modal.active .modal-content {
             z-index: 10001;
         }
+
+        /* === Tree Health Dashboard Styles === */
+        .tree-health-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .grove-selector-container {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: var(--color-background-light);
+            border-radius: var(--border-radius-lg);
+        }
+
+        .health-overview-card, .yield-projections-card, .alerts-card, .recommendations-card {
+            grid-column: span 1;
+        }
+
+        .sensor-charts-card {
+            grid-column: 1 / -1;
+        }
+
+        #sensorCharts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .sensor-chart-container {
+            position: relative;
+            height: 250px; /* Give charts a fixed height */
+            background-color: var(--color-background-light);
+            padding: 1rem;
+            border-radius: var(--border-radius-md);
+        }
+
+        .sensor-chart-container h5 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        /* === Market Prices Professional Styles === */
+        #currentPricesDisplay {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        .price-card {
+            background: linear-gradient(145deg, var(--color-background-light), var(--color-background-dark));
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--color-border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        .price-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .price-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+        .price-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .price-card-title h4 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--color-text-light);
+        }
+        .price-card-current .price-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--color-text-light);
+        }
+        .price-card-current .price-unit {
+            font-size: 1rem;
+            color: var(--color-text-dark);
+            margin-left: 0.25rem;
+        }
+        .price-card-change {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .price-card-body {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .price-card-chart {
+            width: 100%;
+            height: 50px;
+        }
+        .variety-icon-svg {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+        }
+        .price-card-footer {
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid var(--color-border);
+        }
+        .grade-range {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--color-text-dark);
+        }
         /* === End Fix === */
 
     </style>
@@ -784,6 +906,64 @@
 
                             <div class="health-overview" id="healthOverview">
                                 <!-- Health monitoring cards will be populated here -->
+                                <div class="dashboard-grid tree-health-dashboard" id="tree-health-dashboard">
+                                    <!-- Grove Selector -->
+                                    <div class="grove-selector-container">
+                                        <label for="healthGroveSelector">Select Grove:</label>
+                                        <select id="healthGroveSelector" class="form-select">
+                                            <option value="">Loading groves...</option>
+                                        </select>
+                                        <button id="refreshHealthData" class="btn btn-secondary btn-sm">Refresh</button>
+                                    </div>
+
+                                    <!-- Health Overview -->
+                                    <div class="health-overview-card card">
+                                        <div class="card-header">
+                                            <h4 class="card-title">Health Overview</h4>
+                                        </div>
+                                        <div class="card-body" id="healthOverviewContent">
+                                            <p>Select a grove to view health data.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Yield Projections -->
+                                    <div class="yield-projections-card card">
+                                        <div class="card-header">
+                                            <h4 class="card-title">Yield Projections</h4>
+                                        </div>
+                                        <div class="card-body" id="yieldProjectionsContent">
+                                            <p>Select a grove to view yield projections.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Active Alerts -->
+                                    <div class="alerts-card card">
+                                        <div class="card-header">
+                                            <h4 class="card-title">Active Alerts</h4>
+                                        </div>
+                                        <div class="card-body" id="alertsPanel">
+                                            <p>No active alerts.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Recommendations -->
+                                    <div class="recommendations-card card">
+                                        <div class="card-header">
+                                            <h4 class="card-title">Care Recommendations</h4>
+                                        </div>
+                                        <div class="card-body" id="recommendationsContent">
+                                            <p>No recommendations at this time.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sensor Data Charts -->
+                                    <div class="sensor-charts-card card">
+                                        <div class="card-header">
+                                            <h4 class="card-title">Live Sensor Data</h4>
+                                        </div>
+                                        <div class="card-body" id="sensorCharts"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1787,34 +1967,34 @@
     </div>
 
     <!-- Utility Scripts -->
-    <script src="/js/errors.js"></script>
-    <script src="/js/error-handler.js"></script>
-    <script src="/js/notification-manager.js"></script>
+    <script type="module" src="/js/errors.js"></script>
+    <script type="module" src="/js/error-handler.js"></script>
+    <script type="module" src="/js/notification-manager.js"></script>
 
     <!-- Design System Scripts -->
-    <script src="/js/keyboard-navigation.js"></script>
-    <script src="/js/aria-semantic-enhancements.js"></script>
-    <script src="/js/screen-reader-announcer.js"></script>
-    <script src="/js/loading-states.js"></script>
+    <script type="module" src="/js/keyboard-navigation.js"></script>
+    <script type="module" src="/js/aria-semantic-enhancements.js"></script>
+    <script type="module" src="/js/screen-reader-announcer.js"></script>
+    <script type="module" src="/js/loading-states.js"></script>
 
     <!-- Navigation -->
-    <script src="/js/api.js"></script>
-    <script src="/js/balance-poller.js"></script>
-    <script src="/js/marketplace.js"></script>
-    <script src="/js/price-oracle.js"></script>
-    <script src="/js/market-prices-display.js"></script>
-    <script src="/js/token-admin.js"></script>
-    <script src="/js/admin-panel.js"></script>
-    <script src="/js/farmer-dashboard.js"></script>
-    <script src="/js/investor-portal.js"></script>
-    <script src="/js/dashboard-enhanced.js"></script>
-    <script src="/js/navigation.js"></script>
+    <script type="module" src="/js/api.js"></script>
+    <script type="module" src="/js/balance-poller.js"></script>
+    <script type="module" src="/js/marketplace.js"></script>
+    <script type="module" src="/js/price-oracle.js"></script>
+    <script type="module" src="/js/market-prices-display.js"></script>
+    <script type="module" src="/js/token-admin.js"></script>
+    <script type="module" src="/js/admin-panel.js"></script>
+    <script type="module" src="/js/farmer-dashboard.js"></script>
+    <script type="module" src="/js/investor-portal.js"></script>
+    <script type="module" src="/js/dashboard-enhanced.js"></script>
+    <script type="module" src="/js/navigation.js"></script>
 
     <!-- Wallet Management - Hedera Wallet Connect v1 -->
     <script type="module" src="/wallet/index.js"></script>
 
     <!-- Main App Controller (view management, navigation, dashboard) -->
-    <script src="/js/main.js"></script>
+    <script type="module" src="/js/main.js"></script>
     <script>
         // FRESH START on every page load - no persistent flags
         (function() {

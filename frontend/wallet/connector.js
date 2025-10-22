@@ -100,13 +100,19 @@ export class HederaWalletConnector {
    */
   async restoreSession() {
     try {
+      console.log('Attempting to restore session...');
       const walletClient = this.connector?.walletConnectClient;
+      console.log('Wallet client:', walletClient);
+      
       const existingSessions = walletClient?.session?.getAll?.() || [];
+      console.log('Existing sessions:', existingSessions);
 
       // Look for V1 sessions (with hedera namespace)
       const v1Session = existingSessions.find(
         s => s.namespaces?.hedera
       );
+      
+      console.log('Found V1 session:', v1Session);
 
       if (v1Session) {
         console.log('✅ Restored existing V1 session');
@@ -128,6 +134,22 @@ export class HederaWalletConnector {
             timestamp: Date.now()
           })
         );
+      } else {
+        console.log('No valid V1 session found');
+        // Check if there's a session marker in localStorage
+        const sessionMarker = sessionStorage.getItem(STORAGE_KEYS.V1_SESSION);
+        console.log('Session marker in storage:', sessionMarker);
+        if (sessionMarker) {
+          try {
+            const parsed = JSON.parse(sessionMarker);
+            console.log('Parsed session marker:', parsed);
+            // If we have a session marker but no session, the session might have expired
+            // Clear the session marker
+            sessionStorage.removeItem(STORAGE_KEYS.V1_SESSION);
+          } catch (e) {
+            console.error('Error parsing session marker:', e);
+          }
+        }
       }
     } catch (error) {
       console.error('Error restoring session:', error);

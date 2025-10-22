@@ -368,12 +368,14 @@ const server = http.createServer(async (req, res) => {
             console.log('[MOCK API] Received request for /api/groves/register');
             console.log('[MOCK API] Request body:', JSON.stringify(body, null, 2));
             
+            // Ensure farmerAddress from the request body is included
             const newGrove = {
                 id: (mockData.groves.length + 1).toString(),
                 ...body,
                 healthScore: Math.floor(Math.random() * 30) + 70,
                 verificationStatus: 'pending',
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                farmerAddress: body.farmerAddress // Explicitly add farmerAddress
             };
             
             mockData.groves.push(newGrove);
@@ -480,9 +482,28 @@ const server = http.createServer(async (req, res) => {
             console.error('[ERROR] An error occurred in /api/harvest/report handler:', error);
             sendError(res, 500, 'Internal server error in harvest report');
         }
-
-            
         }
+
+        else if (pathname === '/api/harvest/distribute' && method === 'POST') {
+            const { harvestId } = body;
+            if (!harvestId) {
+                return sendError(res, 400, 'Harvest ID is required.');
+            }
+
+            const harvest = mockData.harvests.find(h => String(h.id) === String(harvestId));
+
+            if (!harvest) {
+                return sendError(res, 404, 'Harvest not found.');
+            }
+
+            harvest.revenueDistributed = true;
+
+            sendResponse(res, 200, {
+                success: true,
+                message: `Revenue for harvest ${harvestId} has been distributed.`
+            });
+        }
+
 
         // Calculate distribution preview for a harvest
         else if (pathname === '/api/harvest/calculate-distribution' && method === 'POST') {
@@ -587,14 +608,14 @@ const server = http.createServer(async (req, res) => {
             const pendingDistributions = pendingHarvests.reduce((sum, h) => sum + (h.totalRevenue || 0), 0) * 0.3;
             
             // Calculate available balance (distributed but not withdrawn)
-            const distributedHarvests = farmerHarvests.filter(h => h.revenueDistributed);
-            const distributedAmount = distributedHarvests.reduce((sum, h) => sum + (h.totalRevenue || 0), 0) * 0.3;
+            const distributedHarvests = farmerHarvests.filter(h => h.revenueDistributed === true);
+            const totalDistributedShare = distributedHarvests.reduce((sum, h) => sum + (h.totalRevenue || 0), 0) * 0.3;
             
             // Get total withdrawn
             const farmerWithdrawals = mockData.farmerWithdrawals?.filter(w => w.farmerAddress === farmerAddress) || [];
             const totalWithdrawn = farmerWithdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
             
-            const availableBalance = distributedAmount - totalWithdrawn;
+            const availableBalance = totalDistributedShare - totalWithdrawn;
             
             sendResponse(res, 200, {
                 success: true,
@@ -607,6 +628,29 @@ const server = http.createServer(async (req, res) => {
                     totalWithdrawn: totalWithdrawn
                 }
             });
+        }
+        
+        else if (pathname === '/api/revenue/withdraw-farmer-share' && method === 'POST') {
+            const { groveId, amount, farmerAddress } = body;
+            
+            if (!farmerAddress || !amount || amount <= 0) {
+                sendError(res, 400, 'Invalid withdrawal request');
+                return;
+            }
+            
+            // Create withdrawal record
+            const withdrawal = {
+                id: (mockData.farmerWithdrawals.length + 1).toString(),
+                farmerAddress: farmerAddress,
+                groveId: groveId,
+                amount: amount,
+                date: new Date().toISOString(),
+                status: 'completed'
+            };
+            
+            mockData.farmerWithdrawals.push(withdrawal);
+            
+            sendResponse(res, 200, { success: true, message: 'Withdrawal processed successfully', withdrawalId: withdrawal.id });
         }
         
         // Holder earnings endpoint for charts
@@ -1928,14 +1972,18 @@ const server = http.createServer(async (req, res) => {
         // Transaction history endpoint
         else if (pathname === '/api/transactions/history' && method === 'GET') {
             const userAddress = parsedUrl.query.userAddress;
-            
             console.log('Transaction history request for user:', userAddress);
-            console.log('Current mockTransactions:', mockTransactions);
             
             // Filter transactions by user address
             let transactions = mockTransactions;
             if (userAddress) {
-                transactions = mockTransactions.filter(txn => txn.farmerAddress === userAddress);
+                // A user can be the sender (fromAddress) or receiver (toAddress)
+                transactions = mockTransactions.filter(txn => 
+                    txn.fromAddress === userAddress || 
+                    txn.toAddress === userAddress ||
+                    txn.farmerAddress === userAddress || // for farmer withdrawals
+                    txn.buyerAddress === userAddress // for marketplace purchases
+                );
                 console.log('Filtered transactions for user:', transactions);
             }
             

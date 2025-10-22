@@ -1,11 +1,13 @@
 /**
  * Market Prices Display Module
- * Displays real-time coffee prices from ICE and other sources
+ * Displays real-time coffee prices using the PriceOracleManager
  */
 
 class MarketPricesDisplay {
     constructor(apiClient) {
-        this.apiClient = apiClient
+        // Use the global priceOracle instance
+        this.priceOracle = window.priceOracle;
+        this.apiClient = apiClient; // Keep for direct calls if needed
         this.selectedVariety = 'ALL'
         this.pricesData = []
         this.lastUpdate = null
@@ -68,16 +70,15 @@ class MarketPricesDisplay {
                 refreshBtn.textContent = 'Loading...'
             }
 
-            // Fetch current prices from all sources
-            const response = await fetch(`${this.apiClient.baseURL}/api/market/prices`)
-            const data = await response.json()
+            // Use the price oracle to get all variety prices
+            const response = await this.priceOracle.getAllVarietyPrices();
+            const data = response; // The response is now the full object
 
             console.log('Market prices API response:', data)
-
-            if (data.success) {
-                this.pricesData = data.data.prices
+            if (data && data.success && data.data.varieties) {
+                this.pricesData = data.data.varieties;
                 console.log('Loaded prices:', this.pricesData)
-                this.lastUpdate = new Date(data.data.lastUpdated)
+                this.lastUpdate = new Date(data.data.lastUpdated);
                 this.displayPrices()
                 this.displayLastUpdate()
             } else {
@@ -107,10 +108,10 @@ class MarketPricesDisplay {
         // Filter prices by selected variety
         let filteredPrices = this.pricesData
         if (this.selectedVariety !== 'ALL') {
-            filteredPrices = this.pricesData.filter(p => 
-                this.getVarietyName(p.variety) === this.selectedVariety
-            )
+            filteredPrices = this.pricesData.filter(v => v.variety === this.selectedVariety);
         }
+
+        console.log('Filtered prices to display:', filteredPrices);
 
         if (filteredPrices.length === 0) {
             container.innerHTML = `
@@ -122,84 +123,113 @@ class MarketPricesDisplay {
             return
         }
 
-        // Group by variety
-        const byVariety = this.groupByVariety(filteredPrices)
-
-        // Generate HTML
-        container.innerHTML = Object.entries(byVariety).map(([variety, prices]) => {
-            const avgPrice = prices.reduce((sum, p) => sum + p.pricePerKg, 0) / prices.length
-            const sources = [...new Set(prices.map(p => p.source))].join(', ')
-
-            return `
-                <div class="price-variety-card">
-                    <div class="variety-header">
-                        <h4>${variety}</h4>
-                        <span class="variety-badge">${prices.length} source${prices.length > 1 ? 's' : ''}</span>
-                    </div>
-                    <div class="price-main">
-                        <span class="price-value">$${avgPrice.toFixed(2)}</span>
-                        <span class="price-unit">/kg</span>
-                    </div>
-                    <div class="price-details">
-                        <div class="price-range">
-                            <small>Range: $${Math.min(...prices.map(p => p.pricePerKg)).toFixed(2)} - $${Math.max(...prices.map(p => p.pricePerKg)).toFixed(2)}</small>
-                        </div>
-                        <div class="price-sources">
-                            <small>Sources: ${sources}</small>
-                        </div>
-                    </div>
-                    ${this.renderPricesByGrade(prices)}
-                </div>
-            `
-        }).join('')
+        // Generate new professional HTML
+        container.innerHTML = filteredPrices.map(varietyData => this.renderPriceCard(varietyData)).join('');
     }
 
     /**
-     * Render prices by grade
+     * Renders a single, professionally styled price card.
+     * @param {object} varietyData - The data for a single coffee variety.
+     * @returns {string} HTML string for the card.
      */
-    renderPricesByGrade(prices) {
-        // Group by grade
-        const byGrade = {}
-        prices.forEach(p => {
-            if (!byGrade[p.grade]) {
-                byGrade[p.grade] = []
-            }
-            byGrade[p.grade].push(p)
-        })
+    renderPriceCard(varietyData) {
+        const varietyName = varietyData.variety;
+        const grades = varietyData.grades || [];
+        const highGradePrice = grades.find(g => g.grade === 10)?.price || 0;
+        const lowGradePrice = grades.find(g => g.grade === 1)?.price || 0;
+        const avgPrice = grades.length > 0 ? grades.reduce((sum, g) => sum + g.price, 0) / grades.length : 0;
 
-        if (Object.keys(byGrade).length <= 1) return ''
+        // Simulate a 24h price change
+        const change = (Math.random() - 0.45) * 0.15; // Random change between -6.75% and +8.25%
+        const changePercent = (change / (avgPrice - change) * 100).toFixed(2);
+        const changeClass = change >= 0 ? 'positive' : 'negative';
+        const changeIcon = change >= 0 ? '▲' : '▼';
 
         return `
-            <div class="grade-prices">
-                <h5>By Quality Grade:</h5>
-                <div class="grade-list">
-                    ${Object.entries(byGrade).map(([grade, gradePrices]) => {
-                        const avgPrice = gradePrices.reduce((sum, p) => sum + p.pricePerKg, 0) / gradePrices.length
-                        return `
-                            <div class="grade-item">
-                                <span class="grade-label">Grade ${grade}</span>
-                                <span class="grade-price">$${avgPrice.toFixed(2)}/kg</span>
-                            </div>
-                        `
-                    }).join('')}
+            <div class="price-card">
+                <div class="price-card-header">
+                    <div class="price-card-title" title="${varietyName}">
+                        ${this.getVarietyIcon(varietyName)}
+                        <h4>${varietyName.charAt(0).toUpperCase() + varietyName.slice(1).toLowerCase()}</h4>
+                    </div>
+                    <div class="price-card-current">
+                        <span class="price-value">$${avgPrice.toFixed(2)}</span>
+                        <span class="price-unit">/ kg</span>
+                    </div>
+                </div>
+                <div class="price-card-change ${changeClass}">
+                    <span>${changeIcon} $${Math.abs(change).toFixed(2)} (${changePercent}%)</span>
+                    <small>Last 24h</small>
+                </div>
+                <div class="price-card-body">
+                    <div class="price-card-chart">
+                        ${this.renderMiniChart(change >= 0)}
+                    </div>
+                </div>
+                <div class="price-card-footer">
+                    <div class="grade-range">
+                        <small>Low Grade: <strong>$${lowGradePrice.toFixed(2)}</strong></small>
+                        <small>High Grade: <strong>$${highGradePrice.toFixed(2)}</strong></small>
+                    </div>
                 </div>
             </div>
-        `
+        `;
     }
 
     /**
-     * Group prices by variety
+     * Generates a unique SVG icon for each coffee variety.
+     * @param {string} varietyName - The name of the coffee variety.
+     * @returns {string} HTML string for the SVG icon.
      */
-    groupByVariety(prices) {
-        const grouped = {}
-        prices.forEach(price => {
-            const variety = this.getVarietyName(price.variety)
-            if (!grouped[variety]) {
-                grouped[variety] = []
-            }
-            grouped[variety].push(price)
-        })
-        return grouped
+    getVarietyIcon(varietyName) {
+        const colors = {
+            ARABICA: '#D4A373',
+            ROBUSTA: '#A0522D',
+            SPECIALTY: '#D4AF37',
+            ORGANIC: '#556B2F',
+            TYPICA: '#A0522D'
+        };
+        const color = colors[varietyName] || '#607D8B';
+
+        let svgContent = '';
+        switch (varietyName) {
+            case 'ARABICA':
+                svgContent = `<circle cx="12" cy="12" r="8" stroke="${color}" stroke-width="2.5" fill="none"/>`;
+                break;
+            case 'ROBUSTA':
+                svgContent = `<rect x="4" y="4" width="16" height="16" rx="2" stroke="${color}" stroke-width="2.5" fill="none"/>`;
+                break;
+            case 'SPECIALTY':
+                svgContent = `<polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" stroke="${color}" stroke-width="2.5" fill="none"/>`;
+                break;
+            case 'ORGANIC':
+                svgContent = `<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="${color}" stroke="none"/>`;
+                break;
+            default:
+                svgContent = `<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="${color}" stroke-width="2" fill="none"/>`;
+        }
+
+        return `<div class="variety-icon-svg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor">${svgContent}</svg></div>`;
+    }
+
+    /**
+     * Renders a simulated SVG mini-chart.
+     * @param {boolean} isPositive - Determines if the chart trend is up or down.
+     * @returns {string} HTML string for the SVG chart.
+     */
+    renderMiniChart(isPositive) {
+        const color = isPositive ? 'var(--color-success)' : 'var(--color-danger)';
+        const points = [15, 18, 13, 16, 12, 14, 10];
+        if (isPositive) {
+            points.reverse(); // Show an upward trend
+        }
+        const polylinePoints = points.map((p, i) => `${i * 10},${p}`).join(' ');
+
+        return `
+            <svg class="mini-chart" viewBox="0 0 60 30" preserveAspectRatio="none">
+                <polyline points="${polylinePoints}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
     }
 
     /**
@@ -287,38 +317,28 @@ class MarketPricesDisplay {
         if (!container) return
 
         // Base prices for each variety (from current market data or defaults)
-        const basePrices = {
-            'Arabica': 4.50,
-            'Robusta': 2.80,
-            'Specialty': 6.08,
-            'Organic': 5.63
+        const selectedVarietyName = this.selectedVariety === 'ALL' ? 'ARABICA' : this.selectedVariety;
+        const varietyData = this.pricesData.find(v => v.variety === selectedVarietyName);
+
+        if (!varietyData || !varietyData.grades) {
+            container.innerHTML = '<p>No grade pricing available for this variety.</p>';
+            return;
         }
 
-        // Get selected variety or use Arabica as default
-        const selectedVariety = this.selectedVariety === 'ALL' ? 'Arabica' : this.selectedVariety
-        const basePrice = basePrices[selectedVariety] || basePrices['Arabica']
-
-        // Generate pricing for grades 1-10 (grade 1 is highest quality)
-        const grades = []
-        for (let grade = 1; grade <= 10; grade++) {
-            // Higher grades (lower quality) get progressively lower prices
-            // Grade 1 = 100%, Grade 10 = 40% of base price
-            const multiplier = 1 - ((grade - 1) * 0.067)
-            const price = (basePrice * multiplier).toFixed(2)
-            grades.push({ grade, price })
-        }
+        // The API now provides prices for each grade, so we can use that directly.
+        const grades = varietyData.grades.sort((a, b) => a.grade - b.grade);
 
         container.innerHTML = `
             <div class="grade-pricing-grid">
                 ${grades.map(g => `
                     <div class="grade-price-item">
                         <span class="grade-number">Grade ${g.grade}</span>
-                        <span class="grade-price">$${g.price}/kg</span>
+                        <span class="grade-price">$${g.price.toFixed(2)}/kg</span>
                     </div>
                 `).join('')}
             </div>
             <div class="grade-info">
-                <small>Prices for ${selectedVariety} variety. Grade 1 is highest quality.</small>
+                <small>Prices for ${selectedVarietyName} variety. Grade 10 is highest quality.</small>
             </div>
         `
     }
@@ -328,10 +348,7 @@ class MarketPricesDisplay {
      */
     async loadSeasonalMultipliers() {
         try {
-            const response = await fetch(`${this.apiClient.baseURL}/api/pricing/seasonal-multipliers`, {
-                timeout: 30000 // 30 second timeout
-            })
-            const data = await response.json()
+            const data = await this.priceOracle.getSeasonalMultipliers();
 
             console.log('Seasonal multipliers response:', data)
 

@@ -31,6 +31,7 @@ export class WalletManager {
       
       // Check for existing session
       const existingSession = sessionStorage.getItem('hwcV1Session');
+      console.log('Existing session in storage:', existingSession);
       
       if (existingSession) {
         console.log('Found existing session, initializing connector...');
@@ -42,6 +43,7 @@ export class WalletManager {
       
       // Load user type from localStorage
       this.userType = localStorage.getItem('userType') || 'investor';
+      console.log('User type:', this.userType);
       
       // Update UI
       this.updateUI();
@@ -138,14 +140,19 @@ export class WalletManager {
    * Check if wallet is connected
    */
   isWalletConnected() {
-    return walletState.getState().isConnected;
+    const isConnected = walletState.getState().isConnected;
+    console.log('isWalletConnected() called - returning:', isConnected);
+    console.log('Full wallet state:', walletState.getState());
+    return isConnected;
   }
 
   /**
    * Get connected account ID
    */
   getAccountId() {
-    return walletState.getState().accountId;
+    const accountId = walletState.getState().accountId;
+    console.log('getAccountId() called - returning:', accountId);
+    return accountId;
   }
 
   /**
@@ -216,6 +223,10 @@ export class WalletManager {
    * Update UI based on connection state
    */
   updateUI() {
+    console.log('Updating UI based on connection state...');
+    console.log('isWalletConnected():', this.isWalletConnected());
+    console.log('getAccountId():', this.getAccountId());
+    
     // Update connect button
     const connectBtn = document.getElementById('connect-wallet-btn');
     const walletInfo = document.getElementById('walletInfo');
